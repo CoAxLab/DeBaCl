@@ -275,12 +275,16 @@ class ClusterTree:
 			
 			
 			
-	def pruneBySize(self, delta):
+	def pruneBySize(self, delta, mode='proportion'):
 		"""
 		Prune a tree by removing all nodes with too few members.
 		"""
 		
-		thresh = round(delta * self.n)
+		if mode == 'proportion':
+			thresh = round(delta * self.n)
+		else:
+			thresh = delta
+			
 		self.nodes = {k: v for k, v in self.nodes.iteritems() if len(v.members) > thresh}
 		
 		## remove pointers to children that no longer exist
