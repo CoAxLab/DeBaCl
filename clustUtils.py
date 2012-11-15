@@ -20,7 +20,7 @@ import munkres
 
 #########################
 ### CLASS DEFINITIONS ###
-#########################
+#########################-
 	
 class Clustering:
 	"""
@@ -379,7 +379,7 @@ def assignBackgroundPoints(X, clusters, method=None, k=1):
 		## get the background points
 		X_background = X[ix_background, :]
 
-		## compute distance between each background point and all cluster centers and optimal center
+		## distance between each background point and all cluster centers and optimal center
 		d = spdist.cdist(X_background, ctrs)
 		ctr_min = np.argmin(d, axis=1)
 		assignments[ix_background] = labels[ctr_min]	
@@ -411,6 +411,11 @@ def assignBackgroundPoints(X, clusters, method=None, k=1):
 		## use the mean shift algorithm to assign background points
 		print "Sorry, this method has not been implemented yet."
 		clust = None
+		
+		
+	elif method == 'zero':
+		assignments += 1
+
 
 	else:  # assume method == None
 		assignments[ix_background] = max(labels) + 1
