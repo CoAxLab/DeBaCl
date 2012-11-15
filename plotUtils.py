@@ -141,10 +141,10 @@ def makeFrame(title='', xlab='x', ylab='y'):
 	
 	
 	
-def makeFrame3D(title='', xlab='x', ylab='y', zlab='z'):
+def makeFrame3D(title='', xlab='x', ylab='y', zlab='z', size=(8,8)):
 	'''The basic framework for a 3D matplotlib plot.'''
 
-	fig = plt.figure(figsize=(8,8))
+	fig = plt.figure(figsize=size)
 	fig.suptitle(title, fontsize=14, weight='bold')
 	ax = fig.add_subplot(111, projection='3d')
 	fig.subplots_adjust(bottom=0.0, top=1.0, left=-0.05, right=0.98)
