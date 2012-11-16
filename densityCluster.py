@@ -2,8 +2,8 @@
 ## Brian P. Kent
 ## densityCluster.py
 ## Created: 20120821
-## Updated: 20120828
-## Classes and functions for density-based clustering.
+## Updated: 20121115
+## Classes and functions for density-based clustering and visualization.
 ##############################################################
 
 
@@ -342,7 +342,7 @@ class ClusterTree:
 		
 		
 		
-	def plot(self, mode, title=''):
+	def plot(self, height_mode='mass', width_mode='uniform', title=''):
 		"""
 		Make and return a plot of the cluster tree. For each root connected component,
 		traverse the branches recursively by depth-first search.
@@ -353,22 +353,31 @@ class ClusterTree:
 		splits = []
 		segmap = []
 
-		## Find the root connected components
+		## Find the root connected components and corresponding plot intervals
 		ix_root = [x for x in self.nodes.iterkeys() if self.nodes[x].parent == None]
 		n_root = len(ix_root)
-		n = sum([len(self.nodes[x].members) for x in ix_root])
+		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
+		n = sum(census)
+		
+		if width_mode == 'mass':
+			weights = census / n
+			intervals = np.cumsum(weights)
+			intervals = np.insert(intervals, 0, 0.0)
+		else:
+			intervals = np.linspace(0.0, 1.0, n_root+1)
+		
 		
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
-			interval = ((i*1.0)/n_root, (i+1.0)/n_root)
 			branch_segs, branch_splits, branch_segmap = constructTreeBranch(self, ix,
-				interval, mode)
+				(intervals[i], intervals[i+1]), height_mode, width_mode)
 			segments += branch_segs
 			splits += branch_splits
 			segmap += branch_segmap
 			
+			
 		## Find the fraction of nodes in each segment (to use as linewidths)
-		weights = [max(0.45, 5.0 * len(self.nodes[x].members)/n) for x in segmap]
+		thickness = [max(0.45, 5.0 * len(self.nodes[x].members)/n) for x in segmap]
 		
 		level_ticks = np.sort(list(set([v.start_level for v in self.nodes.itervalues()] + \
 			[v.end_level for v in self.nodes.itervalues()])))
@@ -380,7 +389,7 @@ class ClusterTree:
 
 	
 		## Make the plot
-		fig, ax = plt.subplots(1, figsize=(8, 8))
+		fig, ax = plt.subplots(1, figsize=(10, 10))
 		fig.suptitle(title, size=14, weight='bold')
 	
 		ax.set_xlabel("Connected component")
@@ -389,14 +398,14 @@ class ClusterTree:
 		ax.set_xticklabels([])
 
 		## Add the line segments
-		linecol = LineCollection(segments, linewidths=weights, colors='black')
+		linecol = LineCollection(segments, linewidths=thickness, colors='black')
 		linecol.set_picker(20)
 		ax.add_collection(linecol)
 
 		splitcol = LineCollection(splits, colors='black')
 		ax.add_collection(splitcol)
 
-		if mode=='levels':
+		if height_mode=='levels':
 			ax.set_ylabel("Level")
 			ymin = min([v.start_level for v in self.nodes.itervalues()])
 			ymax = max([v.end_level for v in self.nodes.itervalues()])
@@ -657,7 +666,7 @@ def generateTree(W, levels, bg_sets, mode='general'):
 #########################	
 ### UTILITY FUNCTIONS ###
 #########################
-def constructTreeBranch(T, ix, interval, mode):
+def constructTreeBranch(T, ix, interval, height_mode, width_mode):
 	"""
 	A ClusterTree plotting utility that computes the line segments, positions, and line
 	widths for a tree. Called recursively on each branch of the tree.
@@ -669,7 +678,7 @@ def constructTreeBranch(T, ix, interval, mode):
 	
 	xpos = (interval[0] + interval[1]) / 2.0
 	
-	if mode == 'levels':
+	if height_mode == 'levels':
 		start = [xpos, T.nodes[ix].start_level]
 		end = [xpos, T.nodes[ix].end_level]
 	else:
@@ -681,17 +690,31 @@ def constructTreeBranch(T, ix, interval, mode):
 	
 	children = T.nodes[ix].children
 	n_child = len(children)
+	parent_range = interval[1] - interval[0]
 	
+
 	if n_child > 0:
-		child_interval = (interval[1] - interval[0]) / n_child
+		
+		## get branch intervals
+		if width_mode == 'mass':
+			census = np.array([len(T.nodes[x].members) for x in children], dtype=np.float)
+			weights = census / sum(census)
+			child_intervals = np.cumsum(weights)
+			child_intervals = np.insert(child_intervals, 0, 0.0)
+		else:
+	#		child_interval = (interval[1] - interval[0]) / n_child
+			child_intervals = np.linspace(0.0, 1.0, n_child+1)
 	
 		for j, child in enumerate(children):
 		
-			branch_interval = (interval[0] + j * child_interval,
-				interval[0] + (j + 1) * child_interval)
+			branch_interval = (interval[0] + child_intervals[j] * parent_range,
+				interval[0] + child_intervals[j+1] * parent_range)
+		
+#			branch_interval = (interval[0] + j * child_interval,
+#				interval[0] + (j + 1) * child_interval)
 
 			## add split connectors to the child
-			if mode == 'levels':
+			if height_mode == 'levels':
 				start = [xpos, T.nodes[ix].end_level]
 				end = [np.mean(branch_interval), T.nodes[ix].end_level]
 			else:
@@ -702,7 +725,7 @@ def constructTreeBranch(T, ix, interval, mode):
 
 			## call the same branch constructor function on each child
 			branch_segs, branch_splits, branch_segmap = constructTreeBranch(T, child,
-				branch_interval, mode)
+				branch_interval, height_mode, width_mode)
 				
 			segments += branch_segs
 			splits += branch_splits
