@@ -33,13 +33,14 @@ class TreeComponentTool:
 	tree, represented by vertical line segments in the tree.
 	"""
 
-	def __init__(self, tree, pts, mode, output, s=20):
+	def __init__(self, tree, pts, height_mode='mass', width_mode='uniform',
+		output=['tree', 'scatter'], s=20):
+
 		self.T = tree
 		self.X = pts
 		self.output = output
 		self.size = s
-		self.component = None
-		self.fig, self.segmap = self.T.plot(mode)
+		self.fig, self.segmap = self.T.plot(height_mode, gap=0.15)
 		self.fig.suptitle('Cluster Tree Component Selector', fontsize=14, weight='bold')
 		
 		self.ax = self.fig.axes[0]
@@ -82,23 +83,23 @@ class TreeComponentTool:
 		Return the members of the component that is picked out.
 		"""
 	
-		## get the component members
-		artist = event.artist
+		## get the component members and subtree
 		ix_seg = event.ind[0]
 		node_ix = self.segmap[ix_seg]
 		self.component = self.T.nodes[node_ix].members
+		self.subtree = makeSubtree(self.T, node_ix)
 
 	
 		## draw confirmation text box
 		props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-		textstr = "Component computed!"
+		textstr = "Component selected!"
 		self.confirm.append(self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
 			fontsize=12, verticalalignment='top', bbox=props))
 		self.fig.canvas.draw()
 		
 		
 		# plot the component points in a new window (if output==True)
-		if self.output == True:
+		if 'scatter' in self.output:
 			n = self.X.shape[0]
 			
 			base_clr = [217.0 / 255.0] * 3 # light gray
@@ -116,13 +117,22 @@ class TreeComponentTool:
 			pts_fig.show()
 		
 		
+		## construct the new subtree and show it
+		if 'tree' in self.output:
+			subfig = self.subtree.plot()[0]
+			subfig.show()
+		
+		
 	def show(self):
 		self.fig.show()
 		
 		
-	def get_component(self):
+	def getComponent(self):
 		return self.component
 
+
+	def getSubtree(self):
+		return self.subtree
 
 
 
@@ -225,6 +235,15 @@ class ConnectedComponent:
 		self.start_mass = start_mass
 		self.end_mass = end_mass
 		self.members = members
+		
+		
+	def copy(self):
+		component = ConnectedComponent(self.idnum, self.parent, self.children,
+			self.start_level, self.end_level, self.start_mass, self.end_mass,
+			self.members)
+			
+		return component
+		
 
 
 
@@ -342,7 +361,7 @@ class ClusterTree:
 		
 		
 		
-	def plot(self, height_mode='mass', width_mode='uniform', title=''):
+	def plot(self, height_mode='mass', width_mode='uniform', title='', gap=0.05):
 		"""
 		Make and return a plot of the cluster tree. For each root connected component,
 		traverse the branches recursively by depth-first search.
@@ -410,7 +429,7 @@ class ClusterTree:
 			ymin = min([v.start_level for v in self.nodes.itervalues()])
 			ymax = max([v.end_level for v in self.nodes.itervalues()])
 			rng = ymax - ymin
-			ax.set_ylim(ymin - 0.15*rng, ymax + 0.05*rng)
+			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
 			ax.yaxis.grid(color='gray')
 
 			ax.set_yticks(level_ticks)
@@ -429,8 +448,10 @@ class ClusterTree:
 			ax.set_ylabel("Mass", rotation=270)
 			ax.yaxis.set_label_position('right')
 
+			ymin = min([v.start_mass for v in self.nodes.itervalues()])
 			ymax = max([v.end_mass for v in self.nodes.itervalues()])
-			ax.set_ylim(-0.15*ymax, 1.05*ymax)
+			rng = ymax - ymin
+			ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
 			ax.yaxis.grid(color='gray')
 
 			ax2 = ax.twinx()
@@ -778,6 +799,27 @@ def constructDensityGrid(density, mode='mass', n_grid=None):
 	return bg_sets, levels
 	
 	
+	
+def makeSubtree(tree, ix):
+	"""
+	Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
+	"""
+	
+	T = ClusterTree(bg_sets=[], levels=[])
+	T.nodes[ix] = tree.nodes[ix].copy()
+	T.nodes[ix].parent = None
+	queue = tree.nodes[ix].children[:]
+	
+	while len(queue) > 0:
+		branch_ix = queue.pop()
+		T.nodes[branch_ix] = tree.nodes[branch_ix]
+		queue += tree.nodes[branch_ix].children
+	
+	return T
+
+
+
+
 	
 
 
