@@ -368,7 +368,7 @@ class ClusterTree:
 		
 		
 	def plot(self, height_mode='mass', width_mode='uniform', xpos='middle', sort=True,
-		title='', gap=0.05):
+		title='', gap=0.05, color=False):
 		"""
 		Make and return a plot of the cluster tree. For each root connected component,
 		traverse the branches recursively by depth-first search.
@@ -380,7 +380,7 @@ class ClusterTree:
 		segmap = []
 
 		## Find the root connected components and corresponding plot intervals
-		ix_root = np.array([x for x in self.nodes.iterkeys() if self.nodes[x].parent == None])
+		ix_root = np.array([x for x in self.nodes.iterkeys() if self.nodes[x].parent is None])
 		n_root = len(ix_root)
 		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
 		n = sum(census)
@@ -426,7 +426,7 @@ class ClusterTree:
 		mass_tick_labels = [str(round(m, 2)) for m in mass_ticks]
 
 	
-		## Make the plot
+		## Set up the plot framework
 		fig, ax = plt.subplots(1, figsize=(10, 10))
 		fig.suptitle(title, size=14, weight='bold')
 	
@@ -435,14 +435,30 @@ class ClusterTree:
 		ax.set_xticks([])
 		ax.set_xticklabels([])
 
+
 		## Add the line segments
-		linecol = LineCollection(verts, linewidths=thickness, colors='black')
-		linecol.set_picker(20)
+		palette = plutl.Palette(use='scatter')
+
+		if color is True and len(ix_root) < np.alen(palette.colorset):
+			clr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
+			
+			for i, ix in enumerate(ix_root):
+				subtree = makeSubtree(self, ix)
+				c = palette.colorset[i, :]
+				ix_replace = np.in1d(segmap, subtree.nodes.keys())
+				clr[ix_replace] = c
+			
+		else:
+			clr = palette.black
+			
+		linecol = LineCollection(verts, linewidths=thickness, colors=clr)
+		splitcol = LineCollection(splits, colors=clr)
 		ax.add_collection(linecol)
-
-		splitcol = LineCollection(splits, colors='black')
 		ax.add_collection(splitcol)
+		linecol.set_picker(20)
 
+
+		## Make the plot
 		if height_mode=='levels':
 			ax.set_ylabel("Level")
 			ymin = min([v.start_level for v in self.nodes.itervalues()])
