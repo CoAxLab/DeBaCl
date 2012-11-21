@@ -38,9 +38,11 @@ class TreeComponentTool:
 
 		self.T = tree
 		self.X = pts
+		self.height_mode = height_mode
+		self.width_mode = width_mode
 		self.output = output
 		self.size = s
-		self.fig, self.segmap = self.T.plot(height_mode, gap=0.15)
+		self.fig, self.segmap = self.T.plot(height_mode, width_mode, gap=0.15)
 		self.fig.suptitle('Cluster Tree Component Selector', fontsize=14, weight='bold')
 		
 		self.ax = self.fig.axes[0]
@@ -119,7 +121,8 @@ class TreeComponentTool:
 		
 		## construct the new subtree and show it
 		if 'tree' in self.output:
-			subfig = self.subtree.plot()[0]
+			subfig = self.subtree.plot(height_mode=self.height_mode,
+				width_mode=self.width_mode)[0]
 			subfig.show()
 		
 		
@@ -353,30 +356,40 @@ class ClusterTree:
 		print head
 		
 		for k, v in self.nodes.iteritems():
-			line = '{0:<{ix}}{1.start_level:>{lambda1}.6f}{1.end_level:>{lambda2}.6f}'.format(k, v, len(v.members), **widths) + \
-				'{1.start_mass:>{alpha1}.6f}{1.end_mass:>{alpha2}.6f}'.format(k, v, len(v.members), **widths) + \
-				'{2:>{size}}{1.parent:>{parent}}{1.children:>{child}}'.format(k, v, len(v.members), **widths) 			
+			line = '{0:<{ix}}{1.start_level:>{lambda1}.6f}{1.end_level:>{lambda2}.6f}'.format(
+					k, v, len(v.members), **widths) + \
+				'{1.start_mass:>{alpha1}.6f}{1.end_mass:>{alpha2}.6f}'.format(
+					k, v, len(v.members), **widths) + \
+				'{2:>{size}}{1.parent:>{parent}}{1.children:>{child}}'.format(
+					k, v, len(v.members), **widths) 			
 			print line
 			
 		
 		
 		
-	def plot(self, height_mode='mass', width_mode='uniform', title='', gap=0.05):
+	def plot(self, height_mode='mass', width_mode='uniform', xpos='middle', sort=True,
+		title='', gap=0.05):
 		"""
 		Make and return a plot of the cluster tree. For each root connected component,
 		traverse the branches recursively by depth-first search.
 		"""
 
 		## Initialize the plot containers
-		segments = []
+		segments = {}
 		splits = []
 		segmap = []
 
 		## Find the root connected components and corresponding plot intervals
-		ix_root = [x for x in self.nodes.iterkeys() if self.nodes[x].parent == None]
+		ix_root = np.array([x for x in self.nodes.iterkeys() if self.nodes[x].parent == None])
 		n_root = len(ix_root)
 		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
 		n = sum(census)
+		
+		if sort is True:
+			seniority = np.argsort(census)[::-1]
+			ix_root = ix_root[seniority]
+			census = census[seniority]
+	
 		
 		if width_mode == 'mass':
 			weights = census / n
@@ -388,16 +401,22 @@ class ClusterTree:
 		
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
-			branch_segs, branch_splits, branch_segmap = constructTreeBranch(self, ix,
-				(intervals[i], intervals[i+1]), height_mode, width_mode)
-			segments += branch_segs
+			branch_segs, branch_splits, branch_segmap = constructBranchMap(self, ix,
+				(intervals[i], intervals[i+1]), height_mode, width_mode, xpos, sort)
+			segments = dict(segments.items() + branch_segs.items())
 			splits += branch_splits
 			segmap += branch_segmap
+			
+			
+		## get the the vertical line segments in order of the segment map (segmap)
+		verts = [segments[k] for k in segmap]
 			
 			
 		## Find the fraction of nodes in each segment (to use as linewidths)
 		thickness = [max(0.45, 5.0 * len(self.nodes[x].members)/n) for x in segmap]
 		
+		
+		## Find the right tick marks for the plot
 		level_ticks = np.sort(list(set([v.start_level for v in self.nodes.itervalues()] + \
 			[v.end_level for v in self.nodes.itervalues()])))
 		level_tick_labels = [str(round(lvl, 2)) for lvl in level_ticks]
@@ -417,7 +436,7 @@ class ClusterTree:
 		ax.set_xticklabels([])
 
 		## Add the line segments
-		linecol = LineCollection(segments, linewidths=thickness, colors='black')
+		linecol = LineCollection(verts, linewidths=thickness, colors='black')
 		linecol.set_picker(20)
 		ax.add_collection(linecol)
 
@@ -687,70 +706,95 @@ def generateTree(W, levels, bg_sets, mode='general'):
 #########################	
 ### UTILITY FUNCTIONS ###
 #########################
-def constructTreeBranch(T, ix, interval, height_mode, width_mode):
-	"""
-	A ClusterTree plotting utility that computes the line segments, positions, and line
-	widths for a tree. Called recursively on each branch of the tree.
-	"""
+def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 
-	segments = []
-	splits = []
-	segmap = []
-	
-	xpos = (interval[0] + interval[1]) / 2.0
-	
-	if height_mode == 'levels':
-		start = [xpos, T.nodes[ix].start_level]
-		end = [xpos, T.nodes[ix].end_level]
-	else:
-		start = [xpos, T.nodes[ix].start_mass]
-		end = [xpos, T.nodes[ix].end_mass]
-	segments.append((start, end))
-	
-	segmap.append(ix)
-	
-	children = T.nodes[ix].children
+	## get children
+	children = np.array(T.nodes[ix].children)
 	n_child = len(children)
-	parent_range = interval[1] - interval[0]
 	
+	
+	## if there's no children, just one segment at the interval mean
+	if n_child == 0:
+		xpos = np.mean(interval)
+		segmap = [ix]
+		segments = {}
+		splits = []
 
-	if n_child > 0:
+		if height_mode == 'levels':
+			segments[ix] = (([xpos, T.nodes[ix].start_level], [xpos, T.nodes[ix].end_level]))
+		else:
+			segments[ix] = (([xpos, T.nodes[ix].start_mass], [xpos, T.nodes[ix].end_mass]))
+
 		
-		## get branch intervals
+	
+	## else, construct child branches then figure out parent's position				
+	else:
+		parent_range = interval[1] - interval[0]
+		segmap = [ix]
+		segments = {}
+		splits = []
+		
+		census = np.array([len(T.nodes[x].members) for x in children], dtype=np.float)
+		weights = census / sum(census)
+		
+		if sort is True:
+			seniority = np.argsort(weights)[::-1]
+			children = children[seniority]
+			weights = weights[seniority]
+
+		## get relative branch intervals
 		if width_mode == 'mass':
-			census = np.array([len(T.nodes[x].members) for x in children], dtype=np.float)
-			weights = census / sum(census)
 			child_intervals = np.cumsum(weights)
 			child_intervals = np.insert(child_intervals, 0, 0.0)
 		else:
-	#		child_interval = (interval[1] - interval[0]) / n_child
 			child_intervals = np.linspace(0.0, 1.0, n_child+1)
-	
+		
+		## loop over the children
 		for j, child in enumerate(children):
 		
+			## translate local interval to absolute interval
 			branch_interval = (interval[0] + child_intervals[j] * parent_range,
 				interval[0] + child_intervals[j+1] * parent_range)
-		
-#			branch_interval = (interval[0] + j * child_interval,
-#				interval[0] + (j + 1) * child_interval)
 
-			## add split connectors to the child
-			if height_mode == 'levels':
-				start = [xpos, T.nodes[ix].end_level]
-				end = [np.mean(branch_interval), T.nodes[ix].end_level]
-			else:
-				start = [xpos, T.nodes[ix].end_mass]
-				end = [np.mean(branch_interval), T.nodes[ix].end_mass]
+			## recurse on the child
+			branch_segs, branch_splits, branch_segmap = constructBranchMap(T, child,
+				branch_interval, height_mode, width_mode, xpos, sort)
 				
-			splits.append((start, end))
-
-			## call the same branch constructor function on each child
-			branch_segs, branch_splits, branch_segmap = constructTreeBranch(T, child,
-				branch_interval, height_mode, width_mode)
-				
-			segments += branch_segs
-			splits += branch_splits
 			segmap += branch_segmap
+			splits += branch_splits
+			segments = dict(segments.items() + branch_segs.items())
+			
+			
+		## find the middle of the children's x-position and make vertical segment ix
+		children_xpos = np.array([segments[k][0][0] for k in children])
+		
+		if xpos == 'middle':
+			xpos = np.mean(children_xpos)
+		else:
+			xpos_order = np.argsort(children_xpos)
+			ordered_xpos = children_xpos[xpos_order]
+			ordered_weights = weights[xpos_order]
+			xpos = sum([pos*w for pos, w in zip(ordered_xpos, ordered_weights[::-1])])
+		
+		
+		## add horizontal segments to the list
+		for child in children:
+			child_xpos = segments[child][0][0]
+		
+			if height_mode == 'levels':
+				splits.append(([xpos, T.nodes[ix].end_level],
+					[child_xpos, T.nodes[ix].end_level]))
+			else:
+				splits.append(([xpos, T.nodes[ix].end_mass],
+					[child_xpos, T.nodes[ix].end_mass]))
+				
+	
+		## add vertical segment for current node
+		if height_mode == 'levels':
+			segments[ix] = (([xpos, T.nodes[ix].start_level], [xpos, T.nodes[ix].end_level]))
+		else:
+			segments[ix] = (([xpos, T.nodes[ix].start_mass], [xpos, T.nodes[ix].end_mass]))
+	
 	
 	return segments, splits, segmap
 	
