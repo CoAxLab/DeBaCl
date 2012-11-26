@@ -42,7 +42,7 @@ class TreeComponentTool:
 		self.width_mode = width_mode
 		self.output = output
 		self.size = s
-		self.fig, self.segmap = self.T.plot(height_mode, width_mode, gap=0.15)
+		self.fig, self.segmap, self.segments, self.splits = self.T.plot(height_mode, width_mode, gap=0.15)
 		self.fig.suptitle('Cluster Tree Component Selector', fontsize=14, weight='bold')
 		
 		self.ax = self.fig.axes[0]
@@ -62,7 +62,12 @@ class TreeComponentTool:
 		"""
 		Gets rid of the confirmation text box if it's present.
 		"""
+		
+		## reset segments to all be black
+		self.ax.collections[0].set_color('black')
+		self.ax.collections[1].set_color('black')
 
+		## deal with confirmation box
 		if len(self.confirm) == 0:
 			self.remove_flag = False
 			
@@ -90,8 +95,8 @@ class TreeComponentTool:
 		node_ix = self.segmap[ix_seg]
 		self.component = self.T.nodes[node_ix].members
 		self.subtree = makeSubtree(self.T, node_ix)
-
-	
+		
+		
 		## draw confirmation text box
 		props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 		textstr = "Component selected!"
@@ -99,6 +104,18 @@ class TreeComponentTool:
 			fontsize=12, verticalalignment='top', bbox=props))
 		self.fig.canvas.draw()
 		
+		
+		## recolor the original tree
+		palette = plutl.Palette(use='scatter')
+		c0 = palette.colorset[0, :]
+
+		# set vertical segment colors
+		segclrs = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
+		ix_replace = np.in1d(self.segmap, self.subtree.nodes.keys())
+		segclrs[ix_replace] = c0
+		self.ax.collections[0].set_color(segclrs)
+		self.fig.canvas.draw()
+
 		
 		# plot the component points in a new window (if output==True)
 		if 'scatter' in self.output:
@@ -124,8 +141,8 @@ class TreeComponentTool:
 			subfig = self.subtree.plot(height_mode=self.height_mode,
 				width_mode=self.width_mode)[0]
 			subfig.show()
-		
-		
+			
+			
 	def show(self):
 		self.fig.show()
 		
@@ -368,7 +385,7 @@ class ClusterTree:
 		
 		
 	def plot(self, height_mode='mass', width_mode='uniform', xpos='middle', sort=True,
-		title='', gap=0.05, color=False):
+		title='', gap=0.05, color=False, color_nodes=None):
 		"""
 		Make and return a plot of the cluster tree. For each root connected component,
 		traverse the branches recursively by depth-first search.
@@ -376,11 +393,11 @@ class ClusterTree:
 
 		## Initialize the plot containers
 		segments = {}
-		splits = []
+		splits = {}
 		segmap = []
 
 		## Find the root connected components and corresponding plot intervals
-		ix_root = np.array([x for x in self.nodes.iterkeys() if self.nodes[x].parent is None])
+		ix_root = np.array([k for k, v in self.nodes.iteritems() if v.parent is None])
 		n_root = len(ix_root)
 		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
 		n = sum(census)
@@ -404,16 +421,16 @@ class ClusterTree:
 			branch_segs, branch_splits, branch_segmap = constructBranchMap(self, ix,
 				(intervals[i], intervals[i+1]), height_mode, width_mode, xpos, sort)
 			segments = dict(segments.items() + branch_segs.items())
-			splits += branch_splits
+			splits = dict(splits.items() + branch_splits.items())
 			segmap += branch_segmap
 			
 			
 		## get the the vertical line segments in order of the segment map (segmap)
 		verts = [segments[k] for k in segmap]
-			
+		
 			
 		## Find the fraction of nodes in each segment (to use as linewidths)
-		thickness = [max(0.45, 5.0 * len(self.nodes[x].members)/n) for x in segmap]
+		thickness = [max(0.45, 10.0 * len(self.nodes[x].members)/n) for x in segmap]
 		
 		
 		## Find the right tick marks for the plot
@@ -437,25 +454,48 @@ class ClusterTree:
 
 
 		## Add the line segments
-		palette = plutl.Palette(use='scatter')
-
-		if color is True and len(ix_root) < np.alen(palette.colorset):
-			clr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
+		clr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
+		splitclrs = 'black'
 			
-			for i, ix in enumerate(ix_root):
-				subtree = makeSubtree(self, ix)
-				c = palette.colorset[i, :]
-				ix_replace = np.in1d(segmap, subtree.nodes.keys())
-				clr[ix_replace] = c
-			
+		if color is False:
+			splitsegs = splits.values()
+		
 		else:
-			clr = palette.black
+			palette = plutl.Palette(use='scatter')
+			clr_split = {k:[v, [0.0, 0.0, 0.0]] for k, v in splits.iteritems()}
+
+			if color_nodes is None:
+				if len(ix_root) > 1:
+					active_nodes = ix_root
+				else:
+					active_nodes = self.nodes[ix_root[0]].children
+			else:
+				active_nodes = color_nodes
+				
+			if len(active_nodes) <= np.alen(palette.colorset):
+				for i, ix in enumerate(active_nodes):
+					c = palette.colorset[i, :]
+					subtree = makeSubtree(self, ix)
+
+					## set verical colors
+					ix_replace = np.in1d(segmap, subtree.nodes.keys())
+					clr[ix_replace] = c
+
+					## set horizontal colors
+					for subnode in subtree.nodes.keys():
+						if subnode in clr_split.keys():
+							clr_split[subnode][1] = c
+									
+				splitsegs = [v[0] for v in clr_split.itervalues()]
+				splitclrs = [v[1] for v in clr_split.itervalues()]
+		
 			
 		linecol = LineCollection(verts, linewidths=thickness, colors=clr)
-		splitcol = LineCollection(splits, colors=clr)
 		ax.add_collection(linecol)
-		ax.add_collection(splitcol)
 		linecol.set_picker(20)
+		
+		splitcol = LineCollection(splitsegs, colors=splitclrs)
+		ax.add_collection(splitcol)
 
 
 		## Make the plot
@@ -506,7 +546,7 @@ class ClusterTree:
 			ax2.yaxis.tick_left()
 			
 	
-		return fig, segmap
+		return fig, segmap, segments, splits
 		
 		
 		
@@ -734,7 +774,7 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 		xpos = np.mean(interval)
 		segmap = [ix]
 		segments = {}
-		splits = []
+		splits = {}
 
 		if height_mode == 'levels':
 			segments[ix] = (([xpos, T.nodes[ix].start_level], [xpos, T.nodes[ix].end_level]))
@@ -748,7 +788,7 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 		parent_range = interval[1] - interval[0]
 		segmap = [ix]
 		segments = {}
-		splits = []
+		splits = {}
 		
 		census = np.array([len(T.nodes[x].members) for x in children], dtype=np.float)
 		weights = census / sum(census)
@@ -777,7 +817,7 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 				branch_interval, height_mode, width_mode, xpos, sort)
 				
 			segmap += branch_segmap
-			splits += branch_splits
+			splits = dict(splits.items() + branch_splits.items())
 			segments = dict(segments.items() + branch_segs.items())
 			
 			
@@ -798,11 +838,11 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 			child_xpos = segments[child][0][0]
 		
 			if height_mode == 'levels':
-				splits.append(([xpos, T.nodes[ix].end_level],
-					[child_xpos, T.nodes[ix].end_level]))
+				splits[child] = ([xpos, T.nodes[ix].end_level],
+					[child_xpos, T.nodes[ix].end_level])
 			else:
-				splits.append(([xpos, T.nodes[ix].end_mass],
-					[child_xpos, T.nodes[ix].end_mass]))
+				splits[child] = ([xpos, T.nodes[ix].end_mass],
+					[child_xpos, T.nodes[ix].end_mass])
 				
 	
 		## add vertical segment for current node
