@@ -31,8 +31,8 @@ def addJitter(x, width=0.25):
 	
 	
 	
-def makeColorMatrix(n, bg_color, bg_alpha, ix=None, fg_color=[228/255.0, 26/255.0, 28/255.0],
-	fg_alpha=1.0):
+def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
+	fg_color=[228/255.0, 26/255.0, 28/255.0], fg_alpha=1.0):
 
 	rgba = np.zeros((n, 4), dtype=np.float)
 	rgba[:, 0:3] = bg_color

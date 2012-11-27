@@ -219,7 +219,7 @@ class TreeClusterTool:
 
 		## get the clusters and the clusters attribute
 		cut = self.line.get_ydata()[0]
-		self.clusters = self.T.clusterUpperSet(cut, mode=self.height_mode)
+		self.clusters, active_nodes = self.T.clusterUpperSet(cut, mode=self.height_mode)
 		
 
 		## draw confirmation text box
@@ -228,6 +228,30 @@ class TreeClusterTool:
 		self.confirm = self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
 			fontsize=12, verticalalignment='top', bbox=props)
 		self.fig.canvas.draw()
+		
+		
+		## recolor the existing plot
+		palette = plutl.Palette(use='scatter')
+
+		# set vertical segment colors
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
+
+		for i, node_ix in enumerate(active_nodes):
+			subtree = makeSubtree(self.T, node_ix)
+
+			# set vertical segment color
+			seg_replace = np.in1d(self.segmap, subtree.nodes.keys())
+			segclr[seg_replace] = palette.colorset[i, :]
+
+			# set horizontal segment color
+			split_replace = np.in1d(self.splitmap, subtree.nodes.keys())
+			splitclr[split_replace] = palette.colorset[i, :]
+		
+		self.ax.collections[0].set_color(segclr)
+		self.ax.collections[1].set_color(splitclr)
+		self.fig.canvas.draw()
+
 
 		## plot the clustered points in a new window
 		if 'scatter' in self.output:
@@ -590,7 +614,7 @@ class ClusterTree:
 			points.extend(cluster_pts)
 			cluster += ([i] * len(cluster_pts))
 
-		return np.array([points, cluster], dtype=np.int).T
+		return np.array([points, cluster], dtype=np.int).T, active_nodes
 
 
 
