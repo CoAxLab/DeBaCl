@@ -42,7 +42,8 @@ class TreeComponentTool:
 		self.width_mode = width_mode
 		self.output = output
 		self.size = s
-		self.fig, self.segmap, self.segments, self.splits = self.T.plot(height_mode, width_mode, gap=0.15)
+		self.fig, self.segments, self.segmap, self.splits, self.splitmap = self.T.plot(
+			height_mode, width_mode, gap=0.15)
 		self.fig.suptitle('Cluster Tree Component Selector', fontsize=14, weight='bold')
 		
 		self.ax = self.fig.axes[0]
@@ -50,7 +51,6 @@ class TreeComponentTool:
 		segments = self.ax.collections[0]  # the line collection
 		segments.set_picker(15)
 
-		
 		self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
 		self.fig.canvas.mpl_connect('button_press_event', self.handle_click)
 		
@@ -106,14 +106,20 @@ class TreeComponentTool:
 		
 		
 		## recolor the original tree
-		palette = plutl.Palette(use='scatter')
-		c0 = palette.colorset[0, :]
+		c = plutl.Palette(use='scatter').colorset[0, :]
 
 		# set vertical segment colors
-		segclrs = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
 		ix_replace = np.in1d(self.segmap, self.subtree.nodes.keys())
-		segclrs[ix_replace] = c0
-		self.ax.collections[0].set_color(segclrs)
+		segclr[ix_replace] = c
+		self.ax.collections[0].set_color(segclr)
+		
+		# set horizontal segment colors
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
+		ix_replace = np.in1d(self.splitmap, self.subtree.nodes.keys())
+		splitclr[ix_replace] = c
+		self.ax.collections[1].set_color(splitclr)
+		
 		self.fig.canvas.draw()
 
 		
@@ -163,15 +169,20 @@ class TreeClusterTool:
 	a density tree.
 	"""
 
-	def __init__(self, tree, pts, mode, output):
+	def __init__(self, tree, pts, height_mode='mass', width_mode='uniform',
+		output=['tree', 'scatter'], s=20):
+		
 		self.T = tree
 		self.X = pts
-		self.mode = mode
+		self.height_mode = height_mode
+		self.width_mode = width_mode
 		self.output = output
+		self.size = s		
 		self.clusters = None
-		self.fig, self.segmap = self.T.plot(mode)
-		self.fig.suptitle('Cluster Tree Clustering Tool', fontsize=14, weight='bold')
 		
+		self.fig, self.segments, self.segmap, self.splits, self.splitmap = self.T.plot(
+			height_mode, width_mode, gap=0.15)
+		self.fig.suptitle('Cluster Tree Clustering Tool', fontsize=14, weight='bold')
 		self.ax = self.fig.axes[0]
 		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
 		
@@ -187,6 +198,10 @@ class TreeClusterTool:
 		
 	
 	def handle_click(self, event):
+
+		## reset color of all line segments	to be black
+		self.ax.collections[0].set_color('black')
+		self.ax.collections[1].set_color('black')
 	
 		## get rid of the confirmation text box if it's there.
 		if self.confirm != None:
@@ -204,7 +219,7 @@ class TreeClusterTool:
 
 		## get the clusters and the clusters attribute
 		cut = self.line.get_ydata()[0]
-		self.clusters = self.T.clusterUpperSet(cut, mode=self.mode)
+		self.clusters = self.T.clusterUpperSet(cut, mode=self.height_mode)
 		
 
 		## draw confirmation text box
@@ -215,7 +230,7 @@ class TreeClusterTool:
 		self.fig.canvas.draw()
 
 		## plot the clustered points in a new window
-		if self.output == True:
+		if 'scatter' in self.output:
 			n = self.X.shape[0]
 			base_clr = [217.0 / 255.0] * 3  ## light gray
 			black = [0.0, 0.0, 0.0]
@@ -395,6 +410,7 @@ class ClusterTree:
 		segments = {}
 		splits = {}
 		segmap = []
+		splitmap = []
 
 		## Find the root connected components and corresponding plot intervals
 		ix_root = np.array([k for k, v in self.nodes.iteritems() if v.parent is None])
@@ -418,16 +434,17 @@ class ClusterTree:
 		
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
-			branch_segs, branch_splits, branch_segmap = constructBranchMap(self, ix,
-				(intervals[i], intervals[i+1]), height_mode, width_mode, xpos, sort)
+			branch_segs, branch_splits, branch_segmap, branch_splitmap = constructBranchMap(
+				self, ix, (intervals[i], intervals[i+1]), height_mode, width_mode, xpos, sort)
 			segments = dict(segments.items() + branch_segs.items())
 			splits = dict(splits.items() + branch_splits.items())
 			segmap += branch_segmap
+			splitmap += branch_splitmap
 			
 			
 		## get the the vertical line segments in order of the segment map (segmap)
 		verts = [segments[k] for k in segmap]
-		
+		lats = [splits[k] for k in splitmap]
 			
 		## Find the fraction of nodes in each segment (to use as linewidths)
 		thickness = [max(0.45, 10.0 * len(self.nodes[x].members)/n) for x in segmap]
@@ -454,15 +471,11 @@ class ClusterTree:
 
 
 		## Add the line segments
-		clr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
-		splitclrs = 'black'
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
 			
-		if color is False:
-			splitsegs = splits.values()
-		
-		else:
+		if color is True:
 			palette = plutl.Palette(use='scatter')
-			clr_split = {k:[v, [0.0, 0.0, 0.0]] for k, v in splits.iteritems()}
 
 			if color_nodes is None:
 				if len(ix_root) > 1:
@@ -479,22 +492,18 @@ class ClusterTree:
 
 					## set verical colors
 					ix_replace = np.in1d(segmap, subtree.nodes.keys())
-					clr[ix_replace] = c
+					segclr[ix_replace] = c
 
 					## set horizontal colors
-					for subnode in subtree.nodes.keys():
-						if subnode in clr_split.keys():
-							clr_split[subnode][1] = c
-									
-				splitsegs = [v[0] for v in clr_split.itervalues()]
-				splitclrs = [v[1] for v in clr_split.itervalues()]
-		
+					ix_replace = np.in1d(splitmap, subtree.nodes.keys())									
+					splitclr[ix_replace] = c
+					
 			
-		linecol = LineCollection(verts, linewidths=thickness, colors=clr)
+		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
 		ax.add_collection(linecol)
 		linecol.set_picker(20)
 		
-		splitcol = LineCollection(splitsegs, colors=splitclrs)
+		splitcol = LineCollection(lats, colors=splitclr)
 		ax.add_collection(splitcol)
 
 
@@ -546,7 +555,7 @@ class ClusterTree:
 			ax2.yaxis.tick_left()
 			
 	
-		return fig, segmap, segments, splits
+		return fig, segments, segmap, splits, splitmap
 		
 		
 		
@@ -772,9 +781,10 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 	## if there's no children, just one segment at the interval mean
 	if n_child == 0:
 		xpos = np.mean(interval)
-		segmap = [ix]
 		segments = {}
+		segmap = [ix]
 		splits = {}
+		splitmap = []
 
 		if height_mode == 'levels':
 			segments[ix] = (([xpos, T.nodes[ix].start_level], [xpos, T.nodes[ix].end_level]))
@@ -786,9 +796,10 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 	## else, construct child branches then figure out parent's position				
 	else:
 		parent_range = interval[1] - interval[0]
-		segmap = [ix]
 		segments = {}
+		segmap = [ix]
 		splits = {}
+		splitmap = []
 		
 		census = np.array([len(T.nodes[x].members) for x in children], dtype=np.float)
 		weights = census / sum(census)
@@ -813,10 +824,11 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 				interval[0] + child_intervals[j+1] * parent_range)
 
 			## recurse on the child
-			branch_segs, branch_splits, branch_segmap = constructBranchMap(T, child,
-				branch_interval, height_mode, width_mode, xpos, sort)
+			branch_segs, branch_splits, branch_segmap, branch_splitmap = constructBranchMap(
+				T, child, branch_interval, height_mode, width_mode, xpos, sort)
 				
 			segmap += branch_segmap
+			splitmap += branch_splitmap
 			splits = dict(splits.items() + branch_splits.items())
 			segments = dict(segments.items() + branch_segs.items())
 			
@@ -835,6 +847,7 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 		
 		## add horizontal segments to the list
 		for child in children:
+			splitmap.append(child)
 			child_xpos = segments[child][0][0]
 		
 			if height_mode == 'levels':
@@ -852,7 +865,7 @@ def constructBranchMap(T, ix, interval, height_mode, width_mode, xpos, sort):
 			segments[ix] = (([xpos, T.nodes[ix].start_mass], [xpos, T.nodes[ix].end_mass]))
 	
 	
-	return segments, splits, segmap
+	return segments, splits, segmap, splitmap
 	
 
 
