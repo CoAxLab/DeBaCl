@@ -17,6 +17,7 @@ import plotUtils as plutl
 
 import numpy as np
 import scipy.spatial.distance as spdist
+import scipy.io as spio
 import igraph as igr
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -34,7 +35,7 @@ class TreeComponentTool:
 	"""
 
 	def __init__(self, tree, pts, height_mode='mass', width_mode='uniform',
-		output=['tree', 'scatter'], s=20):
+		output=['tree', 'scatter'], s=20, title=''):
 
 		self.T = tree
 		self.X = pts
@@ -44,7 +45,7 @@ class TreeComponentTool:
 		self.size = s
 		self.fig, self.segments, self.segmap, self.splits, self.splitmap = self.T.plot(
 			height_mode, width_mode, gap=0.15)
-		self.fig.suptitle('Cluster Tree Component Selector', fontsize=14, weight='bold')
+		self.fig.suptitle(title, fontsize=14, weight='bold')
 		
 		self.ax = self.fig.axes[0]
 		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
@@ -102,24 +103,23 @@ class TreeComponentTool:
 		textstr = "Component selected!"
 		self.confirm.append(self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
 			fontsize=12, verticalalignment='top', bbox=props))
-		self.fig.canvas.draw()
-		
+				
 		
 		## recolor the original tree
-		c = plutl.Palette(use='scatter').colorset[0, :]
+		palette = plutl.Palette(use='scatter')
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
 		# set vertical segment colors
-		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
 		ix_replace = np.in1d(self.segmap, self.subtree.nodes.keys())
-		segclr[ix_replace] = c
-		self.ax.collections[0].set_color(segclr)
+		segclr[ix_replace] = palette.colorset[0, :]
 		
 		# set horizontal segment colors
-		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 		ix_replace = np.in1d(self.splitmap, self.subtree.nodes.keys())
-		splitclr[ix_replace] = c
+		splitclr[ix_replace] = palette.colorset[0, :]
+
+		self.ax.collections[0].set_color(segclr)
 		self.ax.collections[1].set_color(splitclr)
-		
 		self.fig.canvas.draw()
 
 		
@@ -170,7 +170,7 @@ class TreeClusterTool:
 	"""
 
 	def __init__(self, tree, pts, height_mode='mass', width_mode='uniform',
-		output=['tree', 'scatter'], s=20):
+		output=['tree', 'scatter'], s=20, title=''):
 		
 		self.T = tree
 		self.X = pts
@@ -182,7 +182,7 @@ class TreeClusterTool:
 		
 		self.fig, self.segments, self.segmap, self.splits, self.splitmap = self.T.plot(
 			height_mode, width_mode, gap=0.15)
-		self.fig.suptitle('Cluster Tree Clustering Tool', fontsize=14, weight='bold')
+		self.fig.suptitle(title, fontsize=14, weight='bold')
 		self.ax = self.fig.axes[0]
 		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
 		
@@ -471,7 +471,7 @@ class ClusterTree:
 		lats = [splits[k] for k in splitmap]
 			
 		## Find the fraction of nodes in each segment (to use as linewidths)
-		thickness = [max(0.45, 10.0 * len(self.nodes[x].members)/n) for x in segmap]
+		thickness = [max(0.5, 12.0 * len(self.nodes[x].members)/n) for x in segmap]
 		
 		
 		## Find the right tick marks for the plot
@@ -519,7 +519,7 @@ class ClusterTree:
 					segclr[ix_replace] = c
 
 					## set horizontal colors
-					ix_replace = np.in1d(splitmap, subtree.nodes.keys())									
+					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
 					splitclr[ix_replace] = c
 					
 			
@@ -692,8 +692,35 @@ class ClusterTree:
 			cluster += ([i] * len(cluster_pts))
 
 		return np.array([points, cluster], dtype=np.int).T
+		
+		
+	
+	def save(self, fname):
+		"""
+		Save the tree objects to file.
+		"""
+		
+		tree_dict = {
+			'bg_sets': self.bg_sets,
+			'levels': self.levels,
+			'idnums': [x.idnum for x in self.nodes.values()],
+			'start_levels': [x.start_level for x in self.nodes.values()],
+			'end_levels': [x.end_level for x in self.nodes.values()],
+			'start_mass': [x.start_mass for x in self.nodes.values()],
+			'end_mass': [x.end_mass for x in self.nodes.values()],
+			'parents': [(-1 if x.parent is None else x.parent) for x in self.nodes.values()],
+			'children': [x.children for x in self.nodes.values()],
+			'members': [x.members for x in self.nodes.values()]
+			}
 
-
+		spio.savemat(fname, tree_dict)
+		
+		
+#		self.children = children
+#		self.members = members
+		
+		
+		
 		
 		
 		
@@ -955,6 +982,36 @@ def makeSubtree(tree, ix):
 	return T
 
 
+
+def loadTree(fname):
+	"""
+	Load a saved tree from file.
+	"""
+	
+	indata = spio.loadmat(fname)
+	
+	## format inputs
+	levels = list(indata['levels'].flatten())
+	bg_sets = [np.array(x[0].flatten()) for x in indata['bg_sets']]
+	start_levels = indata['start_levels'].flatten()
+	end_levels = indata['end_levels'].flatten()
+	start_mass = indata['start_mass'].flatten()
+	end_mass = indata['end_mass'].flatten()
+	parents = [(None if x == -1 else x) for x in indata['parents'].flatten()]
+	children = [list(x[0].flatten()) for x in indata['children']]
+	members = [list(x[0].flatten()) for x in indata['members']]
+	
+	## create tree
+	T = ClusterTree(bg_sets, levels)
+	
+	## add nodes to the tree
+	nodes = {}
+	for i, k in enumerate(indata['idnums'].flatten()):
+		nodes[k] = ConnectedComponent(k, parents[i], children[i], start_levels[i],
+			end_levels[i], start_mass[i], end_mass[i], members[i])
+		
+	T.nodes = nodes
+	return T
 
 
 	
