@@ -316,24 +316,6 @@ def findElbow():
 ### GENERIC UTILITY FUNCTIONS ###
 #################################
 
-def arrayMatch(y, x):
-	"""
-	Returns the index in x for each element in y. Based closely on the HYRY's answer on
-	stackoverflow.com at http://stackoverflow.com/questions/8251541/numpy-for-every-element-
-	in-one-array-find-the-index-in-another-array
-	"""
-	
-	index = np.argsort(x)
-	sorted_x = x[index]
-	sorted_index = np.searchsorted(sorted_x, y)
-	yindex = np.take(index, sorted_index, mode='clip')
-	mask = x[yindex] != y
-	
-	return yindex, mask
-	
-	
-
-
 def drawSample(n, k):
 	"""
 	Chooses k indices from range(n) without replacement by shuffling range(n) uniformly over
@@ -425,19 +407,7 @@ def assignBackgroundPoints(X, clusters, method=None, k=1):
 
 	
 
-def consecutiveLabels(x):
-	"""
-	Relabels the integers in x to be consecutive whole numbers.
-	"""
-	
-	x = np.asarray(x)
-	out = np.zeros(x.shape, dtype=np.int) - 1
-	
-	for i, c in enumerate(np.unique(x)):
-		ix = np.where(x == c)[0]
-		out[ix] = i
 
-	return out
 	
 	
 	
