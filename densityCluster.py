@@ -121,7 +121,7 @@ class TreeComponentTool:
 		self.ax.collections[0].set_color(segclr)
 		self.ax.collections[1].set_color(splitclr)
 		self.fig.canvas.draw()
-
+		
 		
 		# plot the component points in a new window (if output==True)
 		if 'scatter' in self.output:
@@ -471,7 +471,7 @@ class ClusterTree:
 		lats = [splits[k] for k in splitmap]
 			
 		## Find the fraction of nodes in each segment (to use as linewidths)
-		thickness = [max(0.5, 12.0 * len(self.nodes[x].members)/n) for x in segmap]
+		thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n) for x in segmap]
 		
 		
 		## Find the right tick marks for the plot
@@ -691,7 +691,7 @@ class ClusterTree:
 			points.extend(cluster_pts)
 			cluster += ([i] * len(cluster_pts))
 
-		return np.array([points, cluster], dtype=np.int).T
+		return np.array([points, cluster], dtype=np.int).T, active_nodes
 		
 		
 	
