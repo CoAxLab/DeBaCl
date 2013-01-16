@@ -13,9 +13,13 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
 
+import matplotlib as mpl
+mpl.rc('axes', labelsize=18)
+mpl.rc('axes', titlesize=22) 
+mpl.rc('xtick', labelsize=14)
+mpl.rc('ytick', labelsize=14) 
 
 
 
@@ -23,10 +27,10 @@ from mpl_toolkits.mplot3d import Axes3D
 ### UTILITY FUNCTIONS AND CLASSES ###
 #####################################
 
-def addJitter(x, width=0.25):
+def addJitter(x, width=0.5):
 	'''Add uniformly distributed jittering to each entry in the numpy vector x.'''
 	
-	return x + 0.5*np.random.random(np.alen(x)) - 0.25
+	return x + width*np.random.random(np.alen(x)) - width/2.0
 	
 	
 	
@@ -132,12 +136,13 @@ class Palette:
 def makeFrame(title='', xlab='x', ylab='y'):
 	'''The basic framework for a matplotlib plot.'''
 
-	fig = plt.figure(figsize=(8,8))
-	fig.suptitle(title, fontsize=14, weight='bold')
+	fig = plt.figure(figsize=(9, 9))
+#	fig.suptitle(title, weight='bold')
 	ax = fig.add_subplot(111)
-	ax.set_xlabel(xlab); ax.set_ylabel(ylab, rotation=0)
+	ax.set_title(title)
+	ax.set_xlabel(xlab); ax.set_ylabel(ylab)
 	
-	return fig	
+	return fig, ax
 	
 	
 	
@@ -146,7 +151,7 @@ def makeFrame3D(title='', xlab='x', ylab='y', zlab='z', size=(8,8)):
 	'''The basic framework for a 3D matplotlib plot.'''
 
 	fig = plt.figure(figsize=size)
-	fig.suptitle(title, fontsize=14, weight='bold')
+	fig.suptitle(title, weight='bold')
 	ax = fig.add_subplot(111, projection='3d')
 	fig.subplots_adjust(bottom=0.0, top=1.0, left=-0.05, right=0.98)
 	ax.set_xlabel(xlab); ax.set_ylabel(ylab); ax.set_zlabel(zlab)

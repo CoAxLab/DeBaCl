@@ -22,6 +22,7 @@ import igraph as igr
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.widgets import Button
+import matplotlib as mpl
 
 
 
@@ -93,16 +94,16 @@ class TreeComponentTool:
 	
 		## get the component members and subtree
 		ix_seg = event.ind[0]
-		node_ix = self.segmap[ix_seg]
-		self.component = self.T.nodes[node_ix].members
-		self.subtree = makeSubtree(self.T, node_ix)
+		self.node_ix = self.segmap[ix_seg]
+		self.component = self.T.nodes[self.node_ix].members
+		self.subtree = makeSubtree(self.T, self.node_ix)
 		
 		
 		## draw confirmation text box
 		props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 		textstr = "Component selected!"
 		self.confirm.append(self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
-			fontsize=12, verticalalignment='top', bbox=props))
+			fontsize=16, verticalalignment='top', bbox=props))
 				
 		
 		## recolor the original tree
@@ -121,6 +122,7 @@ class TreeComponentTool:
 		self.ax.collections[0].set_color(segclr)
 		self.ax.collections[1].set_color(splitclr)
 		self.fig.canvas.draw()
+#		self.fig.savefig('/home/brian/Projects/brains/experiments/20121128_endpt_pubs/output/tree_color2.svg')
 		
 		
 		# plot the component points in a new window (if output==True)
@@ -159,6 +161,12 @@ class TreeComponentTool:
 
 	def getSubtree(self):
 		return self.subtree
+		
+		
+	def getIndex(self):
+		return self.node_ix
+		
+	
 
 
 
@@ -184,6 +192,7 @@ class TreeClusterTool:
 			height_mode, width_mode, gap=0.15)
 		self.fig.suptitle(title, fontsize=14, weight='bold')
 		self.ax = self.fig.axes[0]
+		self.ax.set_position([0.1, 0.1, 0.8, 0.89])
 		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
 		
 		self.line = self.ax.axhline(y=0, color='blue', linewidth=1.0)
@@ -226,7 +235,7 @@ class TreeClusterTool:
 		props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 		textstr = "Clusters computed!"
 		self.confirm = self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
-			fontsize=12, verticalalignment='top', bbox=props)
+			fontsize=16, verticalalignment='top', bbox=props)
 		self.fig.canvas.draw()
 		
 		
@@ -488,6 +497,7 @@ class ClusterTree:
 		fig, ax = plt.subplots(1, figsize=(10, 10))
 		fig.suptitle(title, size=14, weight='bold')
 	
+		ax.set_position([0.1, 0.05, 0.8, 0.93])
 		ax.set_xlabel("Connected component")
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
