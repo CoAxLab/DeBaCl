@@ -747,7 +747,7 @@ def generateChaudhuriTree():
 	
 	
 
-def generateTree(W, levels, bg_sets, mode='general'):
+def generateTree(W, levels, bg_sets, mode='general', verbose=False):
 	"""
 	Construct a level set tree from the upper level sets of a similarity matrix W.
 	"""
@@ -774,7 +774,10 @@ def generateTree(W, levels, bg_sets, mode='general'):
 	
 	
 	# Loop through the removal grid
-	for level, bg in zip(levels, bg_sets):
+	for i, (level, bg) in enumerate(zip(levels, bg_sets)):
+	
+		if verbose and i % 100 == 0:
+			print "iteration", i
 		
 		# compute mass and level
 		mass = 1.0 - (sum([x.vcount() for x in T.subgraphs.itervalues()]) - len(bg)) / (1.0 * n)
