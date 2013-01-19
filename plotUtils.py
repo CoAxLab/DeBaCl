@@ -236,4 +236,63 @@ def plotError(x, y, error, xlab='x', ylab='y', title='', label=''):
 
 
 
+############################
+### SPECIFIC FANCY PLOTS ###
+############################
+def oneDimClusterHist(x, cluster, fhat=None, f=None, levels=None):
+	"""
+	Makes a histogram of the data and colors points and density estimate according to the
+	clusters. 'f' is the true density, should be a two-dimensional matrix. The first column
+	contains arguments on a grid, the second column contains function values. 'cluster'
+	similarly should be a two column matrix with data indices in the first column and
+	cluster labels in the second column.
+	"""
+	
+	n = len(x)
+	palette = Palette()
+	
+	## set up the figure and plot the data histogram
+	fig, (ax0, ax1) = plt.subplots(2, figsize=(10, 10), sharex=True)
+	ax0.set_position([0.125, 0.12, 0.8, 0.78])
+	ax1.set_position([0.125, 0.05, 0.8, 0.05])
+
+	ax1.get_yaxis().set_ticks([])
+	ax0.hist(x, bins=n/20, normed=1, alpha=0.18)
+	
+	
+	## plot the foreground points in the second axes
+	for i, c in enumerate(np.unique(cluster[:, 1])):
+		ix = cluster[np.where(cluster[:, 1] == c)[0], 0]
+		ax1.scatter(x[ix], np.zeros((len(ix),)), alpha=0.08, s=20,
+			color=palette.colorset[i])
+		
+		if fhat is not None:
+			eps = 0.02 * (max(fhat) - min(fhat))
+			ax0.set_ylim(bottom=0.0-eps, top=max(fhat)+eps)
+			ax0.scatter(x[ix], fhat[ix], s=12, alpha=0.5, color=palette.colorset[i])
+	
+	
+	## plot the true density
+	if f is not None:	
+		ax0.plot(f[:,0], f[:,1], color='blue', ls='-', lw=1)
+	
+	
+	## plot the estimate density
+	if fhat is not None:
+		ax0.plot(x, fhat, color='black', lw=1.5, alpha=0.6)
+
+
+	## plot horizontal lines at desired levels
+	if levels is not None:
+		for lev in levels:
+			ax0.axhline(lev, color='red', lw=1, ls='--', alpha=0.7)
+			
+			
+	
+	return fig
+	
+
+
+
+
 

@@ -29,6 +29,209 @@ import matplotlib as mpl
 #########################
 ### Class definitions ###
 #########################
+class HistComponentTool:
+	"""
+	Let the user select a level set tree node and show the underlying 1D points on a
+	histogram.
+	"""
+
+	def __init__(self, tree, pts, f=None, fhat=None):
+		self.T = tree
+		self.x = pts
+		self.f = f
+		self.fhat = fhat
+		self.fig, self.segments, self.segmap, self.splits, self.splitmap = self.T.plot(
+			gap=0.15)
+
+		self.ax = self.fig.axes[0]
+		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
+		segments = self.ax.collections[0]  # the line collection
+		segments.set_picker(15)
+
+		self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
+		self.fig.canvas.mpl_connect('button_press_event', self.handle_click)
+		
+		self.confirm = []  # text box that confirms when a component has been selected
+		self.remove_flag = False
+	
+	
+	def handle_click(self, event):
+		"""
+		Gets rid of the confirmation text box if it's present.
+		"""
+		
+		## reset segments to all be black
+		self.ax.collections[0].set_color('black')
+		self.ax.collections[1].set_color('black')
+
+		## deal with confirmation box
+		if len(self.confirm) == 0:
+			self.remove_flag = False
+			
+		elif len(self.confirm) == 1:
+			if self.remove_flag == True:
+				box = self.confirm.pop()
+				box.remove()
+				self.remove_flag = False
+				self.fig.canvas.draw()
+			else:
+				self.remove_flag = True
+				
+		else:
+			box = self.confirm.pop()
+			box.remove()
+			
+			
+	def handle_pick(self, event):
+		"""
+		Return the members of the component that is picked out.
+		"""
+	
+		## get the component members and subtree
+		ix_seg = event.ind[0]
+		self.node_ix = self.segmap[ix_seg]
+		self.component = self.T.nodes[self.node_ix].members
+		self.subtree = makeSubtree(self.T, self.node_ix)
+				
+		
+		## draw confirmation text box
+		props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+		textstr = "Component selected!"
+		self.confirm.append(self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
+			fontsize=16, verticalalignment='top', bbox=props))
+				
+		
+		## recolor the original tree
+		palette = plutl.Palette(use='scatter')
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
+
+		# set vertical segment colors
+		ix_replace = np.in1d(self.segmap, self.subtree.nodes.keys())
+		segclr[ix_replace] = palette.colorset[0, :]
+		
+		# set horizontal segment colors
+		ix_replace = np.in1d(self.splitmap, self.subtree.nodes.keys())
+		splitclr[ix_replace] = palette.colorset[0, :]
+
+		self.ax.collections[0].set_color(segclr)
+		self.ax.collections[1].set_color(splitclr)
+		self.fig.canvas.draw()
+		
+		
+		# plot the component points in a new window (if output==True)
+		uc = np.vstack((self.component, np.zeros((len(self.component),), dtype=np.int))).T
+		hist_fig = plutl.oneDimClusterHist(self.x, uc, self.fhat, self.f)
+		hist_fig.show()
+		
+				
+	def show(self):
+		self.fig.show()
+	
+	
+	
+class HistClusterTool:
+	"""
+	Let the user select a level and show the clusters of underlying 1D points in a
+	histogram.
+	"""
+	
+	def __init__(self, tree, pts, f=None, fhat=None):
+		self.T = tree
+		self.x = pts
+		self.f = f
+		self.fhat = fhat
+		self.clusters = None
+		
+		self.fig, self.segments, self.segmap, self.splits, self.splitmap = self.T.plot(
+			gap=0.15)
+		self.ax = self.fig.axes[0]
+		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
+		
+		self.line = self.ax.axhline(y=0, color='blue', linewidth=1.0)
+		
+		self.fig.canvas.mpl_connect('button_press_event', self.handle_click)
+		self.confirm = []  # text box that confirms when a component has been selected
+		self.remove_flag = False
+		
+	
+	def handle_click(self, event):
+	
+		if event.inaxes == self.line.axes:
+		
+			## redraw line at the new click point
+			self.line.set_ydata([event.ydata, event.ydata])
+	
+			## reset segments to all be black
+			self.ax.collections[0].set_color('black')
+			self.ax.collections[1].set_color('black')
+
+			## deal with confirmation box
+			if len(self.confirm) == 0:
+				self.remove_flag = False
+			
+			elif len(self.confirm) == 1:
+				if self.remove_flag == True:
+					box = self.confirm.pop()
+					box.remove()
+					self.remove_flag = False
+					self.fig.canvas.draw()
+				else:
+					self.remove_flag = True
+				
+			else:
+				box = self.confirm.pop()
+				box.remove()
+	
+
+			## get the clusters and the clusters attribute
+			cut = self.line.get_ydata()[0]
+			self.clusters, active_nodes = self.T.clusterUpperSet(cut, mode='mass')
+		
+
+			## draw confirmation text box
+			props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+			textstr = "Clusters computed!"		
+			self.confirm.append(self.ax.text(0.37, 0.07, textstr, transform=self.ax.transAxes,
+				fontsize=16, verticalalignment='top', bbox=props))
+			self.fig.canvas.draw()
+		
+		
+			## recolor the existing plot
+			palette = plutl.Palette(use='scatter')
+
+			# set vertical segment colors
+			segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
+			splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
+
+			for i, node_ix in enumerate(active_nodes):
+				subtree = makeSubtree(self.T, node_ix)
+
+				# set vertical segment color
+				seg_replace = np.in1d(self.segmap, subtree.nodes.keys())
+				segclr[seg_replace] = palette.colorset[i, :]
+
+				# set horizontal segment color
+				split_replace = np.in1d(self.splitmap, subtree.nodes.keys())
+				splitclr[split_replace] = palette.colorset[i, :]
+		
+			self.ax.collections[0].set_color(segclr)
+			self.ax.collections[1].set_color(splitclr)
+			self.fig.canvas.draw()
+
+			## plot the clustered points in a new window
+			cut_level = self.T.massToLevel(cut)
+			hist_fig = plutl.oneDimClusterHist(self.x, self.clusters, self.fhat, self.f,
+				levels=[cut_level])
+			hist_fig.show()
+
+				
+	def show(self):
+		self.fig.show()
+		
+	
+
+
 class TreeComponentTool:
 	"""
 	Allows the user to select and plot points in a particular component of the density
@@ -281,7 +484,7 @@ class TreeClusterTool:
 		self.fig.show()
 		
 		
-	def get_clusters(self):
+	def getClusters(self):
 		return self.clusters
 		
 
@@ -702,6 +905,17 @@ class ClusterTree:
 			cluster += ([i] * len(cluster_pts))
 
 		return np.array([points, cluster], dtype=np.int).T, active_nodes
+		
+		
+	
+	def massToLevel(self, alpha):
+		"""
+		Convert the specified mass location into a level location.
+		"""
+		n_bg = [len(bg_set) for bg_set in self.bg_sets]
+		masses = np.cumsum(n_bg) / (1.0 * self.n)
+		cut_level = self.levels[np.where(masses > alpha)[0][0]]
+		return cut_level
 		
 		
 	
