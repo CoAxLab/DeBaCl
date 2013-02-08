@@ -185,7 +185,7 @@ def plotPoints(X, size=20, clr='blue', symb='o', alpha=None, edgecolor=None, tit
 		
 	size : int, optional
 	
-	clr : string or RGBA matrix, optional
+	clr : string, list of ints, or RGBA matrix, optional
 	
 	symb : string, optional
 	
