@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl.py
 ## Created: 20120821
-## Updated: 20130206
+## Updated: 20130221
 ##############################################################
 
 ##############
@@ -93,6 +93,85 @@ class LevelSetTree(object):
 		self.n = sum([len(x) for x in bg_sets])
 		self.nodes = {}
 		self.subgraphs = {}
+		
+		
+	def mergeBySize(self, threshold):
+		"""
+		Prune splits from a tree based on size of child nodes. Merge members of child
+		nodes rather than removing them.
+		
+		Parameters
+		----------
+		threshold : numeric
+			Tree branches with fewer members than this will be merged into larger
+			siblings or parents.
+		
+		Notes
+		-----
+		Modifies a level set tree in-place.
+		"""
+		
+		## remove small root branches
+		small_roots = [k for k, v in self.nodes.iteritems()
+			if v.parent==None and len(v.members) <= threshold]
+		
+		for root in small_roots:
+			root_tree = makeSubtree(self, root)
+			for ix in root_tree.nodes.iterkeys():
+				del self.nodes[ix]
+			
+		
+		## main pruning
+		parents = [k for k, v in self.nodes.iteritems() if len(v.children) >= 1]
+		parents = np.sort(parents)[::-1]
+		
+		for ix_parent in parents:
+			parent = self.nodes[ix_parent]
+			
+			# get size of each child
+			kid_size = {k: len(self.nodes[k].members) for k in parent.children}
+
+			# count children larger than 'threshold'
+			n_bigkid = sum(np.array(kid_size.values()) >= threshold)
+			
+			if n_bigkid == 0:
+				# update parent's end level and end mass
+				parent.end_level = max([self.nodes[k].end_level for k in parent.children])
+				parent.end_mass = max([self.nodes[k].end_mass for k in parent.children])
+
+				# remove small kids from the tree
+				for k in parent.children:
+					del self.nodes[k]
+				parent.children = []
+				
+			elif n_bigkid == 1:
+				pass
+				# identify the big kid
+				ix_bigkid = [k for k, v in kid_size.iteritems() if v >= threshold][0]
+				bigkid = self.nodes[ix_bigkid]
+					
+				# update k's end level and end mass
+				parent.end_level = bigkid.end_level
+				parent.end_mass = bigkid.end_mass
+				
+				# set grandkids' parent to k
+				for c in bigkid.children:
+					self.nodes[c].parent = ix_parent
+				
+				# delete small kids
+				for k in parent.children:
+					if k != ix_bigkid:
+						del self.nodes[k]
+				
+				# set k's children to grandkids
+				parent.children = bigkid.children
+
+				# delete the single bigkid
+				del self.nodes[ix_bigkid]
+				
+			else:
+				pass  # do nothing here		
+							
 		
 		
 	def pruneBySize(self, delta, mode='proportion'):
