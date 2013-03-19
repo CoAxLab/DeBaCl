@@ -96,6 +96,34 @@ class LevelSetTree(object):
 		self.subgraphs = {}
 		
 		
+	def collapseLeaves(self, active_nodes):
+		"""
+		Removes descendent nodes for the branches in 'active_nodes'.
+		
+		Parameters
+		----------
+		active_nodes : array-like
+			List of nodes to use as the leaves in the collapsed tree.
+		
+		Returns
+		-------
+		"""
+		
+		for ix in active_nodes:
+			subtree = makeSubtree(self, ix)
+			
+			max_end_level = max([v.end_level for v in subtree.nodes.values()])
+			max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
+			
+			self.nodes[ix].end_level = max_end_level
+			self.nodes[ix].end_mass = max_end_mass
+			self.nodes[ix].children = []
+			
+			for u in subtree.nodes.keys():
+				if u != ix:
+					del self.nodes[u]
+
+		
 	def mergeBySize(self, threshold):
 		"""
 		Prune splits from a tree based on size of child nodes. Merge members of child
