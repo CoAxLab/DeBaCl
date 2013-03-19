@@ -490,7 +490,7 @@ class LevelSetTree(object):
 	
 		## Set up the plot framework
 		fig, ax = plt.subplots()
-		ax.set_position([0.1, 0.05, 0.8, 0.93])
+		ax.set_position([0.11, 0.05, 0.78, 0.93])
 		ax.set_xlabel("Connected component")
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
@@ -614,6 +614,57 @@ class LevelSetTree(object):
 		return labels
 		
 		
+	def firstKCluster(self, k):
+		"""
+		Returns foreground cluster labels for the 'k' modes with the lowest start
+		levels. In principle, this is the 'k' leaf nodes with the smallest indices, but
+		double check this by finding all leaf start values and ordering.
+		
+		Parameters
+		----------
+		k : integer
+			The desired number of clusters.
+		
+		Returns
+		-------
+		labels : 2D numpy array
+			Each row corresponds to a foreground data point. The first column contains
+			the index of the point in the original data set, and the second column
+			contains the cluster assignment. Cluster labels are increasing integers
+			starting at 0.
+		
+		active_nodes : list
+			Indices of tree nodes that are foreground clusters. Particularly useful for
+			coloring a level set tree plot to match the data scatterplot.
+		"""
+		
+		parents = np.array([u for u, v in self.nodes.items() if len(v.children) > 0])
+		roots = [u for u, v in self.nodes.items() if v.parent is None]
+		splits = [self.nodes[u].end_level for u in parents]
+		order = np.argsort(splits)
+		star_parents = parents[order[:(k-len(roots))]]
+		
+		children = [u for u, v in self.nodes.items() if v.parent is None]
+		for u in star_parents:
+			children += self.nodes[u].children
+
+		active_nodes = [x for x in children if
+			sum(np.in1d(self.nodes[x].children, children))==0] 
+		
+		
+		points = []
+		cluster = []
+		
+		for i, c in enumerate(active_nodes):
+			cluster_pts = self.nodes[c].members
+			points.extend(cluster_pts)
+			cluster += ([i] * len(cluster_pts))
+
+		labels = np.array([points, cluster], dtype=np.int).T
+		return labels, active_nodes
+		
+		
+		
 	def upperSetCluster(self, cut, mode):
 		"""
 		Set foreground clusters by finding connected components at an upper level set or
@@ -671,7 +722,7 @@ class LevelSetTree(object):
 		return labels, active_nodes
 		
 
-	def firstKCluster(self, k):
+	def firstKLevelCluster(self, k):
 		"""
 		Use the first K clusters to appear in the level set tree as foreground clusters.
 		
