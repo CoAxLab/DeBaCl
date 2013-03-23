@@ -396,7 +396,7 @@ class LevelSetTree(object):
 		
 		
 	def plot(self, height_mode='mass', width_mode='uniform', xpos='middle', sort=True,
-		gap=0.05, color=False, color_nodes=None):
+		gap=0.05, color=None, color_nodes=None, palette_type='scatter'):
 		"""
 		Create a static plot of a level set tree.
 		
@@ -427,14 +427,17 @@ class LevelSetTree(object):
 			also works well. Higher values are used for interactive tools to make room
 			for buttons and messages.
 			
-		color : bool
-			Indicates if tree nodes should be colored. If True and color_nodes is None,
-			then nodes will be colored at the first split (including level 0 if there
-			are multiple root nodes).
+		color : list
+			Indicates if tree nodes should be colored, and if so which colors to use, in
+			terms of indices of the selected color palette. This needs to be simplified
+			before the next release.
 		
 		color_nodes : list
 			Each entry should be a valid index in the level set tree that will be
 			colored uniquely.
+			
+		palette_type : {'scatter', 'neuroimg', 'lines'}, optional
+			Type of palette to use if tree nodes are colored. See plot_utils.py.
 		
 		Returns
 		-------
@@ -529,8 +532,8 @@ class LevelSetTree(object):
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
 			
-		if color is True:
-			palette = plutl.Palette(use='scatter')
+		if color is not None:
+			palette = plutl.Palette(use=palette_type)
 
 			if color_nodes is None:
 				if len(ix_root) > 1:
@@ -542,7 +545,7 @@ class LevelSetTree(object):
 				
 			if len(active_nodes) <= np.alen(palette.colorset):
 				for i, ix in enumerate(active_nodes):
-					c = palette.colorset[i, :]
+					c = palette.colorset[color[i], :]
 					subtree = makeSubtree(self, ix)
 
 					## set verical colors
@@ -639,7 +642,7 @@ class LevelSetTree(object):
 			cluster += ([i] * len(self.nodes[k].members))
 
 		labels = np.array([points, cluster], dtype=np.int).T		
-		return labels
+		return labels, leaves
 		
 		
 	def firstKCluster(self, k):

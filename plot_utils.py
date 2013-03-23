@@ -56,6 +56,18 @@ class Palette(object):
 				(247, 129, 191), #pink	
 				(184, 134, 11), #goldenrod									
 				]) / 255.0
+				
+		elif use == 'neuroimg':
+			self.colorset = np.array([
+				(170, 0, 0), # dark red
+				(255, 0, 0), # red
+				(0, 255, 0), # green
+				(0, 0, 255), # blue
+				(0, 255, 255), # cyan
+				(255, 0, 255), # violet
+				(255, 255, 0), # yellow
+				]) / 255.0
+			
 		else:
 			self.colorset = np.array([
 					(228, 26, 28), #red
