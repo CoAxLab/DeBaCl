@@ -78,7 +78,6 @@ class Palette(object):
 					(247, 129, 191), #pink
 					(166, 86, 40), #brown
 					(0, 206, 209), #turqoise
-					(238, 213, 183), #bisque
 					(85, 107, 47), #olive green
 					(127, 255, 0), #chartreuse
 					(205, 92, 92), #light red
@@ -92,6 +91,7 @@ class Palette(object):
 					(83, 19, 67),
 					(162, 38, 132),
 					(171, 15, 88),
+					(238, 213, 183), #bisque
 					(82, 82, 82), #dark gray
 					(150, 150, 150), #gray
 					(240, 240, 240) # super light gray

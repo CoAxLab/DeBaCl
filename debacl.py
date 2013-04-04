@@ -1068,7 +1068,7 @@ def makeLevelSetTree(W, levels, bg_sets, mode='general', verbose=False):
 	if mode == 'density':
 		start_level = 0.0
 	else:
-		start_level = float(np.min(levels) - 1.0)
+		start_level = float(np.min(levels) - 0.000001)
 		
 	for i, c in enumerate(cc0):
 		T.subgraphs[i] = G.subgraph(c)
