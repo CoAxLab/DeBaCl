@@ -489,7 +489,7 @@ class LevelSetTree(object):
 		
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
-			branch = constructBranchMap(self, ix, (intervals[i], intervals[i+1]),
+			branch = self.constructBranchMap(ix, (intervals[i], intervals[i+1]),
 					height_mode, width_mode, xpos, sort)
 			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
@@ -844,14 +844,13 @@ class LevelSetTree(object):
 		
 	def constructBranchMap(self, ix, interval, height_mode, width_mode, xpos, sort):
 		"""
-		Map level set tree nodes to locations in a plot canvas.
-	
-		Finds the plot coordinates of vertical line segments corresponding to LST nodes and
-		horizontal line segments corresponding to node splits. Also provides indices of
-		vertical segments and splits for downstream use with interactive plot picker tools.
-		This function is not meant to be called by the user; it is a helper function for the
-		LevelSetTree.plot() method. This function is recursive: it calls itself to map the
-		coordinates of children of the current node 'ix'.
+		Map level set tree nodes to locations in a plot canvas. Finds the plot
+		coordinates of vertical line segments corresponding to LST nodes and horizontal
+		line segments corresponding to node splits. Also provides indices of vertical
+		segments and splits for downstream use with interactive plot picker tools. This
+		function is not meant to be called by the user; it is a helper function for the
+		LevelSetTree.plot() method. This function is recursive: it calls itself to map
+		the coordinates of children of the current node 'ix'.
 	
 		Parameters
 		----------
@@ -946,7 +945,7 @@ class LevelSetTree(object):
 					interval[0] + child_intervals[j+1] * parent_range)
 
 				## recurse on the child
-				branch = constructBranchMap(self, child, branch_interval, height_mode,
+				branch = self.constructBranchMap(child, branch_interval, height_mode,
 					width_mode, xpos, sort)
 				branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
