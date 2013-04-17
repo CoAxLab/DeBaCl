@@ -549,12 +549,13 @@ class LevelSetTree(object):
 					subtree = makeSubtree(self, ix)
 
 					## set verical colors
-					ix_replace = np.in1d(segmap, subtree.nodes.keys())
+					ix_replace = np.in1d(segmap, subtree.nodes.keys())					
 					segclr[ix_replace] = c
 
 					## set horizontal colors
-					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
-					splitclr[ix_replace] = c
+					if splitmap:
+						ix_replace = np.in1d(splitmap, subtree.nodes.keys())
+						splitclr[ix_replace] = c
 					
 			
 		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
