@@ -482,7 +482,6 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 
 	elif start == 'max-radius':
 		max_radius = max(k_radius)
-		print max_radius, distances[0]
 		
 		# remove edges longer than the maximum k-neighbor radius
 		cut_edges = G.es.select(length_gt = max_radius)
@@ -506,7 +505,7 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 	## Iterate through all pairwise distances in descending order
 	for i, r in enumerate(distances):
 		n_iter = len(distances)
-		if i % 100 == 0 and verbose:
+		if i % 1000 == 0 and verbose:
 			print "iteration:", i, "/", n_iter
 
 		deactivate_keys = []
