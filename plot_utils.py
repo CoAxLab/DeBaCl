@@ -56,6 +56,18 @@ class Palette(object):
 				(247, 129, 191), #pink	
 				(184, 134, 11), #goldenrod									
 				]) / 255.0
+				
+		elif use == 'neuroimg':
+			self.colorset = np.array([
+				(170, 0, 0), # dark red
+				(255, 0, 0), # red
+				(0, 255, 0), # green
+				(0, 0, 255), # blue
+				(0, 255, 255), # cyan
+				(255, 0, 255), # violet
+				(255, 255, 0), # yellow
+				]) / 255.0
+			
 		else:
 			self.colorset = np.array([
 					(228, 26, 28), #red
@@ -66,7 +78,6 @@ class Palette(object):
 					(247, 129, 191), #pink
 					(166, 86, 40), #brown
 					(0, 206, 209), #turqoise
-					(238, 213, 183), #bisque
 					(85, 107, 47), #olive green
 					(127, 255, 0), #chartreuse
 					(205, 92, 92), #light red
@@ -80,6 +91,7 @@ class Palette(object):
 					(83, 19, 67),
 					(162, 38, 132),
 					(171, 15, 88),
+					(238, 213, 183), #bisque
 					(82, 82, 82), #dark gray
 					(150, 150, 150), #gray
 					(240, 240, 240) # super light gray
