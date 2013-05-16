@@ -396,7 +396,50 @@ class LevelSetTree(object):
 		
 		
 		
-	def massPlot(self):
+	def branchMassPlot(self, width_mode='uniform', gap=0.04, color_nodes=None):
+		"""
+		Create a branch mass plot of a level set tree.
+		
+		Parameters
+		----------
+		width_mode : {'uniform', 'mass'}, optional
+			Determines how much horzontal space each level set tree node is given. The
+			default of "uniform" gives each child node an equal fraction of the parent
+			node's horizontal space. If set to 'mass', then horizontal space is
+			allocated proportional to the mass (i.e. fraction of points) of a node
+			relative to its siblings.
+		
+		gap : float
+			Fraction of vertical space to leave at the bottom. Default is 5%, and 0%
+			also works well. Higher values are used for interactive tools to make room
+			for buttons and messages.
+			
+		color_nodes : list
+			Each entry should be a valid index in the level set tree that will be
+			colored uniquely.
+			
+		Returns
+		-------
+		fig : matplotlib figure
+			Use fig.show() to view, fig.savefig() to save, etc.
+			
+		segments : dict
+			A dictionary with values that contain the coordinates of vertical line
+			segment endpoints. This is only useful to the interactive analysis tools.
+		
+		segmap : list
+			Indicates the order of the vertical line segments as returned by the
+			recursive coordinate mapping function, so they can be picked by the user in
+			the interactive tools.
+		
+		splits : dict
+			Dictionary values contain the coordinates of horizontal line segments (i.e.
+			node splits).
+			
+		splitmap : list
+			Indicates the order of horizontal line segments returned by recursive
+			coordinate mapping function, for use with interactive tools.
+		"""
 		
 		## Initialize the plot containers
 		segments = {}
@@ -409,15 +452,24 @@ class LevelSetTree(object):
 		n_root = len(ix_root)
 		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
 		n = sum(census)
-		
+				
 		seniority = np.argsort(census)[::-1]
 		ix_root = ix_root[seniority]
 		census = census[seniority]
-		intervals = np.linspace(0.0, 1.0, n_root+1)
 		
+		if width_mode == 'mass':
+			weights = census / n
+			intervals = np.cumsum(weights)
+			intervals = np.insert(intervals, 0, 0.0)
+		else:
+			intervals = np.linspace(0.0, 1.0, n_root+1)
+		print intervals
+
+
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
-			branch = self.constructMassMap(ix, 0.0, (intervals[i], intervals[i+1]))
+			branch = self.constructMassMap(ix, 0.0, (intervals[i], intervals[i+1]),
+				width_mode)
 			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
 			segments = dict(segments.items() + branch_segs.items())
@@ -452,18 +504,32 @@ class LevelSetTree(object):
 		## Add the line segments
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
+		
+		palette = plutl.Palette()
+		if color_nodes is not None and len(color_nodes) <= np.alen(palette.colorset):
+			for i, ix in enumerate(color_nodes):
+				c = palette.colorset[i, :]
+				subtree = makeSubtree(self, ix)
+
+				## set verical colors
+				ix_replace = np.in1d(segmap, subtree.nodes.keys())					
+				segclr[ix_replace] = c
+
+				## set horizontal colors
+				if splitmap:
+					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
+					splitclr[ix_replace] = c
+		
 		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
 		ax.add_collection(linecol)
 		splitcol = LineCollection(lats, colors=splitclr)
 		ax.add_collection(splitcol)
-
-				
+		
 		return fig, segments, segmap, splits, splitmap
 		
-
 		
-	def plot(self, height_mode='mass', width_mode='uniform', xpos='middle', sort=True,
-		gap=0.05, color=None, color_nodes=None, palette_type='scatter'):
+	def plot(self, height_mode='mass', width_mode='uniform', sort=True, gap=0.05, 
+		color_nodes=None):
 		"""
 		Create a static plot of a level set tree.
 		
@@ -480,11 +546,6 @@ class LevelSetTree(object):
 			allocated proportional to the mass (i.e. fraction of points) of a node
 			relative to its siblings.
 		
-		xpos : {'middle'}, optional
-			Where the vertical line segments are located within their allocated
-			horizontal space. The default (and only implement option) is for them to lie
-			in the middle of their horizontal intervals.
-		
 		sort : bool
 			If True, sort sibling nodes from most to least points and draw left to
 			right. Also sorts root nodes in the same way.
@@ -494,18 +555,10 @@ class LevelSetTree(object):
 			also works well. Higher values are used for interactive tools to make room
 			for buttons and messages.
 			
-		color : list
-			Indicates if tree nodes should be colored, and if so which colors to use, in
-			terms of indices of the selected color palette. This needs to be simplified
-			before the next release.
-		
 		color_nodes : list
 			Each entry should be a valid index in the level set tree that will be
 			colored uniquely.
 			
-		palette_type : {'scatter', 'neuroimg', 'lines'}, optional
-			Type of palette to use if tree nodes are colored. See plot_utils.py.
-		
 		Returns
 		-------
 		fig : matplotlib figure
@@ -557,7 +610,7 @@ class LevelSetTree(object):
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
 			branch = self.constructBranchMap(ix, (intervals[i], intervals[i+1]),
-					height_mode, width_mode, xpos, sort)
+					height_mode, width_mode, sort)
 			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
 			segments = dict(segments.items() + branch_segs.items())
@@ -599,30 +652,20 @@ class LevelSetTree(object):
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
 			
-		if color is not None:
-			palette = plutl.Palette(use=palette_type)
+		palette = plutl.Palette()
+		if color_nodes is not None and len(color_nodes) <= np.alen(palette.colorset):
+			for i, ix in enumerate(color_nodes):
+				c = palette.colorset[i, :]
+				subtree = makeSubtree(self, ix)
 
-			if color_nodes is None:
-				if len(ix_root) > 1:
-					active_nodes = ix_root
-				else:
-					active_nodes = self.nodes[ix_root[0]].children
-			else:
-				active_nodes = color_nodes
-				
-			if len(active_nodes) <= np.alen(palette.colorset):
-				for i, ix in enumerate(active_nodes):
-					c = palette.colorset[color[i], :]
-					subtree = makeSubtree(self, ix)
+				## set verical colors
+				ix_replace = np.in1d(segmap, subtree.nodes.keys())					
+				segclr[ix_replace] = c
 
-					## set verical colors
-					ix_replace = np.in1d(segmap, subtree.nodes.keys())					
-					segclr[ix_replace] = c
-
-					## set horizontal colors
-					if splitmap:
-						ix_replace = np.in1d(splitmap, subtree.nodes.keys())
-						splitclr[ix_replace] = c
+				## set horizontal colors
+				if splitmap:
+					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
+					splitclr[ix_replace] = c
 					
 			
 		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
@@ -909,7 +952,7 @@ class LevelSetTree(object):
 		return cut
 		
 		
-	def constructBranchMap(self, ix, interval, height_mode, width_mode, xpos, sort):
+	def constructBranchMap(self, ix, interval, height_mode, width_mode, sort):
 		"""
 		Map level set tree nodes to locations in a plot canvas. Finds the plot
 		coordinates of vertical line segments corresponding to LST nodes and horizontal
@@ -932,8 +975,6 @@ class LevelSetTree(object):
 		width_mode : {'uniform', 'mass'}, optional
 			Determines how much horzontal space each level set tree node is given. See
 			LevelSetTree.plot() for more information.
-	
-		xpos : {middle'}, optional
 	
 		sort : bool
 			If True, sort sibling nodes from most to least points and draw left to right.
@@ -1013,7 +1054,7 @@ class LevelSetTree(object):
 
 				## recurse on the child
 				branch = self.constructBranchMap(child, branch_interval, height_mode,
-					width_mode, xpos, sort)
+					width_mode, sort)
 				branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
 				segmap += branch_segmap
@@ -1024,14 +1065,7 @@ class LevelSetTree(object):
 			
 			## find the middle of the children's x-position and make vertical segment ix
 			children_xpos = np.array([segments[k][0][0] for k in children])
-		
-			if xpos == 'middle':
-				xpos = np.mean(children_xpos)
-			else:
-				xpos_order = np.argsort(children_xpos)
-				ordered_xpos = children_xpos[xpos_order]
-				ordered_weights = weights[xpos_order]
-				xpos = sum([pos*w for pos, w in zip(ordered_xpos, ordered_weights[::-1])])
+			xpos = np.mean(children_xpos)
 		
 		
 			## add horizontal segments to the list
@@ -1058,9 +1092,53 @@ class LevelSetTree(object):
 		return segments, splits, segmap, splitmap
 
 
-
-
-	def constructMassMap(self, ix, start_pile, interval):
+	def constructMassMap(self, ix, start_pile, interval, width_mode):
+		"""
+		Map level set tree nodes to locations in a plot canvas. Finds the plot
+		coordinates of vertical line segments corresponding to LST nodes and horizontal
+		line segments corresponding to node splits. Also provides indices of vertical
+		segments and splits for downstream use with interactive plot picker tools. This
+		function is not meant to be called by the user; it is a helper function for the
+		LevelSetTree.plot() method. This function is recursive: it calls itself to map
+		the coordinates of children of the current node 'ix'. Differs from
+		'constructBranchMap' by setting the height of each vertical segment to be
+		proportional to the number of points in the corresponding LST node.
+	
+		Parameters
+		----------
+		ix : int
+			The tree node to map.
+		
+		start_pile: float
+			The height of the branch on the plot at it's start (i.e. lower terminus).
+			
+		interval: length 2 tuple of floats
+			Horizontal space allocated to node 'ix'.
+	
+		width_mode : {'uniform', 'mass'}, optional
+			Determines how much horzontal space each level set tree node is given. See
+			LevelSetTree.plot() for more information.
+	
+		Returns
+		-------
+		segments : dict
+			A dictionary with values that contain the coordinates of vertical line
+			segment endpoints. This is only useful to the interactive analysis tools.
+	
+		segmap : list
+			Indicates the order of the vertical line segments as returned by the
+			recursive coordinate mapping function, so they can be picked by the user in
+			the interactive tools.
+	
+		splits : dict
+			Dictionary values contain the coordinates of horizontal line segments (i.e.
+			node splits).
+		
+		splitmap : list
+			Indicates the order of horizontal line segments returned by recursive
+			coordinate mapping function, for use with interactive tools.
+		"""
+		
 		size = float(len(self.nodes[ix].members))
 	
 		## get children
@@ -1093,7 +1171,15 @@ class LevelSetTree(object):
 			children = children[seniority]
 			weights = weights[seniority]
 			
-			child_intervals = np.linspace(0.0, 1.0, n_child+1)
+			## get relative branch intervals
+			if width_mode == 'mass':
+				child_intervals = np.cumsum(weights)
+				child_intervals = np.insert(child_intervals, 0, 0.0)
+			else:
+				child_intervals = np.linspace(0.0, 1.0, n_child+1)
+			
+			
+			## find height of the branch
 			end_pile = start_pile + (size - sum(census))/self.n
 		
 			## loop over the children
@@ -1104,7 +1190,8 @@ class LevelSetTree(object):
 					interval[0] + child_intervals[j+1] * parent_range)
 
 				## recurse on the child
-				branch = self.constructMassMap(child, end_pile, branch_interval)
+				branch = self.constructMassMap(child, end_pile, branch_interval,
+					width_mode)
 				branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
 				segmap += branch_segmap
