@@ -395,6 +395,73 @@ class LevelSetTree(object):
 		spio.savemat(fname, tree_dict)
 		
 		
+		
+	def massPlot(self):
+		
+		## Initialize the plot containers
+		segments = {}
+		splits = {}
+		segmap = []
+		splitmap = []
+
+		## Find the root connected components and corresponding plot intervals
+		ix_root = np.array([k for k, v in self.nodes.iteritems() if v.parent is None])
+		n_root = len(ix_root)
+		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
+		n = sum(census)
+		
+		seniority = np.argsort(census)[::-1]
+		ix_root = ix_root[seniority]
+		census = census[seniority]
+		intervals = np.linspace(0.0, 1.0, n_root+1)
+		
+		## Do a depth-first search on each root to get segments for each branch
+		for i, ix in enumerate(ix_root):
+			branch = self.constructMassMap(ix, 0.0, (intervals[i], intervals[i+1]))
+			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
+				
+			segments = dict(segments.items() + branch_segs.items())
+			splits = dict(splits.items() + branch_splits.items())
+			segmap += branch_segmap
+			splitmap += branch_splitmap
+			
+		## get the the vertical line segments in order of the segment map (segmap)
+		verts = [segments[k] for k in segmap]
+		lats = [splits[k] for k in splitmap]
+			
+		## Find the fraction of nodes in each segment (to use as linewidths)
+		thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n) for x in segmap]
+		
+		## Get the relevant yticks
+		yticks = [(x[0][1], x[1][1]) for x in segments.values()]
+		yticks = np.round(np.unique(np.array(yticks).flatten()), 3)
+		ymax = max(yticks)
+		
+		## Set up the plot framework
+		fig, ax = plt.subplots()
+		ax.set_position([0.11, 0.05, 0.78, 0.93])
+		ax.set_xlabel("Connected component")
+		ax.set_xlim((-0.04, 1.04))
+		ax.set_ylim((-0.04*ymax, 1.04*ymax))
+		ax.set_ylabel("Mass")
+		ax.yaxis.grid(color='gray')
+		ax.set_yticks(yticks)
+		ax.set_xticks([])
+		ax.set_xticklabels([])
+		
+		## Add the line segments
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
+		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
+		ax.add_collection(linecol)
+		splitcol = LineCollection(lats, colors=splitclr)
+		ax.add_collection(splitcol)
+
+				
+		return fig, segments, segmap, splits, splitmap
+		
+
+		
 	def plot(self, height_mode='mass', width_mode='uniform', xpos='middle', sort=True,
 		gap=0.05, color=None, color_nodes=None, palette_type='scatter'):
 		"""
@@ -991,6 +1058,81 @@ class LevelSetTree(object):
 		return segments, splits, segmap, splitmap
 
 
+
+
+	def constructMassMap(self, ix, start_pile, interval):
+		size = float(len(self.nodes[ix].members))
+	
+		## get children
+		children = np.array(self.nodes[ix].children)
+		n_child = len(children)
+	
+		
+		## if there's no children, just one segment at the interval mean
+		if n_child == 0:
+			xpos = np.mean(interval)
+			end_pile = start_pile + size/self.n
+			segments = {}
+			segmap = [ix]
+			splits = {}		
+			splitmap = []
+			segments[ix] = ([xpos, start_pile], [xpos, end_pile])
+			
+		else:
+			parent_range = interval[1] - interval[0]
+			segments = {}
+			segmap = [ix]
+			splits = {}
+			splitmap = []
+		
+			census = np.array([len(self.nodes[x].members) for x in children],
+				dtype=np.float)
+			weights = census / sum(census)
+		
+			seniority = np.argsort(weights)[::-1]
+			children = children[seniority]
+			weights = weights[seniority]
+			
+			child_intervals = np.linspace(0.0, 1.0, n_child+1)
+			end_pile = start_pile + (size - sum(census))/self.n
+		
+			## loop over the children
+			for j, child in enumerate(children):
+		
+				## translate local interval to absolute interval
+				branch_interval = (interval[0] + child_intervals[j] * parent_range,
+					interval[0] + child_intervals[j+1] * parent_range)
+
+				## recurse on the child
+				branch = self.constructMassMap(child, end_pile, branch_interval)
+				branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
+				
+				segmap += branch_segmap
+				splitmap += branch_splitmap
+				splits = dict(splits.items() + branch_splits.items())
+				segments = dict(segments.items() + branch_segs.items())
+				
+				
+			## find the middle of the children's x-position and make vertical segment ix
+			children_xpos = np.array([segments[k][0][0] for k in children])
+			xpos = np.mean(children_xpos)				
+
+
+			## add horizontal segments to the list
+			for child in children:
+				splitmap.append(child)
+				child_xpos = segments[child][0][0]
+				splits[child] = ([xpos, end_pile],[child_xpos, end_pile])
+
+	
+			## add vertical segment for current node
+			segments[ix] = ([xpos, start_pile], [xpos, end_pile])
+			
+			
+		return segments, splits, segmap, splitmap
+	
+	
+	
 	
 	def massToLevel(self, alpha):
 		"""
