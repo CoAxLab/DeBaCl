@@ -91,6 +91,9 @@ class Palette(object):
 					(83, 19, 67),
 					(162, 38, 132),
 					(171, 15, 88),
+					(204, 77, 51),
+					(118, 207, 23), #lime green
+					(207, 203, 23), #pea green
 					(238, 213, 183), #bisque
 					(82, 82, 82), #dark gray
 					(150, 150, 150), #gray
@@ -102,7 +105,8 @@ class Palette(object):
  		"""
  		Turn a numpy array of group labels (integers) into RGBA colors.
  		"""
-		return self.colorset[ix] 		
+ 		n_clr = np.alen(self.colorset)
+		return self.colorset[ix % n_clr] 		
  	 	
  	
  	def makeColorMap(self):
@@ -122,14 +126,15 @@ def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
 	"""
 	Construct the RGBA color parameter for a matplotlib plot.
 	
-	This function is intended to allow for a set of "foreground" points to be colored
-	according to integer labels (e.g. according to clustering output), while
-	"background" points are all colored something else (e.g. light gray). It is used
-	primarily in the interactive plot tools for DeBaCl but can also be used directly by
-	a user to build a scatterplot from scratch using more complicated DeBaCl output.
-	Note this function can be used to build an RGBA color matrix for any aspect of a
-	plot, including point face color, edge color, and line color, despite use of the
-	term "points" in the descriptions below.
+	This function is intended to allow for a set of "foreground" points to be
+	colored according to integer labels (e.g. according to clustering output),
+	while "background" points are all colored something else (e.g. light gray).
+	It is used primarily in the interactive plot tools for DeBaCl but can also
+	be used directly by a user to build a scatterplot from scratch using more
+	complicated DeBaCl output. Note this function can be used to build an RGBA
+	color matrix for any aspect of a plot, including point face color, edge
+	color, and line color, despite use of the term "points" in the descriptions
+	below.
 	
 	Parameters
 	----------
@@ -147,10 +152,11 @@ def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
 		distinguish between foreground and background points.
 	
 	fg_color : list of ints or list of floats, optional
-		Only relevant if 'ix' is specified. If 'fg_color' is a list of integers then
-		each entry in 'fg_color' indicates the color of the corresponding foreground
-		point. If 'fg_color' is a list of 3 floats, then all foreground points will be
-		that RGB color. The default is to color all foreground points red.
+		Only relevant if 'ix' is specified. If 'fg_color' is a list of integers
+		then each entry in 'fg_color' indicates the color of the corresponding
+		foreground point. If 'fg_color' is a list of 3 floats, then all
+		foreground points will be that RGB color. The default is to color all
+		foreground points red.
 	
 	fg_alpha : float, optional
 		Opacity of the foreground points.
@@ -185,10 +191,8 @@ def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
 def plotPoints(X, size=20, clr='blue', symb='o', alpha=None, edgecolor=None, title='',
 	xlab='x', ylab='y', zlab='z', azimuth=160, elev=10):
 	"""
-	Draw a scatter plot of 2D or 3D data.
-	
-	Except for the data array 'X', see the matplotlib documentation for more detail on
-	plot parameters.
+	Draw a scatter plot of 2D or 3D data. Except for the data array 'X', see the
+	matplotlib documentation for more detail on plot parameters.
 	
 	Parameters
 	----------
@@ -208,8 +212,8 @@ def plotPoints(X, size=20, clr='blue', symb='o', alpha=None, edgecolor=None, tit
 	title, xlab, ylab, zlab : string, optional
 	
 	azimuth, elev : int, optional
-		Azimuth should be in the interval [0, 359]. Elevation should be in the range [0,
-		90].
+		Azimuth should be in the interval [0, 359]. Elevation should be in the
+		range [0, 90].
 	
 	Returns
 	-------
@@ -256,11 +260,11 @@ def clusterHistogram(x, cluster, fhat=None, f=None, levels=None):
 	"""
 	Plot a histogram and illustrate the location of selected cluster points.
 	
-	The primary plot axis is a histogram. Under this plot is a second axis that shows
-	the location of the points in 'cluster', colored according to cluster label. If
-	specified, also plot a density estimate, density function (or any function), and
-	horizontal guidelines. This is the workhorse of the DeBaCl interactive tools for 1D
-	data.
+	The primary plot axis is a histogram. Under this plot is a second axis that
+	shows the location of the points in 'cluster', colored according to cluster
+	label. If specified, also plot a density estimate, density function (or any
+	function), and horizontal guidelines. This is the workhorse of the DeBaCl
+	interactive tools for 1D data.
 	
 	Parameters
 	----------
@@ -268,23 +272,23 @@ def clusterHistogram(x, cluster, fhat=None, f=None, levels=None):
 		The data.
 	
 	cluster : 2D numpy array
-		A cluster matrix: rows represent points in 'x', with first entry as the index
-		and second entry as the cluster label. The output of all LevelSetTree
-		clustering methods are in this format.
+		A cluster matrix: rows represent points in 'x', with first entry as the
+		index and second entry as the cluster label. The output of all
+		LevelSetTree clustering methods are in this format.
 		
 	fhat : list of floats, optional
-		Density estimate values for the data in 'x'. Plotted as a black curve, with
-		points colored according to 'cluster'.
+		Density estimate values for the data in 'x'. Plotted as a black curve,
+		with points colored according to 'cluster'.
 	
 	f : 2D numpy array, optional
-		Any function. Arguments in the first column and values in the second. Plotted
-		independently of the data as a blue curve, so does not need to have the same
-		number of rows as values in 'x'. Typically this is the generating probability
-		density function for a 1D simulation.
+		Any function. Arguments in the first column and values in the second.
+		Plotted independently of the data as a blue curve, so does not need to
+		have the same number of rows as values in 'x'. Typically this is the
+		generating probability density function for a 1D simulation.
 	
 	levels : list of floats, optional
-		Each entry in 'levels' causes a horizontal dashed red line to appear at that
-		value.
+		Each entry in 'levels' causes a horizontal dashed red line to appear at
+		that value.
 	
 	Returns
 	-------

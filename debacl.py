@@ -9,9 +9,9 @@
 ### SET UP ###
 ##############
 """
-Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox. Includes
-functions to construct and modify with level set tree objects, and tools for interactive
-data analysis and clustering with level set trees.
+Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
+Includes functions to construct and modify with level set tree objects, and
+tools for interactive data analysis and clustering with level set trees.
 """
 
 import numpy as np
@@ -35,12 +35,12 @@ import plot_utils as plutl
 
 class ConnectedComponent(object):
 	"""
-	Defines a connected component for level set tree construction. A level set tree is
-	really just a set of ConnectedComponents.
+	Defines a connected component for level set tree construction. A level set
+	tree is really just a set of ConnectedComponents.
 	"""
 	
-	def __init__(self, idnum, parent, children, start_level, end_level, start_mass,
-		end_mass, members):
+	def __init__(self, idnum, parent, children, start_level, end_level,
+		start_mass, end_mass, members):
 		
 		self.idnum = idnum
 		self.parent = parent
@@ -75,14 +75,14 @@ class ConnectedComponent(object):
 
 class LevelSetTree(object):
 	"""
-	Defines methods and attributes for a level set tree, i.e. a collection of connected
-	components organized hierarchically.
+	Defines methods and attributes for a level set tree, i.e. a collection of
+	connected components organized hierarchically.
 	
 	Parameters
 	----------
 	bg_sets : list of lists
-		The observations removed as background points at each successively higher
-		density level.
+		The observations removed as background points at each successively
+		higher density level.
 	
 	levels : array_like
 		The probability density level associated with each element in 'bg_sets'.
@@ -212,8 +212,8 @@ class LevelSetTree(object):
 		delta : numeric
 			Specifies the pruning threshold.
 		mode : {'proportion', 'number'}, optional
-			Indicates if 'delta' is a proportion of the total data set size, or an
-			integer number.
+			Indicates if 'delta' is a proportion of the total data set size, or
+			an integer number.
 			
 		Notes
 		-----
@@ -259,8 +259,9 @@ class LevelSetTree(object):
 		Prune a tree by removing root nodes that end below a set level.
 		
 		This only tends to be useful for LSTs based on epsilon-neighborhood
-		graphs. It is not smart - if a root node ends below the threshold, the node and
-		its children are removed even if the children end above the threshold.
+		graphs. It is not smart - if a root node ends below the threshold, the
+		node and its children are removed even if the children end above the
+		threshold.
 		
 		Parameters
 		----------
@@ -282,9 +283,10 @@ class LevelSetTree(object):
 		
 	def getSummary(self):
 		"""
-		Produce a tree summary table with Pandas. This can be printed to screen or saved
-		easily to CSV. This is much simpler than manually formatting the strings in the
-		CoAxLab version of DeBaCl, but it does require Pandas.
+		Produce a tree summary table with Pandas. This can be printed to screen
+		or saved easily to CSV. This is much simpler than manually formatting
+		the strings in the CoAxLab version of DeBaCl, but it does require
+		Pandas.
 		
 		Parameters
 		----------
@@ -315,8 +317,8 @@ class LevelSetTree(object):
 				
 	def printSummary(self):
 		"""
-		Prints a table of summary statistics for all of the connected components in a
-		level set tree.
+		Prints a table of summary statistics for all of the connected components
+		in a level set tree.
 		
 		Parameters
 		----------
@@ -366,8 +368,8 @@ class LevelSetTree(object):
 		"""
 		Save a level set tree object to file.
 		
-		Saves a level set tree as a MATLAB struct using the scipy.io module. Ignore the
-		warning about using oned_as default value ('column').
+		Saves a level set tree as a MATLAB struct using the scipy.io module.
+		Ignore the warning about using oned_as default value ('column').
 		
 		Parameters
 		----------
@@ -395,7 +397,6 @@ class LevelSetTree(object):
 		spio.savemat(fname, tree_dict)
 		
 		
-		
 	def branchMassPlot(self, width_mode='uniform', gap=0.04, color_nodes=None):
 		"""
 		Create a branch mass plot of a level set tree.
@@ -403,20 +404,20 @@ class LevelSetTree(object):
 		Parameters
 		----------
 		width_mode : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is given. The
-			default of "uniform" gives each child node an equal fraction of the parent
-			node's horizontal space. If set to 'mass', then horizontal space is
-			allocated proportional to the mass (i.e. fraction of points) of a node
-			relative to its siblings.
+			Determines how much horzontal space each level set tree node is
+			given. The default of "uniform" gives each child node an equal
+			fraction of the parent node's horizontal space. If set to 'mass',
+			then horizontal space is allocated proportional to the mass (i.e.
+			fraction of points) of a node relative to its siblings.
 		
 		gap : float
-			Fraction of vertical space to leave at the bottom. Default is 5%, and 0%
-			also works well. Higher values are used for interactive tools to make room
-			for buttons and messages.
+			Fraction of vertical space to leave at the bottom. Default is 5%,
+			and 0% also works well. Higher values are used for interactive tools
+			to make room for buttons and messages.
 			
 		color_nodes : list
-			Each entry should be a valid index in the level set tree that will be
-			colored uniquely.
+			Each entry should be a valid index in the level set tree that will
+			be colored uniquely.
 			
 		Returns
 		-------
@@ -424,21 +425,23 @@ class LevelSetTree(object):
 			Use fig.show() to view, fig.savefig() to save, etc.
 			
 		segments : dict
-			A dictionary with values that contain the coordinates of vertical line
-			segment endpoints. This is only useful to the interactive analysis tools.
+			A dictionary with values that contain the coordinates of vertical
+			line segment endpoints. This is only useful to the interactive
+			analysis tools.
 		
 		segmap : list
 			Indicates the order of the vertical line segments as returned by the
-			recursive coordinate mapping function, so they can be picked by the user in
-			the interactive tools.
+			recursive coordinate mapping function, so they can be picked by the
+			user in the interactive tools.
 		
 		splits : dict
-			Dictionary values contain the coordinates of horizontal line segments (i.e.
-			node splits).
+			Dictionary values contain the coordinates of horizontal line
+			segments (i.e. node splits).
 			
 		splitmap : list
-			Indicates the order of horizontal line segments returned by recursive
-			coordinate mapping function, for use with interactive tools.
+			Indicates the order of horizontal line segments returned by
+			recursive coordinate mapping function, for use with interactive
+			tools.
 		"""
 		
 		## Initialize the plot containers
@@ -528,36 +531,36 @@ class LevelSetTree(object):
 		return fig, segments, segmap, splits, splitmap
 		
 		
-	def plot(self, height_mode='mass', width_mode='uniform', sort=True, gap=0.05, 
-		color_nodes=None):
+	def plot(self, height_mode='mass', width_mode='uniform', sort=True,
+		gap=0.05, color_nodes=None):
 		"""
 		Create a static plot of a level set tree.
 		
 		Parameters
 		----------
 		height_mode : {'mass', 'levels'}, optional
-			Determines if the dominant vertical axis is based on density level values or
-			mass (i.e. probability content) values.
+			Determines if the dominant vertical axis is based on density level
+			values or mass (i.e. probability content) values.
 		
 		width_mode : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is given. The
-			default of "uniform" gives each child node an equal fraction of the parent
-			node's horizontal space. If set to 'mass', then horizontal space is
-			allocated proportional to the mass (i.e. fraction of points) of a node
-			relative to its siblings.
+			Determines how much horzontal space each level set tree node is
+			given. The default of "uniform" gives each child node an equal
+			fraction of the parent node's horizontal space. If set to 'mass',
+			then horizontal space is allocated proportional to the mass (i.e.
+			fraction of points) of a node relative to its siblings.
 		
-		sort : bool
-			If True, sort sibling nodes from most to least points and draw left to
-			right. Also sorts root nodes in the same way.
+		sort : bool, optional
+			If True, sort sibling nodes from most to least points and draw left
+			to right. Also sorts root nodes in the same way.
 			
-		gap : float
-			Fraction of vertical space to leave at the bottom. Default is 5%, and 0%
-			also works well. Higher values are used for interactive tools to make room
-			for buttons and messages.
+		gap : float, optional
+			Fraction of vertical space to leave at the bottom. Default is 5%,
+			and 0% also works well. Higher values are used for interactive tools
+			to make room for buttons and messages.
 			
-		color_nodes : list
-			Each entry should be a valid index in the level set tree that will be
-			colored uniquely.
+		color_nodes : list, optional
+			Each entry should be a valid index in the level set tree that will
+			be colored uniquely.
 			
 		Returns
 		-------
@@ -642,7 +645,7 @@ class LevelSetTree(object):
 		## Set up the plot framework
 		fig, ax = plt.subplots()
 		ax.set_position([0.11, 0.05, 0.78, 0.93])
-		ax.set_xlabel("Connected component")
+#		ax.set_xlabel("Connected component")
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
 		ax.set_xticklabels([])
@@ -653,9 +656,10 @@ class LevelSetTree(object):
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
 			
 		palette = plutl.Palette()
-		if color_nodes is not None and len(color_nodes) <= np.alen(palette.colorset):
+		if color_nodes is not None:
 			for i, ix in enumerate(color_nodes):
-				c = palette.colorset[i, :]
+				n_clr = np.alen(palette.colorset)
+				c = palette.colorset[i % n_clr, :]
 				subtree = makeSubtree(self, ix)
 
 				## set verical colors
@@ -724,6 +728,87 @@ class LevelSetTree(object):
 			ax2.yaxis.tick_left()
 				
 		return fig, segments, segmap, splits, splitmap
+		
+		
+	def plotOld(self, gap=0.05):
+		"""
+		Make a level set tree plot with none of the new features.
+		
+		Parameters
+		---------		
+		gap : float, optional
+			Fraction of vertical space to leave at the bottom. Default is 5%,
+			and 0% also works well. Higher values are used for interactive tools
+			to make room for buttons and messages.
+			
+			
+		Returns
+		-------
+		fig : matplotlib figure
+			Use fig.show() to view, fig.savefig() to save, etc.
+		"""
+		
+		# initialize the plot containers
+		segments = {}
+		splits = {}
+		segmap = []
+		splitmap = []
+
+		# find the root connected components and corresponding plot intervals
+		ix_root = np.array([k for k, v in self.nodes.iteritems()
+			if v.parent is None])
+		n_root = len(ix_root)
+		census = np.array([len(self.nodes[x].members) for x in ix_root],
+			dtype=np.float)
+		n = sum(census)
+		intervals = np.linspace(0.0, 1.0, n_root+1)
+
+		# do a depth-first search on each root to get segments for each branch
+		for i, ix in enumerate(ix_root):
+			branch = self.constructBranchMap(ix, (intervals[i], intervals[i+1]),
+					height_mode='levels', width_mode='uniform', sort=False)
+			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
+		
+			segments = dict(segments.items() + branch_segs.items())
+			splits = dict(splits.items() + branch_splits.items())
+			segmap += branch_segmap
+			splitmap += branch_splitmap
+		
+		# find the right tick marks for the plot
+		level_ticks = np.sort(list(set(
+			[v.start_level for v in self.nodes.itervalues()] + \
+			[v.end_level for v in self.nodes.itervalues()])))
+		level_tick_labels = [str(round(lvl, 2)) for lvl in level_ticks]
+
+		# set up the plot framework
+		fig, ax = plt.subplots()
+		ax.set_position([0.11, 0.05, 0.78, 0.93])
+#		ax.set_xlabel("Connected component")
+		ax.set_xlim((-0.04, 1.04))
+		ax.set_xticks([])
+		ax.set_xticklabels([])
+
+		ax.set_ylabel("Level")
+		ymin = min([v.start_level for v in self.nodes.itervalues()])
+		ymax = max([v.end_level for v in self.nodes.itervalues()])
+		rng = ymax - ymin
+		ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
+		ax.yaxis.grid(color='gray')
+		ax.set_yticks(level_ticks)
+		ax.set_yticklabels(level_tick_labels)
+		
+		# add the line segments
+		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
+		verts = [segments[k] for k in segmap]
+		linecol = LineCollection(verts, colors=segclr)
+		ax.add_collection(linecol)
+
+		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
+		lats = [splits[k] for k in splitmap]
+		splitcol = LineCollection(lats, colors=segclr)
+		ax.add_collection(splitcol)
+
+		return fig
 		
 		
 	def allModeCluster(self):
