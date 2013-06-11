@@ -397,7 +397,7 @@ class LevelSetTree(object):
 		spio.savemat(fname, tree_dict)
 		
 		
-	def branchMassPlot(self, width_mode='uniform', gap=0.04, color_nodes=None):
+	def plotKappa(self, width_mode='uniform', gap=0.05, color_nodes=None):
 		"""
 		Create a branch mass plot of a level set tree.
 		
@@ -466,7 +466,6 @@ class LevelSetTree(object):
 			intervals = np.insert(intervals, 0, 0.0)
 		else:
 			intervals = np.linspace(0.0, 1.0, n_root+1)
-		print intervals
 
 
 		## Do a depth-first search on each root to get segments for each branch
@@ -489,13 +488,13 @@ class LevelSetTree(object):
 		
 		## Get the relevant yticks
 		yticks = [(x[0][1], x[1][1]) for x in segments.values()]
-		yticks = np.round(np.unique(np.array(yticks).flatten()), 3)
+		yticks = np.round(np.unique(np.array(yticks).flatten()), 2)
 		ymax = max(yticks)
 		
 		## Set up the plot framework
 		fig, ax = plt.subplots()
 		ax.set_position([0.11, 0.05, 0.78, 0.93])
-		ax.set_xlabel("Connected component")
+#		ax.set_xlabel("Connected component")
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_ylim((-0.04*ymax, 1.04*ymax))
 		ax.set_ylabel("Mass")
