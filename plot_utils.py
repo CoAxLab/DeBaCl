@@ -120,16 +120,16 @@ class Palette(object):
 def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
 	fg_color=[228/255.0, 26/255.0, 28/255.0], fg_alpha=1.0):
 	"""
-	Construct the RGBA color parameter for a matplotlib plot.
-	
-	This function is intended to allow for a set of "foreground" points to be colored
-	according to integer labels (e.g. according to clustering output), while
-	"background" points are all colored something else (e.g. light gray). It is used
-	primarily in the interactive plot tools for DeBaCl but can also be used directly by
-	a user to build a scatterplot from scratch using more complicated DeBaCl output.
-	Note this function can be used to build an RGBA color matrix for any aspect of a
-	plot, including point face color, edge color, and line color, despite use of the
-	term "points" in the descriptions below.
+	Construct the RGBA color parameter for a matplotlib plot. This function is
+	intended to allow for a set of "foreground" points to be colored according
+	to integer labels (e.g. according to clustering output), while "background"
+	points are all colored something else (e.g. light gray). It is used
+	primarily in the interactive plot tools for DeBaCl but can also be used
+	directly by a user to build a scatterplot from scratch using more
+	complicated DeBaCl output. Note this function can be used to build an RGBA
+	color matrix for any aspect of a plot, including point face color, edge
+	color, and line color, despite use of the term "points" in the descriptions
+	below.
 	
 	Parameters
 	----------
