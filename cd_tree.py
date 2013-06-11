@@ -9,9 +9,9 @@
 ### SET UP ###
 ##############
 """
-Main functions and classes for construction and use of Chaudhuri-Dasgupta level set
-trees. A companion to debacl.py, which has a more developed set of tools for working
-with generic level set trees.
+Main functions and classes for construction and use of Chaudhuri-Dasgupta level
+set trees. A companion to debacl.py, which has a more developed set of tools for
+working with generic level set trees.
 """
 
 import numpy as np
@@ -29,11 +29,12 @@ from matplotlib.collections import LineCollection
 #####################
 class CD_Component(object):
 	"""
-	Defines a connected component for level set tree construction. A level set tree is
-	really just a set of ConnectedComponents.
+	Defines a connected component for level set tree construction. A level set
+	tree is really just a set of ConnectedComponents.
 	"""
 	
-	def __init__(self, idnum, parent, children, start_radius, end_radius, members):
+	def __init__(self, idnum, parent, children, start_radius, end_radius,
+		members):
 		self.idnum = idnum
 		self.parent = parent
 		self.children = children
@@ -74,9 +75,10 @@ class CD_Tree(object):
 	
 	def getSummary(self):
 		"""
-		Produce a tree summary table with Pandas. This can be printed to screen or saved
-		easily to CSV. This is much simpler than manually formatting the strings in the
-		CoAxLab version of DeBaCl, but it does require Pandas.
+		Produce a tree summary table with Pandas. This can be printed to screen
+		or saved easily to CSV. This is much simpler than manually formatting
+		the strings in the CoAxLab version of DeBaCl, but it does require
+		Pandas.
 		
 		Parameters
 		----------
@@ -105,14 +107,14 @@ class CD_Tree(object):
 	
 	def mergeBySize(self, threshold):
 		"""
-		Prune splits from a tree based on size of child nodes. Merge members of child
-		nodes rather than removing them.
+		Prune splits from a tree based on size of child nodes. Merge members of
+		child nodes rather than removing them.
 		
 		Parameters
 		----------
 		threshold : numeric
-			Tree branches with fewer members than this will be merged into larger
-			siblings or parents.
+			Tree branches with fewer members than this will be merged into
+			larger siblings or parents.
 		
 		Notes
 		-----
@@ -187,20 +189,20 @@ class CD_Tree(object):
 		Parameters
 		----------
 		width_mode : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is given. The
-			default of "uniform" gives each child node an equal fraction of the parent
-			node's horizontal space. If set to 'mass', then horizontal space is
-			allocated proportional to the mass (i.e. fraction of points) of a node
-			relative to its siblings.
+			Determines how much horzontal space each level set tree node is
+			given. The default of "uniform" gives each child node an equal
+			fraction of the parent node's horizontal space. If set to 'mass',
+			then horizontal space is allocated proportional to the mass (i.e.
+			fraction of points) of a node relative to its siblings.
 		
 		sort : bool
-			If True, sort sibling nodes from most to least points and draw left to
-			right. Also sorts root nodes in the same way.
+			If True, sort sibling nodes from most to least points and draw left
+			to right. Also sorts root nodes in the same way.
 			
 		gap : float
-			Fraction of vertical space to leave at the bottom. Default is 5%, and 0%
-			also works well. Higher values are used for interactive tools to make room
-			for buttons and messages.
+			Fraction of vertical space to leave at the bottom. Default is 5%,
+			and 0% also works well. Higher values are used for interactive tools
+			to make room for buttons and messages.
 			
 		Returns
 		-------
@@ -298,12 +300,13 @@ class CD_Tree(object):
 	def constructBranchMap(self, ix, interval, width_mode):
 		"""
 		Map level set tree nodes to locations in a plot canvas. Finds the plot
-		coordinates of vertical line segments corresponding to LST nodes and horizontal
-		line segments corresponding to node splits. Also provides indices of vertical
-		segments and splits for downstream use with interactive plot picker tools. This
-		function is not meant to be called by the user; it is a helper function for the
-		LevelSetTree.plot() method. This function is recursive: it calls itself to map
-		the coordinates of children of the current node 'ix'.
+		coordinates of vertical line segments corresponding to LST nodes and
+		horizontal line segments corresponding to node splits. Also provides
+		indices of vertical segments and splits for downstream use with
+		interactive plot picker tools. This function is not meant to be called
+		by the user; it is a helper function for the LevelSetTree.plot() method.
+		This function is recursive: it calls itself to map the coordinates of
+		children of the current node 'ix'.
 	
 		Parameters
 		----------
@@ -314,27 +317,29 @@ class CD_Tree(object):
 			Horizontal space allocated to node 'ix'.
 	
 		width_mode : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is given. See
-			LevelSetTree.plot() for more information.
+			Determines how much horzontal space each level set tree node is
+			given. See LevelSetTree.plot() for more information.
 	
 		Returns
 		-------
 		segments : dict
-			A dictionary with values that contain the coordinates of vertical line
-			segment endpoints. This is only useful to the interactive analysis tools.
+			A dictionary with values that contain the coordinates of vertical
+			line segment endpoints. This is only useful to the interactive
+			analysis tools.
 	
 		segmap : list
 			Indicates the order of the vertical line segments as returned by the
-			recursive coordinate mapping function, so they can be picked by the user in
-			the interactive tools.
+			recursive coordinate mapping function, so they can be picked by the
+			user in the interactive tools.
 	
 		splits : dict
-			Dictionary values contain the coordinates of horizontal line segments (i.e.
-			node splits).
+			Dictionary values contain the coordinates of horizontal line
+			segments (i.e. node splits).
 		
 		splitmap : list
-			Indicates the order of horizontal line segments returned by recursive
-			coordinate mapping function, for use with interactive tools.
+			Indicates the order of horizontal line segments returned by
+			recursive coordinate mapping function, for use with interactive
+			tools.
 		"""
 
 		## get children
@@ -424,9 +429,9 @@ class CD_Tree(object):
 
 def makeCDTree(X, k, start='max-edge', verbose=False):
 	"""
-	Construct a Chaudhuri-Dasgupta level set tree. A level set tree is constructed by
-	identifying connected components of observations as edges are removed from the
-	geometric graph in descending order of pairwise distance.
+	Construct a Chaudhuri-Dasgupta level set tree. A level set tree is
+	constructed by identifying connected components of observations as edges are
+	removed from the geometric graph in descending order of pairwise distance.
 	
 	Parameters
 	----------
@@ -434,11 +439,12 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 		Data matrix, with observations as rows.
 	
 	start : {'max-edge', 'max-radius'}, optional
-		Should the tree start at the longest pairwise distance, or at the largest
-		k-neighbor radius.
+		Should the tree start at the longest pairwise distance, or at the
+		largest k-neighbor radius.
 	
 	verbose: {False, True}, optional
-		If set to True, then prints to the screen a progress indicator every 100 levels.
+		If set to True, then prints to the screen a progress indicator every 100
+		levels.
 	
 	Returns
 	-------
