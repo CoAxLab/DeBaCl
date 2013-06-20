@@ -4,7 +4,7 @@
 ## Created: 20130417
 ## Updated: 20130417
 ##############################################################
-## this is a test
+
 ##############
 ### SET UP ###
 ##############
@@ -16,7 +16,7 @@ working with generic level set trees.
 
 import numpy as np
 import pandas as pd
-import scipy.spatial.distance as spdist
+import scipy.spatial.distance as spd
 import scipy.io as spio
 import igraph as igr
 import matplotlib.pyplot as plt
@@ -427,7 +427,7 @@ class CD_Tree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def makeCDTree(X, k, start='max-edge', verbose=False):
+def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 	"""
 	Construct a Chaudhuri-Dasgupta level set tree. A level set tree is
 	constructed by identifying connected components of observations as edges are
@@ -437,10 +437,20 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 	----------
 	X : 2D array
 		Data matrix, with observations as rows.
+		
+	k : integer
+		Number of observations to consider as neighbors of each point.
+		
+	alpha : float
+		A robustness parameter. Dilates the threshold for including edges in an
+		upper level set similarity graph.
 	
-	start : {'max-edge', 'max-radius'}, optional
-		Should the tree start at the longest pairwise distance, or at the
-		largest k-neighbor radius.
+	start : {'complete', 'knn', 'mst'}, optional
+		Initialization of the similarity graph. 'Complete' starts with a
+		complete similarity graph (as written in the Chaudhuri-Dasgupta paper)
+		and knn starts with a k-nearest neighbor similarity graph. 'mst' starts
+		with the minimal spanning tree of the complete graph (not yet
+		implemented).
 	
 	verbose: {False, True}, optional
 		If set to True, then prints to the screen a progress indicator every 100
@@ -456,8 +466,8 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 	
 	
 	## Find the distance between each pair of points
-	d = spdist.pdist(X, metric='euclidean')
-	D = spdist.squareform(d)
+	r_node = spd.pdist(X, metric='euclidean')
+	D = spd.squareform(r_node)
 	
 	
 	## Get the k-neighbor radius for each point
@@ -472,21 +482,23 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 	G.vs['name'] = range(n)
 	G.vs['radius'] = k_radius
 	G.es['name'] = range(G.ecount())
-	G.es['length'] = d
+	G.es['length'] = r_node
+	
 
-	ix_order = np.argsort(d)[::-1]
-	distances = d[ix_order]
-		
+	## Set all relevant distances
+	r_edge = r_node / alpha
+	r_levels = np.unique(np.append(r_node, r_edge))[::-1]
+
 
 	## Instantiate the tree	
 	T = CD_Tree()
 	
-	if start == 'max-edge':
+	if start == 'complete':
 		T.subgraphs[0] = G
 		T.nodes[0] = CD_Component(0, parent=None, children=[],
-			start_radius=distances[0], end_radius=None, members=G.vs['name'])
+			start_radius=r_levels[0], end_radius=None, members=G.vs['name'])
 
-	elif start == 'max-radius':
+	elif start == 'knn':
 		max_radius = max(k_radius)
 		
 		# remove edges longer than the maximum k-neighbor radius
@@ -499,18 +511,21 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 		for i, c in enumerate(cc0):
 			T.subgraphs[i] = G.subgraph(c)
 			T.nodes[i] = CD_Component(i, parent=None, children=[], 
-				start_radius=max_radius, end_radius=None, members=G.vs[c]['name'])
+				start_radius=max_radius, end_radius=None,
+					members=G.vs[c]['name'])
 				
-		# trim the distances vector
-		distances = distances[distances <= max_radius]
+	elif start == 'mst':
+		print "Minimal spanning tree initialization is not yet implemented."
+		return T			
 				
 	else:
 		print "Start value not understood."
 		
 		
-	## Iterate through all pairwise distances in descending order
-	for i, r in enumerate(distances):
-		n_iter = len(distances)
+	## Iterate through relevant threshold values in descending order
+	for i, r in enumerate(r_levels):
+
+		n_iter = len(r_levels)
 		if i % 1000 == 0 and verbose:
 			print "iteration:", i, "/", n_iter
 
@@ -518,23 +533,27 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 		activate_subgraphs = {}
 
 		for (k, H) in T.subgraphs.items():
-			cut_edges = H.es.select(length_ge = r)
+			
+			# remove nodes and edges with large weight
 			cut_nodes = H.vs.select(radius_ge = r)
-		
+			if len(cut_nodes) > 0:			
+				cut_nodes.delete()
+
+			cut_edges = H.es.select(length_ge = alpha * r)  # note this alpha
 			if len(cut_edges) > 0:
 				cut_edges.delete()
 
-			if len(cut_nodes) > 0:			
-				cut_nodes.delete()
 			
-				# check if component has vanished - can only happen on node deletion
-				if H.vcount() == 0:
-					T.nodes[k].end_radius = r
-					deactivate_keys.append(k)
+			# check if component has vanishe
+			if H.vcount() == 0:
+				T.nodes[k].end_radius = r
+				deactivate_keys.append(k)
 		
+		
+			# if the graph has changed, look for splits
 			if len(cut_edges) > 0 or len(cut_nodes) > 0:	
-					# check if component splits
 					cc = H.components()	
+
 					if len(cc) > 1:
 						T.nodes[k].end_radius = r
 						deactivate_keys.append(k)
@@ -544,8 +563,8 @@ def makeCDTree(X, k, start='max-edge', verbose=False):
 							T.nodes[k].children.append(new_key)
 							activate_subgraphs[new_key] = H.subgraph(c)
 							T.nodes[new_key] = CD_Component(new_key, parent=k,
-									children=[], start_radius=r, end_radius=None,
-									members=H.vs[c]['name'])
+									children=[], start_radius=r,
+									end_radius=None, members=H.vs[c]['name'])
 								
 		# update active components
 		for k in deactivate_keys:
