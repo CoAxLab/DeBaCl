@@ -445,12 +445,10 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 		A robustness parameter. Dilates the threshold for including edges in an
 		upper level set similarity graph.
 	
-	start : {'complete', 'knn', 'mst'}, optional
+	start : {'complete', 'knn'}, optional
 		Initialization of the similarity graph. 'Complete' starts with a
 		complete similarity graph (as written in the Chaudhuri-Dasgupta paper)
-		and knn starts with a k-nearest neighbor similarity graph. 'mst' starts
-		with the minimal spanning tree of the complete graph (not yet
-		implemented).
+		and knn starts with a k-nearest neighbor similarity graph.
 	
 	verbose: {False, True}, optional
 		If set to True, then prints to the screen a progress indicator every 100
@@ -514,12 +512,9 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 				start_radius=max_radius, end_radius=None,
 					members=G.vs[c]['name'])
 				
-	elif start == 'mst':
-		print "Minimal spanning tree initialization is not yet implemented."
-		return T			
-				
 	else:
 		print "Start value not understood."
+		return
 		
 		
 	## Iterate through relevant threshold values in descending order
