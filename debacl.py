@@ -591,9 +591,11 @@ class LevelSetTree(object):
 		splitmap = []
 
 		## Find the root connected components and corresponding plot intervals
-		ix_root = np.array([k for k, v in self.nodes.iteritems() if v.parent is None])
+		ix_root = np.array([k for k, v in self.nodes.iteritems()
+			if v.parent is None])
 		n_root = len(ix_root)
-		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
+		census = np.array([len(self.nodes[x].members) for x in ix_root],
+			dtype=np.float)
 		n = sum(census)
 		
 		if sort is True:
@@ -810,6 +812,86 @@ class LevelSetTree(object):
 		return fig
 		
 		
+	def getClusterLabels(self, method='all-mode', **kwargs):
+		"""
+		Umbrella function for retrieving custer labels from the level set tree.
+		
+		Parameters
+		----------
+		method : {'all-mode', 'first-k', 'upper-set', 'k-level'}, optional
+			Method for obtaining cluster labels from the tree. 'all-mode' treats
+			each leaf of the tree as a separate cluter. 'first-k' finds the
+			first K non-overlapping clusters from the roots of the tree.
+			'upper-set' returns labels by cutting the tree at a specified
+			density (lambda) or mass (alpha) level. 'k-level' returns labels at
+			the lowest density level that has k nodes.
+			
+		k : integer
+			If method is 'first-k' or 'k-level', this is the desired number of
+			clusters.
+		
+ 		threshold : float
+ 			If method is 'upper-set', this is the threshold at which to cut the
+ 			tree.
+		
+		scale : {'lambda', 'alpha'}
+			If method is 'upper-set', this is vertical scale which 'threshold'
+			refers to. 'lambda' corresponds to a density level, 'alpha'
+			corresponds to a mass level.
+		
+		Returns
+		-------
+		labels : 2-dimensional numpy array
+			Each row corresponds to an observation. The first column indicates
+			the index of the observation in the original data matrix, and the
+			second column is the integer cluster label (starting at 0). Note
+			that the set of observations in this "foreground" set is typically
+			smaller than the original dataset.
+			
+		leaves : list
+			Indices of tree nodes corresponding to foreground clusters.
+		"""
+				
+		if method == 'all-mode':
+			print 'all-mode'
+			labels, leaves = self.allModeCluster()
+			
+		elif method == 'first-k':
+			required = set(['k'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for the first-k " + \
+				"cluster labeling method.")		
+			else:
+				k = kwargs.get('k')
+				labels, leaves = self.firstKCluster(k)
+			
+		elif method == 'upper-set':
+			required = set(['threshold', 'scale'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for the upper-set " + \
+				"cluster labeling method.")		
+			else:
+				threshold = kwargs.get('threshold')
+				scale = kwargs.get('scale')
+				labels, leaves = self.upperSetCluster(threshold, scale)
+
+		elif method == 'k-level':
+			required = set(['k'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for the k-level " + \
+				"cluster labeling method.")		
+			else:
+				k = kwargs.get('k')
+				labels, leaves = self.firstKLevelCluster(k)
+									
+		else:
+			print 'method not understood'
+			labels = np.array([])
+			leaves = []
+
+ 		return labels, leaves
+		
+			
 	def allModeCluster(self):
 		"""
 		Set every leaf node as a foreground cluster.
@@ -820,10 +902,12 @@ class LevelSetTree(object):
 		Returns
 		-------
 		labels : 2D numpy array
-			Each row corresponds to a foreground data point. The first column contains
-			the index of the point in the original data set, and the second column
-			contains the cluster assignment. Cluster labels are increasing integers
-			starting at 0.
+			Each row corresponds to a foreground data point. The first column
+			contains the index of the point in the original data set, and the
+			second column contains the cluster assignment. Cluster labels are
+			increasing integers starting at 0.
+			
+		leaves : list
 		"""
 	
 		leaves = [k for k, v in self.nodes.items() if v.children == []]
@@ -842,9 +926,10 @@ class LevelSetTree(object):
 		
 	def firstKCluster(self, k):
 		"""
-		Returns foreground cluster labels for the 'k' modes with the lowest start
-		levels. In principle, this is the 'k' leaf nodes with the smallest indices, but
-		double check this by finding all leaf start values and ordering.
+		Returns foreground cluster labels for the 'k' modes with the lowest
+		start levels. In principle, this is the 'k' leaf nodes with the smallest
+		indices, but double check this by finding all leaf start values and
+		ordering.
 		
 		Parameters
 		----------
@@ -854,33 +939,35 @@ class LevelSetTree(object):
 		Returns
 		-------
 		labels : 2D numpy array
-			Each row corresponds to a foreground data point. The first column contains
-			the index of the point in the original data set, and the second column
-			contains the cluster assignment. Cluster labels are increasing integers
-			starting at 0.
+			Each row corresponds to a foreground data point. The first column
+			contains the index of the point in the original data set, and the
+			second column contains the cluster assignment. Cluster labels are
+			increasing integers starting at 0.
 		
 		active_nodes : list
-			Indices of tree nodes that are foreground clusters. Particularly useful for
-			coloring a level set tree plot to match the data scatterplot.
+			Indices of tree nodes that are foreground clusters. Particularly
+			useful for coloring a level set tree plot to match the data
+			scatterplot.
 		"""
 		
-		parents = np.array([u for u, v in self.nodes.items() if len(v.children) > 0])
+		parents = np.array([u for u, v in self.nodes.items()
+			if len(v.children) > 0])
 		roots = [u for u, v in self.nodes.items() if v.parent is None]
 		splits = [self.nodes[u].end_level for u in parents]
 		order = np.argsort(splits)
 		star_parents = parents[order[:(k-len(roots))]]
-		
+	
 		children = [u for u, v in self.nodes.items() if v.parent is None]
 		for u in star_parents:
 			children += self.nodes[u].children
 
 		active_nodes = [x for x in children if
 			sum(np.in1d(self.nodes[x].children, children))==0] 
-		
-		
+	
+	
 		points = []
 		cluster = []
-		
+	
 		for i, c in enumerate(active_nodes):
 			cluster_pts = self.nodes[c].members
 			points.extend(cluster_pts)
@@ -888,49 +975,49 @@ class LevelSetTree(object):
 
 		labels = np.array([points, cluster], dtype=np.int).T
 		return labels, active_nodes
-		
-		
-		
-	def upperSetCluster(self, cut, mode):
+	
+				
+	def upperSetCluster(self, threshold, scale):
 		"""
-		Set foreground clusters by finding connected components at an upper level set or
-		upper mass set.
+		Set foreground clusters by finding connected components at an upper
+		level set or upper mass set.
 		
 		Parameters
 		----------
-		cut : float
-			The level or mass value that defines the foreground set of points, depending
-			on 'mode'.
+		threshold : float
+			The level or mass value that defines the foreground set of points,
+			depending on 'mode'.
 		
-		mode : {'level', 'mass'}
-			Determines if the 'cut' threshold is a density level value or a mass value
-			(i.e. fraction of data in the background set)
+		scale : {'lambda', 'alpha'}
+			Determines if the 'cut' threshold is a density level value or a mass
+			value (i.e. fraction of data in the background set)
 		
 		Returns
 		-------
 		labels : 2D numpy array
-			Each row corresponds to a foreground data point. The first column contains
-			the index of the point in the original data set, and the second column
-			contains the cluster assignment. Cluster labels are increasing integers
-			starting at 0.
+			Each row corresponds to a foreground data point. The first column
+			contains the index of the point in the original data set, and the
+			second column contains the cluster assignment. Cluster labels are
+			increasing integers starting at 0.
 		
 		active_nodes : list
-			Indices of tree nodes that are foreground clusters. Particularly useful for
-			coloring a level set tree plot to match the data scatterplot.
+			Indices of tree nodes that are foreground clusters. Particularly
+			useful for coloring a level set tree plot to match the data
+			scatterplot.
 		"""
 	
 		## identify upper level points and the nodes active at the cut
-		if mode == 'mass':
+		if scale == 'alpha':
 			n_bg = [len(x) for x in self.bg_sets]
 			alphas = np.cumsum(n_bg) / (1.0 * self.n)
-			upper_levels = np.where(alphas > cut)[0]
+			upper_levels = np.where(alphas > threshold)[0]
 			active_nodes = [k for k, v in self.nodes.iteritems()
-				if v.start_mass <= cut and v.end_mass > cut]
+				if v.start_mass <= threshold and v.end_mass > threshold]
 
 		else:
-			upper_levels = np.where(np.array(self.levels) > cut)[0]
+			upper_levels = np.where(np.array(self.levels) > threshold)[0]
 			active_nodes = [k for k, v in self.nodes.iteritems()
-				if v.start_level <= cut and v.end_level > cut]
+				if v.start_level <= threshold and v.end_level > threshold]
 
 		upper_pts = np.array([y for x in upper_levels for y in self.bg_sets[x]])
 		
@@ -950,13 +1037,13 @@ class LevelSetTree(object):
 
 	def firstKLevelCluster(self, k):
 		"""
-		Use the first K clusters to appear in the level set tree as foreground clusters.
-		
-		In general, K-1 clusters will appear at a lower level than the K'th cluster;
-		this function returns all members from all K clusters (rather than only the
-		members in the upper level set where the K'th cluster appears). There are not
-		always K clusters available in a level set tree - see LevelSetTree.findKCut for
-		details on default behavior in this case.
+		Use the first K clusters to appear in the level set tree as foreground
+		clusters. In general, K-1 clusters will appear at a lower level than the
+		K'th cluster; this function returns all members from all K clusters
+		(rather than only the members in the upper level set where the K'th
+		cluster appears). There are not always K clusters available in a level
+		set tree - see LevelSetTree.findKCut for details on default behavior in
+		this case.
 		
 		Parameters
 		----------
@@ -966,14 +1053,15 @@ class LevelSetTree(object):
 		Returns
 		-------
 		labels : 2D numpy array
-			Each row corresponds to a foreground data point. The first column contains
-			the index of the point in the original data set, and the second column
-			contains the cluster assignment. Cluster labels are increasing integers
-			starting at 0.
+			Each row corresponds to a foreground data point. The first column
+			contains the index of the point in the original data set, and the
+			second column contains the cluster assignment. Cluster labels are
+			increasing integers starting at 0.
 		
 		active_nodes : list
-			Indices of tree nodes that are foreground clusters. Particularly useful for
-			coloring a level set tree plot to match the data scatterplot.
+			Indices of tree nodes that are foreground clusters. Particularly
+			useful for coloring a level set tree plot to match the data
+			scatterplot.
 		"""
 		
 		cut = self.findKCut(k)
