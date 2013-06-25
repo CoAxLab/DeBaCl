@@ -96,196 +96,49 @@ class LevelSetTree(object):
 		self.subgraphs = {}
 		
 		
-	def collapseLeaves(self, active_nodes):
+	def prune(self, method='size-merge', **kwargs):
 		"""
-		Removes descendent nodes for the branches in 'active_nodes'.
+		Prune the tree.
 		
 		Parameters
 		----------
-		active_nodes : array-like
-			List of nodes to use as the leaves in the collapsed tree.
+		method : {'size-merge', 'size-cut'}
+		
+		gamma : integer
+			Nodes smaller than this will be merged (for 'size-merge') or cut
+			(for 'size-cut')
 		
 		Returns
 		-------
-		"""
-		
-		for ix in active_nodes:
-			subtree = makeSubtree(self, ix)
-			
-			max_end_level = max([v.end_level for v in subtree.nodes.values()])
-			max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
-			
-			self.nodes[ix].end_level = max_end_level
-			self.nodes[ix].end_mass = max_end_mass
-			self.nodes[ix].children = []
-			
-			for u in subtree.nodes.keys():
-				if u != ix:
-					del self.nodes[u]
-
-		
-	def mergeBySize(self, threshold):
-		"""
-		Prune splits from a tree based on size of child nodes. Merge members of
-		child nodes rather than removing them.
-		
-		Parameters
-		----------
-		threshold : numeric
-			Tree branches with fewer members than this will be merged into
-			larger siblings or parents.
 		
 		Notes
 		-----
-		Modifies a level set tree in-place.
+		Modifies the tree in-place.
+		
 		"""
 		
-		## remove small root branches
-		small_roots = [k for k, v in self.nodes.iteritems()
-			if v.parent==None and len(v.members) <= threshold]
-		
-		for root in small_roots:
-			root_tree = makeSubtree(self, root)
-			for ix in root_tree.nodes.iterkeys():
-				del self.nodes[ix]
-			
-		
-		## main pruning
-		parents = [k for k, v in self.nodes.iteritems() if len(v.children) >= 1]
-		parents = np.sort(parents)[::-1]
-		
-		for ix_parent in parents:
-			parent = self.nodes[ix_parent]
-			
-			# get size of each child
-			kid_size = {k: len(self.nodes[k].members) for k in parent.children}
-
-			# count children larger than 'threshold'
-			n_bigkid = sum(np.array(kid_size.values()) >= threshold)
-			
-			if n_bigkid == 0:
-				# update parent's end level and end mass
-				parent.end_level = max([self.nodes[k].end_level
-					for k in parent.children])
-				parent.end_mass = max([self.nodes[k].end_mass
-					for k in parent.children])
-
-				# remove small kids from the tree
-				for k in parent.children:
-					del self.nodes[k]
-				parent.children = []
-				
-			elif n_bigkid == 1:
-				pass
-				# identify the big kid
-				ix_bigkid = [k for k, v in kid_size.iteritems()
-					if v >= threshold][0]
-				bigkid = self.nodes[ix_bigkid]
-					
-				# update k's end level and end mass
-				parent.end_level = bigkid.end_level
-				parent.end_mass = bigkid.end_mass
-				
-				# set grandkids' parent to k
-				for c in bigkid.children:
-					self.nodes[c].parent = ix_parent
-				
-				# delete small kids
-				for k in parent.children:
-					if k != ix_bigkid:
-						del self.nodes[k]
-				
-				# set k's children to grandkids
-				parent.children = bigkid.children
-
-				# delete the single bigkid
-				del self.nodes[ix_bigkid]
-				
+		if method == 'size-merge':
+			required = set(['gamma'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for size-merge pruning.")
 			else:
-				pass  # do nothing here		
-							
-		
-		
-	def pruneBySize(self, delta, mode='proportion'):
-		"""
-		Prune a tree by removing all nodes with too few members.
-		
-		Parameters
-		----------
-		delta : numeric
-			Specifies the pruning threshold.
-		mode : {'proportion', 'number'}, optional
-			Indicates if 'delta' is a proportion of the total data set size, or
-			an integer number.
+				gamma = kwargs.get('gamma')
+				self.mergeBySize(gamma)
 			
-		Notes
-		-----
-		Operates in-place on the levelSetTree.
-		"""
-		
-		if mode == 'proportion':
-			thresh = round(delta * self.n)
+		elif method == 'size-cut':
+			required = set(['gamma'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for size-cut pruning.")
+			else:
+				gamma = kwargs.get('gamma')
+				self.cutBySize(gamma)			
+				
 		else:
-			thresh = delta
-			
-		self.nodes = {k: v for k, v in self.nodes.iteritems()
-			if len(v.members) > thresh}
-		
-		## remove pointers to children that no longer exist
-		for v in self.nodes.itervalues():
-			v.children = [ix for ix in v.children if ix in self.nodes.keys()]
-			
-		## if a node has only one child, collapse that node back into the parent
-		one_child_keys = [k for k, v in self.nodes.iteritems()
-			if len(v.children) == 1]
-		one_child_keys = np.sort(one_child_keys)[::-1]  # do it from the leaves to roots
-
-		for k in one_child_keys:
-			v = self.nodes[k]
-			k_child = v.children[0]
-			child = self.nodes[k_child]
-
-			# update the parent
-			v.end_level = child.end_level
-			v.end_mass = child.end_mass
-			v.children = child.children
-			
-			# update the grandchildren's parent
-			for c in v.children:
-				self.nodes[c].parent = k
-			
-			# remove the child node
-			del self.nodes[k_child]
-			
-			
-	def pruneRootsByLevel(self, thresh):
-		"""
-		Prune a tree by removing root nodes that end below a set level.
-		
-		This only tends to be useful for LSTs based on epsilon-neighborhood
-		graphs. It is not smart - if a root node ends below the threshold, the
-		node and its children are removed even if the children end above the
-		threshold.
-		
-		Parameters
-		----------
-		thresh : float
-			The threshold for keeping or cutting a root node.
-		
-		Returns
-		-------
-		"""
-	
-		remove_queue = [k for k, v in self.nodes.iteritems()
-			if v.parent==None and v.end_level <= thresh]
-		
-		while len(remove_queue) > 0:
-			k = remove_queue.pop()
-			remove_queue += self.nodes[k].children
-			del self.nodes[k]
+			print "Pruning method not understood. No changes were made to " + \
+				"the tree."
 	
 		
-	def getSummary(self):
+	def summarize(self):
 		"""
 		Produce a tree summary table with Pandas. This can be printed to screen
 		or saved easily to CSV. This is much simpler than manually formatting
@@ -661,6 +514,132 @@ class LevelSetTree(object):
 			nodes = []
 
  		return labels, nodes
+ 		
+ 		
+ 	def mergeBySize(self, threshold):
+		"""
+		Prune splits from a tree based on size of child nodes. Merge members of
+		child nodes rather than removing them.
+		
+		Parameters
+		----------
+		threshold : numeric
+			Tree branches with fewer members than this will be merged into
+			larger siblings or parents.
+		
+		Notes
+		-----
+		Modifies a level set tree in-place.
+		"""
+		
+		## remove small root branches
+		small_roots = [k for k, v in self.nodes.iteritems()
+			if v.parent==None and len(v.members) <= threshold]
+		
+		for root in small_roots:
+			root_tree = makeSubtree(self, root)
+			for ix in root_tree.nodes.iterkeys():
+				del self.nodes[ix]
+			
+		
+		## main pruning
+		parents = [k for k, v in self.nodes.iteritems() if len(v.children) >= 1]
+		parents = np.sort(parents)[::-1]
+		
+		for ix_parent in parents:
+			parent = self.nodes[ix_parent]
+			
+			# get size of each child
+			kid_size = {k: len(self.nodes[k].members) for k in parent.children}
+
+			# count children larger than 'threshold'
+			n_bigkid = sum(np.array(kid_size.values()) >= threshold)
+			
+			if n_bigkid == 0:
+				# update parent's end level and end mass
+				parent.end_level = max([self.nodes[k].end_level
+					for k in parent.children])
+				parent.end_mass = max([self.nodes[k].end_mass
+					for k in parent.children])
+
+				# remove small kids from the tree
+				for k in parent.children:
+					del self.nodes[k]
+				parent.children = []
+				
+			elif n_bigkid == 1:
+				pass
+				# identify the big kid
+				ix_bigkid = [k for k, v in kid_size.iteritems()
+					if v >= threshold][0]
+				bigkid = self.nodes[ix_bigkid]
+					
+				# update k's end level and end mass
+				parent.end_level = bigkid.end_level
+				parent.end_mass = bigkid.end_mass
+				
+				# set grandkids' parent to k
+				for c in bigkid.children:
+					self.nodes[c].parent = ix_parent
+				
+				# delete small kids
+				for k in parent.children:
+					if k != ix_bigkid:
+						del self.nodes[k]
+				
+				# set k's children to grandkids
+				parent.children = bigkid.children
+
+				# delete the single bigkid
+				del self.nodes[ix_bigkid]
+				
+			else:
+				pass  # do nothing here		
+							
+		
+		
+	def cutBySize(self, gamma):
+		"""
+		Prune a tree by removing all nodes with too few members.
+		
+		Parameters
+		----------
+		gamma : numeric
+			Specifies the pruning threshold.
+			
+		Notes
+		-----
+		Operates in-place on the levelSetTree.
+		"""
+				
+		self.nodes = {k: v for k, v in self.nodes.iteritems()
+			if len(v.members) > gamma}
+		
+		## remove pointers to children that no longer exist
+		for v in self.nodes.itervalues():
+			v.children = [ix for ix in v.children if ix in self.nodes.keys()]
+			
+		## if a node has only one child, collapse that node back into the parent
+		one_child_keys = [k for k, v in self.nodes.iteritems()
+			if len(v.children) == 1]
+		one_child_keys = np.sort(one_child_keys)[::-1]
+
+		for k in one_child_keys:
+			v = self.nodes[k]
+			k_child = v.children[0]
+			child = self.nodes[k_child]
+
+			# update the parent
+			v.end_level = child.end_level
+			v.end_mass = child.end_mass
+			v.children = child.children
+			
+			# update the grandchildren's parent
+			for c in v.children:
+				self.nodes[c].parent = k
+			
+			# remove the child node
+			del self.nodes[k_child]
 		
 			
 	def allModeCluster(self):
@@ -851,6 +830,34 @@ class LevelSetTree(object):
 
 		labels = np.array([points, cluster], dtype=np.int).T
 		return labels, nodes
+
+
+	def collapseLeaves(self, active_nodes):
+		"""
+		Removes descendent nodes for the branches in 'active_nodes'.
+		
+		Parameters
+		----------
+		active_nodes : array-like
+			List of nodes to use as the leaves in the collapsed tree.
+		
+		Returns
+		-------
+		"""
+		
+		for ix in active_nodes:
+			subtree = makeSubtree(self, ix)
+			
+			max_end_level = max([v.end_level for v in subtree.nodes.values()])
+			max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
+			
+			self.nodes[ix].end_level = max_end_level
+			self.nodes[ix].end_mass = max_end_mass
+			self.nodes[ix].children = []
+			
+			for u in subtree.nodes.keys():
+				if u != ix:
+					del self.nodes[u]
 
 
 	def findKCut(self, k):
