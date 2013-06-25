@@ -23,9 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.widgets import Button
 
-import gen_utils as utl
-import plot_utils as plutl
-
+import debacl_utils as utl
 
 
 
@@ -1214,7 +1212,60 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def makeLevelSetTree(W, levels, bg_sets, mode='general', verbose=False):
+def levelSetTree(X, k, gamma, n_grid=None, verbose=True):
+	"""
+	Construct a level set tree, from soup to nuts. This function assumes a
+	k-nearest neighbor similarity graph and k-nearest neighbor density estimate,
+	which is less flexible than building the similarity graphy, estimating the
+	(pseudo-) density, constructing the tree, and pruning with separate
+	functions.
+	
+	Parameters
+	----------
+	X : 2-dimensional numpy array
+		The data matrix. Rows are observations.
+		
+	k : integer
+		Number of observations to consider as neighbors to a given point, in
+		both the k-nearest neighbor similarity graph and k-nearest neighbor
+		density estimate.
+		
+	n_grid : integer
+		Number of cells in the density level mesh. If None, level sets are
+		computed and decomposed as each observation is removed from the upper
+		level set.
+		
+	gamma : integer
+		Size threshold for pruning small leaf nodes of the tree. Uses the
+		sizeMerge function to prune.
+		
+	verbose : boolean
+		Prints progress updates to the screen if True.
+			
+	Returns
+	-------
+	T : LevelSetTree object
+		The pruned level set tree estimated from a k-nearest neighbor similariy
+		graph and density estimate.
+	"""
+
+	n, p = X.shape
+	
+	W, k_radius = utl.knnGraph(X, k)
+	np.fill_diagonal(W, False)
+	
+	fhat = utl.knnDensity(k_radius, n, p, k)
+
+	bg_sets, levels = utl.constructDensityGrid(fhat, mode='mass', n_grid=n_grid)
+	T = constructTree(W, levels, bg_sets, mode='density',
+		verbose=verbose)
+		
+	T.prune(method='size-merge', gamma=gamma)
+		
+	return T
+
+
+def constructTree(W, levels, bg_sets, mode='general', verbose=False):
 	"""
 	Construct a level set tree. A level set tree is constructed by identifying
 	connected components of observations at successively higher levels of a
@@ -1268,8 +1319,8 @@ def makeLevelSetTree(W, levels, bg_sets, mode='general', verbose=False):
 	for i, c in enumerate(cc0):
 		T.subgraphs[i] = G.subgraph(c)
 		T.nodes[i] = ConnectedComponent(i, parent=None, children=[],
-			start_level=start_level, end_level=None, start_mass=0.0, end_mass=None,
-			members=G.vs[c]['index'])
+			start_level=start_level, end_level=None, start_mass=0.0,
+			end_mass=None, members=G.vs[c]['index'])
 	
 	
 	# Loop through the removal grid
@@ -1317,9 +1368,10 @@ def makeLevelSetTree(W, levels, bg_sets, mode='general', verbose=False):
 							new_key = max(T.nodes.keys()) + 1
 							T.nodes[k].children.append(new_key)
 							activate_subgraphs[new_key] = H.subgraph(c)
-							T.nodes[new_key] = ConnectedComponent(new_key, parent=k,
-								children=[], start_level=level, end_level=None,
-								start_mass=mass, end_mass=None,
+						
+							T.nodes[new_key] = ConnectedComponent(new_key,
+								parent=k, children=[], start_level=level,
+								end_level=None, start_mass=mass, end_mass=None,
 								members=H.vs[c]['index'])
 											
 		# update active components
