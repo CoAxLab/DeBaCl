@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl.py
 ## Created: 20120821
-## Updated: 20130515
+## Updated: 20130624
 ##############################################################
 
 ##############
@@ -352,151 +352,26 @@ class LevelSetTree(object):
 		spio.savemat(fname, tree_dict)
 		
 		
-	def plotKappa(self, width_mode='uniform', gap=0.05, color_nodes=None):
+	def plot(self, form, width='uniform', sort=True, gap=0.05, color_nodes=None):
 		"""
-		Create a branch mass plot of a level set tree.
+		Create a level set tree plot in Matplotlib.
 		
 		Parameters
 		----------
-		width_mode : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is
-			given. The default of "uniform" gives each child node an equal
-			fraction of the parent node's horizontal space. If set to 'mass',
-			then horizontal space is allocated proportional to the mass (i.e.
-			fraction of points) of a node relative to its siblings.
-		
-		gap : float
-			Fraction of vertical space to leave at the bottom. Default is 5%,
-			and 0% also works well. Higher values are used for interactive tools
-			to make room for buttons and messages.
+		form : {'lambda', 'alpha', 'kappa', 'old'}
+			Determines main form of the plot. 'lambda' is the traditional plot
+			where the vertical scale is density levels, but plot improvements
+			such as mass sorting of the nodes and colored nodes are allowed and
+			the secondary 'alpha' scale is visible (but not controlling). The
+			'old' form uses density levels for vertical scale but does not allow
+			plot tweaks and does not show the secondary 'alpha' scale. The
+			'alpha' setting makes the uppper level set mass the primary vertical
+			scale, leaving the 'lambda' scale in place for reference. 'kappa'
+			makes node mass the vertical scale, so that each node's vertical
+			height is proportional to its mass excluding the mass of the node's
+			children.
 			
-		color_nodes : list
-			Each entry should be a valid index in the level set tree that will
-			be colored uniquely.
-			
-		Returns
-		-------
-		fig : matplotlib figure
-			Use fig.show() to view, fig.savefig() to save, etc.
-			
-		segments : dict
-			A dictionary with values that contain the coordinates of vertical
-			line segment endpoints. This is only useful to the interactive
-			analysis tools.
-		
-		segmap : list
-			Indicates the order of the vertical line segments as returned by the
-			recursive coordinate mapping function, so they can be picked by the
-			user in the interactive tools.
-		
-		splits : dict
-			Dictionary values contain the coordinates of horizontal line
-			segments (i.e. node splits).
-			
-		splitmap : list
-			Indicates the order of horizontal line segments returned by
-			recursive coordinate mapping function, for use with interactive
-			tools.
-		"""
-		
-		## Initialize the plot containers
-		segments = {}
-		splits = {}
-		segmap = []
-		splitmap = []
-
-		## Find the root connected components and corresponding plot intervals
-		ix_root = np.array([k for k, v in self.nodes.iteritems() if v.parent is None])
-		n_root = len(ix_root)
-		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
-		n = sum(census)
-				
-		seniority = np.argsort(census)[::-1]
-		ix_root = ix_root[seniority]
-		census = census[seniority]
-		
-		if width_mode == 'mass':
-			weights = census / n
-			intervals = np.cumsum(weights)
-			intervals = np.insert(intervals, 0, 0.0)
-		else:
-			intervals = np.linspace(0.0, 1.0, n_root+1)
-
-
-		## Do a depth-first search on each root to get segments for each branch
-		for i, ix in enumerate(ix_root):
-			branch = self.constructMassMap(ix, 0.0, (intervals[i], intervals[i+1]),
-				width_mode)
-			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
-				
-			segments = dict(segments.items() + branch_segs.items())
-			splits = dict(splits.items() + branch_splits.items())
-			segmap += branch_segmap
-			splitmap += branch_splitmap
-			
-		## get the the vertical line segments in order of the segment map (segmap)
-		verts = [segments[k] for k in segmap]
-		lats = [splits[k] for k in splitmap]
-			
-		## Find the fraction of nodes in each segment (to use as linewidths)
-		thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n) for x in segmap]
-		
-		## Get the relevant yticks
-		yticks = [(x[0][1], x[1][1]) for x in segments.values()]
-		yticks = np.round(np.unique(np.array(yticks).flatten()), 2)
-		ymax = max(yticks)
-		
-		## Set up the plot framework
-		fig, ax = plt.subplots()
-		ax.set_position([0.11, 0.05, 0.78, 0.93])
-#		ax.set_xlabel("Connected component")
-		ax.set_xlim((-0.04, 1.04))
-		ax.set_ylim((-0.04*ymax, 1.04*ymax))
-		ax.set_ylabel("Mass")
-		ax.yaxis.grid(color='gray')
-		ax.set_yticks(yticks)
-		ax.set_xticks([])
-		ax.set_xticklabels([])
-		
-		## Add the line segments
-		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
-		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
-		
-		palette = plutl.Palette()
-		if color_nodes is not None and len(color_nodes) <= np.alen(palette.colorset):
-			for i, ix in enumerate(color_nodes):
-				c = palette.colorset[i, :]
-				subtree = makeSubtree(self, ix)
-
-				## set verical colors
-				ix_replace = np.in1d(segmap, subtree.nodes.keys())					
-				segclr[ix_replace] = c
-
-				## set horizontal colors
-				if splitmap:
-					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
-					splitclr[ix_replace] = c
-		
-		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
-		ax.add_collection(linecol)
-		splitcol = LineCollection(lats, colors=splitclr)
-		ax.add_collection(splitcol)
-		
-		return fig, segments, segmap, splits, splitmap
-		
-		
-	def plot(self, height_mode='mass', width_mode='uniform', sort=True,
-		gap=0.05, color_nodes=None):
-		"""
-		Create a static plot of a level set tree.
-		
-		Parameters
-		----------
-		height_mode : {'mass', 'levels'}, optional
-			Determines if the dominant vertical axis is based on density level
-			values or mass (i.e. probability content) values.
-		
-		width_mode : {'uniform', 'mass'}, optional
+		width : {'uniform', 'mass'}, optional
 			Determines how much horzontal space each level set tree node is
 			given. The default of "uniform" gives each child node an equal
 			fraction of the parent node's horizontal space. If set to 'mass',
@@ -540,12 +415,20 @@ class LevelSetTree(object):
 			recursive coordinate mapping function, for use with interactive
 			tools.
 		"""
+		
+		## Validate input
+		if form == 'old':
+			sort = False
+			color_nodes = None
+			width = 'uniform'
+			
 
 		## Initialize the plot containers
 		segments = {}
 		splits = {}
 		segmap = []
 		splitmap = []
+		
 
 		## Find the root connected components and corresponding plot intervals
 		ix_root = np.array([k for k, v in self.nodes.iteritems()
@@ -560,7 +443,7 @@ class LevelSetTree(object):
 			ix_root = ix_root[seniority]
 			census = census[seniority]
 			
-		if width_mode == 'mass':
+		if width == 'mass':
 			weights = census / n
 			intervals = np.cumsum(weights)
 			intervals = np.insert(intervals, 0, 0.0)
@@ -570,49 +453,111 @@ class LevelSetTree(object):
 		
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
-			branch = self.constructBranchMap(ix, (intervals[i], intervals[i+1]),
-					height_mode, width_mode, sort)
+			if form == 'kappa':
+				branch = self.constructMassMap(ix, 0.0, (intervals[i],
+					intervals[i+1]), width)
+			elif form == 'old':
+				branch = self.constructBranchMap(ix, (intervals[i],
+					intervals[i+1]), 'lambda', width, sort)			
+			else:
+				branch = self.constructBranchMap(ix, (intervals[i],
+					intervals[i+1]), form, width, sort)
+		
 			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
-				
 			segments = dict(segments.items() + branch_segs.items())
 			splits = dict(splits.items() + branch_splits.items())
 			segmap += branch_segmap
 			splitmap += branch_splitmap
-			
+
 			
 		## get the the vertical line segments in order of the segment map (segmap)
 		verts = [segments[k] for k in segmap]
 		lats = [splits[k] for k in splitmap]
-			
+
+
 		## Find the fraction of nodes in each segment (to use as linewidths)
 		thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n)
 			for x in segmap]
-		
-		
-		## Find the right tick marks for the plot
-		level_ticks = np.sort(list(set(
-			[v.start_level for v in self.nodes.itervalues()] + \
-			[v.end_level for v in self.nodes.itervalues()])))
-		level_tick_labels = [str(round(lvl, 2)) for lvl in level_ticks]
-		
-		mass_ticks = np.sort(list(set(
-			[v.start_mass for v in self.nodes.itervalues()] + \
-			[v.end_mass for v in self.nodes.itervalues()])))
-		mass_tick_labels = [str(round(m, 2)) for m in mass_ticks]
 
-	
+		
+		## Get the relevant vertical ticks
+		primary_ticks = [(x[0][1], x[1][1]) for x in segments.values()]
+		primary_ticks = np.unique(np.array(primary_ticks).flatten())
+		primary_labels = [str(round(tick, 2)) for tick in primary_ticks]
+		
+						
 		## Set up the plot framework
 		fig, ax = plt.subplots()
 		ax.set_position([0.11, 0.05, 0.78, 0.93])
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
 		ax.set_xticklabels([])
+		ax.yaxis.grid(color='gray')
+		ax.set_yticks(primary_ticks)
+		ax.set_yticklabels(primary_labels)
 
+				
+		## Form-specific details
+		if form == 'kappa':
+			kappa_max = max(primary_ticks)
+			ax.set_ylim((-1.0 * gap * kappa_max, 1.04*kappa_max))
+			ax.set_ylabel("mass")
+			
+		elif form == 'old':
+			ax.set_ylabel("lambda")
+			ymin = min([v.start_level for v in self.nodes.itervalues()])
+			ymax = max([v.end_level for v in self.nodes.itervalues()])
+			rng = ymax - ymin
+			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)	
 
+		elif form == 'lambda':
+			ax.set_ylabel("lambda")
+			ymin = min([v.start_level for v in self.nodes.itervalues()])
+			ymax = max([v.end_level for v in self.nodes.itervalues()])
+			rng = ymax - ymin
+			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
+			
+			ax2 = ax.twinx()
+			ax2.set_position([0.11, 0.05, 0.78, 0.93])
+			ax2.set_ylabel("alpha", rotation=270)
+
+			alpha_ticks = np.sort(list(set(
+				[v.start_mass for v in self.nodes.itervalues()] + \
+				[v.end_mass for v in self.nodes.itervalues()])))
+			alpha_labels = [str(round(m, 2)) for m in alpha_ticks]
+
+			ax2.set_yticks(primary_ticks)
+			ax2.set_yticklabels(alpha_labels)		
+			ax2.set_ylim(ax.get_ylim())
+		
+		elif form == 'alpha':
+			ax.set_ylabel("alpha", rotation=270)
+			ymin = min([v.start_mass for v in self.nodes.itervalues()])
+			ymax = max([v.end_mass for v in self.nodes.itervalues()])
+			rng = ymax - ymin
+			ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
+			
+			ax2 = ax.twinx()
+			ax2.set_position([0.11, 0.05, 0.78, 0.93])
+			ax2.set_ylabel("lambda")
+
+			lambda_ticks = np.sort(list(set(
+				[v.start_level for v in self.nodes.itervalues()] + \
+				[v.end_level for v in self.nodes.itervalues()])))
+			lambda_labels = [str(round(lvl, 2)) for lvl in lambda_ticks]
+
+			ax2.set_ylim(ax.get_ylim())
+			ax2.set_yticks(primary_ticks)
+			ax2.set_yticklabels(lambda_labels)
+						
+		else:
+			raise ValueError('Plot form not understood')				
+
+				
 		## Add the line segments
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
-			
+
 		palette = plutl.Palette()
 		if color_nodes is not None:
 			for i, ix in enumerate(color_nodes):
@@ -621,153 +566,23 @@ class LevelSetTree(object):
 				subtree = makeSubtree(self, ix)
 
 				## set verical colors
-				ix_replace = np.in1d(segmap, subtree.nodes.keys())					
+				ix_replace = np.in1d(segmap, subtree.nodes.keys())
 				segclr[ix_replace] = c
 
 				## set horizontal colors
 				if splitmap:
 					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
 					splitclr[ix_replace] = c
-					
-			
+						
 		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
 		ax.add_collection(linecol)
 		linecol.set_picker(20)
-		
+	
 		splitcol = LineCollection(lats, colors=splitclr)
 		ax.add_collection(splitcol)
-
-
-		## Make the plot
-		if height_mode=='levels':
-			ax.set_ylabel("Level")
-			ymin = min([v.start_level for v in self.nodes.itervalues()])
-			ymax = max([v.end_level for v in self.nodes.itervalues()])
-			rng = ymax - ymin
-			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
-			ax.yaxis.grid(color='gray')
-
-			ax.set_yticks(level_ticks)
-			ax.set_yticklabels(level_tick_labels)
-			
-			ax2 = ax.twinx()
-			ax2.set_xticks([])
-			ax2.set_xticklabels([])
-			ax2.set_ylabel("Mass", rotation=270)
-			
-			ax2.set_ylim(ax.get_ylim())
-			ax2.set_yticks(level_ticks)
-			ax2.set_yticklabels(mass_tick_labels)
-
-		else:
-			ax.set_ylabel("Mass", rotation=270)
-			ax.yaxis.set_label_position('right')
-
-			ymin = min([v.start_mass for v in self.nodes.itervalues()])
-			ymax = max([v.end_mass for v in self.nodes.itervalues()])
-			rng = ymax - ymin
-			ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
-			ax.yaxis.grid(color='gray')
-
-			ax2 = ax.twinx()
-			ax2.set_xticks([])
-			ax2.set_xticklabels([])
-			
-			ax2.yaxis.set_label_position('left')
-			ax2.set_ylabel("Level")
-
-			ax.set_yticks(mass_ticks)
-			ax.set_yticklabels(mass_tick_labels)
-			ax.yaxis.tick_right()
-
-			ax2.set_ylim(ax.get_ylim())
-			ax2.set_yticks(mass_ticks)
-			ax2.set_yticklabels(level_tick_labels)
-			ax2.yaxis.tick_left()
 				
 		return fig, segments, segmap, splits, splitmap
-		
-		
-	def plotOld(self, gap=0.05):
-		"""
-		Make a level set tree plot with none of the new features.
-		
-		Parameters
-		---------		
-		gap : float, optional
-			Fraction of vertical space to leave at the bottom. Default is 5%,
-			and 0% also works well. Higher values are used for interactive tools
-			to make room for buttons and messages.
 			
-			
-		Returns
-		-------
-		fig : matplotlib figure
-			Use fig.show() to view, fig.savefig() to save, etc.
-		"""
-		
-		# initialize the plot containers
-		segments = {}
-		splits = {}
-		segmap = []
-		splitmap = []
-
-		# find the root connected components and corresponding plot intervals
-		ix_root = np.array([k for k, v in self.nodes.iteritems()
-			if v.parent is None])
-		n_root = len(ix_root)
-		census = np.array([len(self.nodes[x].members) for x in ix_root],
-			dtype=np.float)
-		n = sum(census)
-		intervals = np.linspace(0.0, 1.0, n_root+1)
-
-		# do a depth-first search on each root to get segments for each branch
-		for i, ix in enumerate(ix_root):
-			branch = self.constructBranchMap(ix, (intervals[i], intervals[i+1]),
-					height_mode='levels', width_mode='uniform', sort=False)
-			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
-		
-			segments = dict(segments.items() + branch_segs.items())
-			splits = dict(splits.items() + branch_splits.items())
-			segmap += branch_segmap
-			splitmap += branch_splitmap
-		
-		# find the right tick marks for the plot
-		level_ticks = np.sort(list(set(
-			[v.start_level for v in self.nodes.itervalues()] + \
-			[v.end_level for v in self.nodes.itervalues()])))
-		level_tick_labels = [str(round(lvl, 2)) for lvl in level_ticks]
-
-		# set up the plot framework
-		fig, ax = plt.subplots()
-		ax.set_position([0.11, 0.05, 0.78, 0.93])
-#		ax.set_xlabel("Connected component")
-		ax.set_xlim((-0.04, 1.04))
-		ax.set_xticks([])
-		ax.set_xticklabels([])
-
-		ax.set_ylabel("Level")
-		ymin = min([v.start_level for v in self.nodes.itervalues()])
-		ymax = max([v.end_level for v in self.nodes.itervalues()])
-		rng = ymax - ymin
-		ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
-		ax.yaxis.grid(color='gray')
-		ax.set_yticks(level_ticks)
-		ax.set_yticklabels(level_tick_labels)
-		
-		# add the line segments
-		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
-		verts = [segments[k] for k in segmap]
-		linecol = LineCollection(verts, colors=segclr)
-		ax.add_collection(linecol)
-
-		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
-		lats = [splits[k] for k in splitmap]
-		splitcol = LineCollection(lats, colors=segclr)
-		ax.add_collection(splitcol)
-
-		return fig
-		
 		
 	def getClusterLabels(self, method='all-mode', **kwargs):
 		"""
@@ -1080,7 +895,7 @@ class LevelSetTree(object):
 		return cut
 		
 		
-	def constructBranchMap(self, ix, interval, height_mode, width_mode, sort):
+	def constructBranchMap(self, ix, interval, scale, width, sort):
 		"""
 		Map level set tree nodes to locations in a plot canvas. Finds the plot
 		coordinates of vertical line segments corresponding to LST nodes and
@@ -1099,9 +914,9 @@ class LevelSetTree(object):
 		interval: length 2 tuple of floats
 			Horizontal space allocated to node 'ix'.
 	
-		height_mode : {'mass', 'levels'}, optional
+		scale : {'lambda', 'alpha'}, optional
 	
-		width_mode : {'uniform', 'mass'}, optional
+		width : {'uniform', 'mass'}, optional
 			Determines how much horzontal space each level set tree node is
 			given. See LevelSetTree.plot() for more information.
 	
@@ -1130,7 +945,7 @@ class LevelSetTree(object):
 			recursive coordinate mapping function, for use with interactive
 			tools.
 		"""
-
+		
 		## get children
 		children = np.array(self.nodes[ix].children)
 		n_child = len(children)
@@ -1144,7 +959,7 @@ class LevelSetTree(object):
 			splits = {}
 			splitmap = []
 
-			if height_mode == 'levels':
+			if scale == 'lambda':
 				segments[ix] = (([xpos, self.nodes[ix].start_level],
 					[xpos, self.nodes[ix].end_level]))
 			else:
@@ -1171,7 +986,7 @@ class LevelSetTree(object):
 				weights = weights[seniority]
 
 			## get relative branch intervals
-			if width_mode == 'mass':
+			if width == 'mass':
 				child_intervals = np.cumsum(weights)
 				child_intervals = np.insert(child_intervals, 0, 0.0)
 			else:
@@ -1181,13 +996,15 @@ class LevelSetTree(object):
 			for j, child in enumerate(children):
 		
 				## translate local interval to absolute interval
-				branch_interval = (interval[0] + child_intervals[j] * parent_range,
+				branch_interval = (interval[0] + \
+					child_intervals[j] * parent_range,
 					interval[0] + child_intervals[j+1] * parent_range)
 
 				## recurse on the child
-				branch = self.constructBranchMap(child, branch_interval, height_mode,
-					width_mode, sort)
-				branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
+				branch = self.constructBranchMap(child, branch_interval,
+					scale, width, sort)
+				branch_segs, branch_splits, branch_segmap, \
+					branch_splitmap = branch
 				
 				segmap += branch_segmap
 				splitmap += branch_splitmap
@@ -1205,7 +1022,7 @@ class LevelSetTree(object):
 				splitmap.append(child)
 				child_xpos = segments[child][0][0]
 		
-				if height_mode == 'levels':
+				if scale == 'lambda':
 					splits[child] = ([xpos, self.nodes[ix].end_level],
 						[child_xpos, self.nodes[ix].end_level])
 				else:
@@ -1214,7 +1031,7 @@ class LevelSetTree(object):
 				
 	
 			## add vertical segment for current node
-			if height_mode == 'levels':
+			if scale == 'lambda':
 				segments[ix] = (([xpos, self.nodes[ix].start_level],
 					[xpos, self.nodes[ix].end_level]))
 			else:
