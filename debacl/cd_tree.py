@@ -104,6 +104,34 @@ class CD_Tree(object):
 		summary.set_index('key', inplace=True)
 		return summary
 		
+		
+	def makeSubtree(self, ix):
+		"""
+		Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
+	
+		Parameters
+		----------
+		ix : int
+			Node to use at the root of the new tree.
+	
+		Returns
+		-------
+		T : LevelSetTree
+			A completely indpendent level set tree, with 'ix' as the root node.
+		"""
+		
+		T = LevelSetTree(bg_sets=[], levels=[])
+		T.nodes[ix] = self.nodes[ix].copy()
+		T.nodes[ix].parent = None
+		queue = self.nodes[ix].children[:]
+	
+		while len(queue) > 0:
+			branch_ix = queue.pop()
+			T.nodes[branch_ix] = self.nodes[branch_ix]
+			queue += self.nodes[branch_ix].children
+	
+		return T
+		
 	
 	def mergeBySize(self, threshold):
 		"""
@@ -569,35 +597,5 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 	
 	return T
 	
-
-
-def makeSubtree(tree, ix):
-	"""
-	Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
-	
-	Parameters
-	----------
-	tree : LevelSetTree
-	
-	ix : int
-		Node to use at the root of the new tree.
-	
-	Returns
-	-------
-	T : LevelSetTree
-		A completely indpendent level set tree, with 'ix' as the root node.
-	"""
-		
-	T = CD_Tree()
-	T.nodes[ix] = tree.nodes[ix].copy()
-	T.nodes[ix].parent = None
-	queue = tree.nodes[ix].children[:]
-	
-	while len(queue) > 0:
-		branch_ix = queue.pop()
-		T.nodes[branch_ix] = tree.nodes[branch_ix]
-		queue += tree.nodes[branch_ix].children
-	
-	return T
 
 		

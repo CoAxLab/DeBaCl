@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl.py
 ## Created: 20120821
-## Updated: 20130624
+## Updated: 20130625
 ##############################################################
 
 ##############
@@ -14,6 +14,7 @@ Includes functions to construct and modify with level set tree objects, and
 tools for interactive data analysis and clustering with level set trees.
 """
 
+
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as spdist
@@ -23,7 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.widgets import Button
 
-import debacl_utils as utl
+import utils as utl
 
 
 
@@ -409,7 +410,7 @@ class LevelSetTree(object):
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
 
-		palette = plutl.Palette()
+		palette = utl.Palette()
 		if color_nodes is not None:
 			for i, ix in enumerate(color_nodes):
 				n_clr = np.alen(palette.colorset)
@@ -512,6 +513,34 @@ class LevelSetTree(object):
 			nodes = []
 
  		return labels, nodes
+ 		
+ 		
+	def makeSubtree(self, ix):
+		"""
+		Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
+	
+		Parameters
+		----------
+		ix : int
+			Node to use at the root of the new tree.
+	
+		Returns
+		-------
+		T : LevelSetTree
+			A completely indpendent level set tree, with 'ix' as the root node.
+		"""
+		
+		T = LevelSetTree(bg_sets=[], levels=[])
+		T.nodes[ix] = self.nodes[ix].copy()
+		T.nodes[ix].parent = None
+		queue = self.nodes[ix].children[:]
+	
+		while len(queue) > 0:
+			branch_ix = queue.pop()
+			T.nodes[branch_ix] = self.nodes[branch_ix]
+			queue += self.nodes[branch_ix].children
+	
+		return T
  		
  		
  	def mergeBySize(self, threshold):
@@ -1377,37 +1406,6 @@ def constructTree(W, levels, bg_sets, mode='general', verbose=False):
 		T.subgraphs.update(activate_subgraphs)
 		
 	return T
-	
-
-
-def makeSubtree(tree, ix):
-	"""
-	Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
-	
-	Parameters
-	----------
-	tree : LevelSetTree
-	
-	ix : int
-		Node to use at the root of the new tree.
-	
-	Returns
-	-------
-	T : LevelSetTree
-		A completely indpendent level set tree, with 'ix' as the root node.
-	"""
-		
-	T = LevelSetTree(bg_sets=[], levels=[])
-	T.nodes[ix] = tree.nodes[ix].copy()
-	T.nodes[ix].parent = None
-	queue = tree.nodes[ix].children[:]
-	
-	while len(queue) > 0:
-		branch_ix = queue.pop()
-		T.nodes[branch_ix] = tree.nodes[branch_ix]
-		queue += tree.nodes[branch_ix].children
-	
-	return T
 
 
 def loadTree(fname):
@@ -1520,7 +1518,7 @@ class TreeComponentTool(object):
 			self.splitmap = self.T.plot(height_mode, width_mode)
 		
 		self.ax = self.fig.axes[0]
-		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
+		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
 		segments = self.ax.collections[0]  # the line collection
 		segments.set_picker(15)
 		self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
@@ -1538,7 +1536,7 @@ class TreeComponentTool(object):
 		self.subtree = makeSubtree(self.T, self.node_ix)
 							
 		## recolor the original tree
-		palette = plutl.Palette(use='scatter')
+		palette = utl.Palette(use='scatter')
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
@@ -1567,7 +1565,7 @@ class TreeComponentTool(object):
 			if p == 1:
 				uc = np.vstack((self.component, np.zeros((len(self.component),),
 					dtype=np.int))).T
-				hist_fig = plutl.clusterHistogram(self.X, uc, self.fhat, self.f)
+				hist_fig = utl.clusterHistogram(self.X, uc, self.fhat, self.f)
 				hist_fig.show()
 			
 			elif p == 2 or p == 3:
@@ -1575,12 +1573,12 @@ class TreeComponentTool(object):
 				comp_clr = [228/255.0, 26/255.0, 28/255.0] # red
 				black = [0.0, 0.0, 0.0]
 
-				clr_matrix = plutl.makeColorMatrix(n, bg_color=base_clr,
+				clr_matrix = utl.makeColorMatrix(n, bg_color=base_clr,
 					bg_alpha=0.72, ix=list(self.component), fg_color=comp_clr,
 					fg_alpha=0.68)
-				edge_matrix = plutl.makeColorMatrix(n, bg_color=black,
+				edge_matrix = utl.makeColorMatrix(n, bg_color=black,
 					bg_alpha=0.38, ix=None)  # edges are black
-				pts_fig = plutl.plotPoints(self.X, size=self.size, clr=clr_matrix,
+				pts_fig = utl.plotPoints(self.X, size=self.size, clr=clr_matrix,
 					edgecolor=edge_matrix)
 				pts_fig.show()
 
@@ -1705,7 +1703,7 @@ class TreeClusterTool(object):
 		self.clusters, active_nodes = self.T.upperSetCluster(cut, mode='mass')
 			
 		# reset vertical segment colors
-		palette = plutl.Palette(use='scatter')
+		palette = utl.Palette(use='scatter')
 		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
@@ -1736,7 +1734,7 @@ class TreeClusterTool(object):
 				
 			if p == 1:
 				cut_level = self.T.massToLevel(cut)
-				hist_fig = plutl.clusterHistogram(self.X, self.clusters,
+				hist_fig = utl.clusterHistogram(self.X, self.clusters,
 					self.fhat, self.f, levels=[cut_level])
 				hist_fig.show()
 
@@ -1744,12 +1742,12 @@ class TreeClusterTool(object):
 				base_clr = [217.0 / 255.0] * 3  ## light gray
 				black = [0.0, 0.0, 0.0]
 			
-				clr_matrix = plutl.makeColorMatrix(n, bg_color=base_clr,
+				clr_matrix = utl.makeColorMatrix(n, bg_color=base_clr,
 					bg_alpha=0.72, ix=self.clusters[:, 0],
 					fg_color=self.clusters[:, 1], fg_alpha=0.68)
-				edge_matrix = plutl.makeColorMatrix(n, bg_color=black,
+				edge_matrix = utl.makeColorMatrix(n, bg_color=black,
 					bg_alpha=0.38, ix=None)
-				pts_fig = plutl.plotPoints(self.X, clr=clr_matrix,
+				pts_fig = utl.plotPoints(self.X, clr=clr_matrix,
 					edgecolor=edge_matrix)
 				pts_fig.show()
 
