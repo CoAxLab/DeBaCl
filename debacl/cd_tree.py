@@ -597,5 +597,51 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 	
 	return T
 	
+	
+	
+def loadTree(fname):
+	"""
+	Load a saved tree from file.
+	
+	Parameters
+	----------
+	fname : string
+		Filename to load. The .mat extension is not necessary.
+	
+	Returns
+	-------
+	T : LevelSetTree
+		The loaded and reconstituted level set tree object.
+	"""
+	
+	indata = spio.loadmat(fname)
+	
+	## format inputs
+	idnums = indata['idnums'].flatten()
+	levels = list(indata['levels'].flatten())
+	bg_sets = [np.array(x[0].flatten()) for x in indata['bg_sets']]
+	start_radius = indata['start_radius'].flatten()
+	end_radius = indata['end_radius'].flatten()
+	parents = [(None if x == -1 else x) for x in indata['parents'].flatten()]
+	children = [list(x[0].flatten()) for x in indata['children']]
+	members = [list(x[0].flatten()) for x in indata['members']]
+	
+	if len(children) == 0:	
+		children = [[]]*len(idnums)
+	
+	## create tree
+	T = CD_Tree()
+	
+	## add nodes to the tree
+	nodes = {}
+	for i, k in enumerate(idnums):
+		nodes[k] = CD_Component(k, parents[i], children[i],
+			start_radius[i], end_radius[i], members[i])
+		
+	T.nodes = nodes
+	return T
+
+
+	
 
 		
