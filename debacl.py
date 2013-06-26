@@ -1251,15 +1251,11 @@ def levelSetTree(X, k, gamma, n_grid=None, verbose=True):
 
 	n, p = X.shape
 	
-	W, k_radius = utl.knnGraph(X, k)
-	np.fill_diagonal(W, False)
-	
+	W, k_radius = utl.knnGraph(X, k, self_edge=False)
 	fhat = utl.knnDensity(k_radius, n, p, k)
-
 	bg_sets, levels = utl.constructDensityGrid(fhat, mode='mass', n_grid=n_grid)
 	T = constructTree(W, levels, bg_sets, mode='density',
-		verbose=verbose)
-		
+		verbose=verbose)		
 	T.prune(method='size-merge', gamma=gamma)
 		
 	return T

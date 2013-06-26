@@ -62,7 +62,7 @@ def drawSample(n, k):
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-def knnGraph(x, k=None, q=0.05):
+def knnGraph(x, k=None, q=0.05, self_edge=False):
 	"""Compute the symmetric k-NN adjacency matrix for a set of points.
 	
 	Parameters
@@ -77,6 +77,11 @@ def knnGraph(x, k=None, q=0.05):
 	q : float, optional
 		The proportion of points to use as neighbors of a given observation.
 		Defaults to 0.05.
+		
+	self_edge : boolean
+		Flag to include or exclude (default) self-edges. Equivalent to having
+		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
+		adjacency matrix.
 	
 	Returns
 	-------
@@ -106,6 +111,9 @@ def knnGraph(x, k=None, q=0.05):
 	W[ix_row, ix_nbr] = True
 	W = np.logical_or(W, W.T)
 	
+	if not self_edge:
+		np.fill_diagonal(W, False)
+	
 	## find the radius of the k'th neighbor
 	k_nbr = ix_nbr[:, -1]
 	k_radius = D[np.arange(n), k_nbr]
@@ -113,7 +121,7 @@ def knnGraph(x, k=None, q=0.05):
 	return W, k_radius
 	
 	
-def gaussianGraph(x, sigma):
+def gaussianGraph(x, sigma, self_edge=False):
 	"""
 	Constructs a complete graph adjacency matrix with a Gaussian similarity
 	kernel. Uses the rows of 'x' as vertices in a graph and connects each pair
@@ -124,8 +132,14 @@ def gaussianGraph(x, sigma):
 	----------
 	x : 2D numpy array
 		Rows of 'x' are locations of graph vertices.
+
 	sigma : float
 		The denominator of the Gaussian kernel.
+				
+	self_edge : boolean
+		Flag to include or exclude (default) self-edges. Equivalent to having
+		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
+		adjacency matrix.	
 	
 	Returns
 	-------
@@ -138,6 +152,9 @@ def gaussianGraph(x, sigma):
 	d = spdist.pdist(x, metric='sqeuclidean')
 	W = np.exp(-1 * d / sigma)
 	W = spdist.squareform(W)
+	
+	if not self_edge:
+		np.fill_diagonal(W, False)
 	
 	return W
 	
@@ -153,18 +170,26 @@ def epsilonGraph(x, eps=None, q=0.05):
 	----------
 	x : 2D numpy array
 		The rows of x are the observations which become graph vertices.
+		
 	eps : float, optional
 		The distance threshold for neighbors. If unspecified, defaults to the
 		proportion in 'q'.
+		
 	q : float, optional
 		If 'eps' is unspecified, this determines the neighbor threshold
 		distance. 'eps' is set to the 'q' quantile of all (n choose 2) pairwise
 		distances, where n is the number of rows in 'x'.
+				
+	self_edge : boolean
+		Flag to include or exclude (default) self-edges. Equivalent to having
+		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
+		adjacency matrix.
 		
 	Returns
 	-------
 	W : 2-dimensional numpy array of booleans
 		The adjacency matrix for the graph.
+
 	eps: float
 		The neighbor threshold distance, useful particularly if not initially
 		specified.
@@ -177,9 +202,11 @@ def epsilonGraph(x, eps=None, q=0.05):
 		eps = np.percentile(d, round(q*100))
 		
 	W = D <= eps
+	
+	if not self_edge:
+		np.fill_diagonal(W, False)
 
 	return W, eps
-
 
 
 
