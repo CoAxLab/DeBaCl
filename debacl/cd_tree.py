@@ -22,12 +22,14 @@ import igraph as igr
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
+import utils as utl
+from level_set_tree import LevelSetTree
 
 
 #####################
 ### BASIC CLASSES ###
 #####################
-class CD_Component(object):
+class ConnectedComponent(object):
 	"""
 	Defines a connected component for level set tree construction. A level set
 	tree is really just a set of ConnectedComponents.
@@ -55,7 +57,7 @@ class CD_Component(object):
 		component : CD_Component	
 		"""
 		
-		component = CD_Component(self.idnum, self.parent, self.children,
+		component = ConnectedComponent(self.idnum, self.parent, self.children,
 			self.start_radius, self.end_radius,	self.members)
 			
 		return component
@@ -63,17 +65,16 @@ class CD_Component(object):
 		
 		
 		
-class CD_Tree(object):
+class CDTree(LevelSetTree):
 	"""
 	Defines methods and attributes for a Chaudhuri-Dasgupta level set tree.
 	"""
 	
 	def __init__(self):
-		self.nodes = {}
-		self.subgraphs = {}
+		LevelSetTree.__init__(self, model='chaudhuri-dasgupta')
 		
 	
-	def getSummary(self):
+	def __str__(self):
 		"""
 		Produce a tree summary table with Pandas. This can be printed to screen
 		or saved easily to CSV. This is much simpler than manually formatting
@@ -102,37 +103,9 @@ class CD_Tree(object):
 			summary = summary.append(row)
 		
 		summary.set_index('key', inplace=True)
-		return summary
+		return summary.to_string() + '\n'
 		
-		
-	def makeSubtree(self, ix):
-		"""
-		Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
-	
-		Parameters
-		----------
-		ix : int
-			Node to use at the root of the new tree.
-	
-		Returns
-		-------
-		T : LevelSetTree
-			A completely indpendent level set tree, with 'ix' as the root node.
-		"""
-		
-		T = LevelSetTree(bg_sets=[], levels=[])
-		T.nodes[ix] = self.nodes[ix].copy()
-		T.nodes[ix].parent = None
-		queue = self.nodes[ix].children[:]
-	
-		while len(queue) > 0:
-			branch_ix = queue.pop()
-			T.nodes[branch_ix] = self.nodes[branch_ix]
-			queue += self.nodes[branch_ix].children
-	
-		return T
-		
-	
+			
 	def mergeBySize(self, threshold):
 		"""
 		Prune splits from a tree based on size of child nodes. Merge members of
@@ -455,7 +428,7 @@ class CD_Tree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
+def cdTree(X, k, alpha=1.0, start='complete', verbose=False):
 	"""
 	Construct a Chaudhuri-Dasgupta level set tree. A level set tree is
 	constructed by identifying connected components of observations as edges are
@@ -517,11 +490,11 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 
 
 	## Instantiate the tree	
-	T = CD_Tree()
+	T = CDTree()
 	
 	if start == 'complete':
 		T.subgraphs[0] = G
-		T.nodes[0] = CD_Component(0, parent=None, children=[],
+		T.nodes[0] = ConnectedComponent(0, parent=None, children=[],
 			start_radius=r_levels[0], end_radius=None, members=G.vs['name'])
 
 	elif start == 'knn':
@@ -585,9 +558,9 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 							new_key = max(T.nodes.keys()) + 1
 							T.nodes[k].children.append(new_key)
 							activate_subgraphs[new_key] = H.subgraph(c)
-							T.nodes[new_key] = CD_Component(new_key, parent=k,
-									children=[], start_radius=r,
-									end_radius=None, members=H.vs[c]['name'])
+							T.nodes[new_key] = ConnectedComponent(new_key,
+								parent=k, children=[], start_radius=r,
+								end_radius=None, members=H.vs[c]['name'])
 								
 		# update active components
 		for k in deactivate_keys:
