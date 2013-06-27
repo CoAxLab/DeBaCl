@@ -21,6 +21,7 @@ import scipy.special as spspec
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib as mpl
+from matplotlib import ticker
 
 
 
@@ -723,7 +724,7 @@ def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 
 
 def setPlotParams(axes_titlesize=22, axes_labelsize=18, xtick_labelsize=14,
-	ytick_labelsize=14, figsize=(9, 9)):
+	ytick_labelsize=14, figsize=(9, 9), n_ticklabel=4):
 	"""
 	A handy function for setting matplotlib parameters without adding trival
 	code to working scripts.
@@ -755,6 +756,9 @@ def setPlotParams(axes_titlesize=22, axes_labelsize=18, xtick_labelsize=14,
 	mpl.rc('ytick', labelsize=ytick_labelsize) 
 	mpl.rc('figure', figsize=figsize)
 
+	def autoloc(self):
+		ticker.MaxNLocator.__init__(self, nbins=n_ticklabel)
+	ticker.AutoLocator.__init__ = autoloc
 
 
 
