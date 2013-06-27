@@ -1396,38 +1396,29 @@ def loadTree(fname):
 ### INTERACTIVE LEVEL SET TREE ANALYLSIS TOOLS ###
 ##################################################
 
-class ComponentGui(object):
+class ComponentGUI(object):
 	"""
 	Allow the user to interactively select level set tree nodes for tree
 	coloring, subsetting, and scatter plots.
 	
 	Parameters
 	----------
-	tree : LevelSetTree
+	tree : GeomTree
 	
-	pts : 2D numpy array
+	X : 2D numpy array
 		Original data matrix. Rows are observations. Must have 3 or fewer
 		columns if the 'output' list includes 'scatter'.
-	
-	height_mode : {'mass', 'levels'}, optional
-		Passed to LevelSetTree.plot(). Determines if the dominant vertical axis
-		is based on density level values or mass (i.e. probability content)
-		values.
-	
-	width_mode : {'uniform', 'mass'}, optional
-		Passed to LevelSetTree.plot(). Determines how much horzontal space each
-		level set tree node is given.
 	
 	output : list of strings, optional
 		If the list includes 'tree', selecting a LST node will plot the subtree
 		with the selected node as the root. If output includes 'scatter' and the
 		data has 3 or fewer dimensions, selecting a tree node produces a scatter
 		plot showing the members of the selected node.
-	
-	s : int, optional
-		If 'output' includes 'scatter', the size of the points in the
-		scatterplot.
 		
+	form : string
+		Type of level set tree plot. Must be 'lambda' or 'alpha' for this GUI
+		tool. See GeomTree.plot for more detail.
+	
 	f : 2D numpy array, optional
 		Any function. Arguments in the first column and values in the second.
 		Plotted independently of the data as a blue curve, so does not need to
@@ -1437,26 +1428,27 @@ class ComponentGui(object):
 	fhat : list of floats, optional
 		Density estimate values for the data in 'pts'. Plotted as a black curve,
 		with points colored according to the selected component.
+		
+	keyword arguments are passed to the GeomTree.plot method.
 	"""
 
-	def __init__(self, tree, pts, height_mode='mass', width_mode='uniform',
-		output=['tree', 'scatter'], s=20, f=None, fhat=None):
+	def __init__(self, tree, X, form, f=None, fhat=None, output=['scatter'],
+		size=30, **kwargs):
 
 		self.T = tree
-		self.X = pts
-		self.height_mode = height_mode
-		self.width_mode = width_mode
+		self.X = X
+		self.form = form
 		self.output = output
-		self.size = s
 		self.f = f
 		self.fhat = fhat
+		self.size = size
 		self.fig, self.segments, self.segmap, self.splits, \
-			self.splitmap = self.T.plot(height_mode, width_mode)
+			self.splitmap = self.T.plot(self.form, **kwargs)
 		
 		self.ax = self.fig.axes[0]
-		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
 		segments = self.ax.collections[0]  # the line collection
 		segments.set_picker(15)
+		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
 		self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
 
 		
@@ -1469,7 +1461,7 @@ class ComponentGui(object):
 		ix_seg = event.ind[0]
 		self.node_ix = self.segmap[ix_seg]
 		self.component = self.T.nodes[self.node_ix].members
-		self.subtree = makeSubtree(self.T, self.node_ix)
+		self.subtree = self.T.makeSubtree(self.node_ix)
 							
 		## recolor the original tree
 		palette = utl.Palette(use='scatter')
@@ -1501,22 +1493,16 @@ class ComponentGui(object):
 			if p == 1:
 				uc = np.vstack((self.component, np.zeros((len(self.component),),
 					dtype=np.int))).T
-				hist_fig = utl.clusterHistogram(self.X, uc, self.fhat, self.f)
-				hist_fig.show()
+				fig = utl.clusterHistogram(self.X, uc, self.fhat, self.f)
+				fig.show()
 			
 			elif p == 2 or p == 3:
-				base_clr = [217.0 / 255.0] * 3 # light gray
-				comp_clr = [228/255.0, 26/255.0, 28/255.0] # red
-				black = [0.0, 0.0, 0.0]
-
-				clr_matrix = utl.makeColorMatrix(n, bg_color=base_clr,
-					bg_alpha=0.72, ix=list(self.component), fg_color=comp_clr,
-					fg_alpha=0.68)
-				edge_matrix = utl.makeColorMatrix(n, bg_color=black,
-					bg_alpha=0.38, ix=None)  # edges are black
-				pts_fig = utl.plotPoints(self.X, size=self.size, clr=clr_matrix,
-					edgecolor=edge_matrix)
-				pts_fig.show()
+				uc = np.vstack((self.component, np.zeros((len(self.component),),
+					dtype=np.int))).T
+					
+				fig, ax = utl.plotForeground(self.X, uc, bg_alpha=0.72,
+					fg_alpha=0.68, edge_alpha=0.68, s=self.size)
+				fig.show()
 
 			else:
 				print "Sorry, your data has too many dimensions to plot."
@@ -1524,8 +1510,7 @@ class ComponentGui(object):
 		
 		# construct the new subtree and show it
 		if 'tree' in self.output:
-			subfig = self.subtree.plot(height_mode=self.height_mode,
-				width_mode=self.width_mode)[0]
+			subfig = self.subtree.plot(self.form)[0]
 			subfig.show()
 			
 			
@@ -1560,7 +1545,7 @@ class ComponentGui(object):
 	
 
 
-class ClusterGui(object):
+class ClusterGUI(object):
 	"""
 	Allow the user to interactively select level or mass values in a level set
 	tree and to see the clusters at that level.
@@ -1569,24 +1554,19 @@ class ClusterGui(object):
 	----------
 	tree : LevelSetTree
 	
-	pts : 2D numpy array
+	X : 2D numpy array
 		Original data matrix. Rows are observations.
 	
-	height_mode : {'mass', 'levels'}, optional
-		Passed to LevelSetTree.plot(). Determines if the dominant vertical axis
-		is based on density level values or mass (i.e. probability content)
-		values.
-	
-	width_mode : {'uniform', 'mass'}, optional
-		Passed to LevelSetTree.plot(). Determines how much horzontal space each
-		level set tree node is given.
-	
+	form : string
+		Type of level set tree plot. Must be 'lambda' or 'alpha' for this GUI
+		tool. See GeomTree.plot for more detail.
+
 	output : list of strings, optional
 		If output includes 'scatter' and the data has 3 or fewer dimensions,
 		selecting a tree node produces a scatter plot showing the members of the
 		selected node.
 	
-	s : int, optional
+	size : int, optional
 		If 'output' includes 'scatter', the size of the points in the
 		scatterplot.
 		
@@ -1599,23 +1579,24 @@ class ClusterGui(object):
 	fhat : list of floats, optional
 		Density estimate values for the data in 'pts'. Plotted as a black curve,
 		with points colored according to the selected component.
+		
+	keyword arguments are passed to the GeomTree.plot method.
 	"""
 
-	def __init__(self, tree, pts, height_mode='mass', width_mode='uniform',
-		output=['scatter'], s=20, f=None, fhat=None):
+	def __init__(self, tree, X, form, output=['scatter'], size=30, f=None,
+		fhat=None, **kwargs):
 		
 		self.T = tree
-		self.X = pts
-		self.height_mode = height_mode
-		self.width_mode = width_mode
+		self.X = X
+		self.form = form
 		self.output = output
-		self.size = s		
+		self.size = size		
 		self.f = f
 		self.fhat = fhat
 		self.clusters = None
 		
 		self.fig, self.segments, self.segmap, self.splits, \
-			self.splitmap = self.T.plot(height_mode, width_mode)
+			self.splitmap = self.T.plot(self.form, **kwargs)
 		self.ax = self.fig.axes[0]
 		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
 		self.line = self.ax.axhline(y=0, color='blue', linewidth=1.0)
@@ -1636,7 +1617,8 @@ class ClusterGui(object):
 		
 		## get the clusters and the clusters attribute
 		cut = self.line.get_ydata()[0]
-		self.clusters, active_nodes = self.T.upperSetCluster(cut, mode='mass')
+		self.clusters, active_nodes = self.T.upperSetCluster(cut,
+			scale=self.form)
 			
 		# reset vertical segment colors
 		palette = utl.Palette(use='scatter')
@@ -1644,7 +1626,7 @@ class ClusterGui(object):
 		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
 		for i, node_ix in enumerate(active_nodes):
-			subtree = makeSubtree(self.T, node_ix)
+			subtree = self.T.makeSubtree(node_ix)
 
 			# set new segment colors
 			seg_replace = np.in1d(self.segmap, subtree.nodes.keys())
@@ -1669,25 +1651,21 @@ class ClusterGui(object):
 				n, p = self.X.shape
 				
 			if p == 1:
-				cut_level = self.T.massToLevel(cut)
-				hist_fig = utl.clusterHistogram(self.X, self.clusters,
+				if self.form == 'alpha':
+					cut_level = self.T.massToLevel(cut)
+				else:
+					cut_level = cut
+					
+				fig = utl.clusterHistogram(self.X, self.clusters,
 					self.fhat, self.f, levels=[cut_level])
-				hist_fig.show()
+				fig.show()
 
 			elif p == 2 or p == 3:
-				base_clr = [217.0 / 255.0] * 3  ## light gray
-				black = [0.0, 0.0, 0.0]
+				fig, ax = utl.plotForeground(self.X, self.clusters,
+					bg_alpha=0.72, fg_alpha=0.68, edge_alpha=0.68, s=self.size)
+				fig.show()
 			
-				clr_matrix = utl.makeColorMatrix(n, bg_color=base_clr,
-					bg_alpha=0.72, ix=self.clusters[:, 0],
-					fg_color=self.clusters[:, 1], fg_alpha=0.68)
-				edge_matrix = utl.makeColorMatrix(n, bg_color=black,
-					bg_alpha=0.38, ix=None)
-				pts_fig = utl.plotPoints(self.X, clr=clr_matrix,
-					edgecolor=edge_matrix)
-				pts_fig.show()
-
-		
+					
 	def show(self):
 		"""
 		Show the interactive plot canvas.

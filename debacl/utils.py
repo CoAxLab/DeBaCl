@@ -651,7 +651,7 @@ def clusterHistogram(x, cluster, fhat=None, f=None, levels=None):
 	
 
 def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
-	bg_alpha=0.3, **kwargs):
+	fg_alpha=0.75, bg_alpha=0.3, edge_alpha=1.0, **kwargs):
 	"""
 	Draw a scatter plot of 2D or 3D data, colored according to foreground
 	cluster label.
@@ -672,6 +672,10 @@ def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 	xlab, ylab, zlab : string
 		Axes axis labels
 		
+	fg_alpha : float
+		Transparency of the foreground (clustered) points. A float between 0
+		(transparent) and 1 (opaque).
+		
 	bg_alpha : float
 		Transparency of the background (unclustered) points. A float between 0
 		(transparent) and 1 (opaque).
@@ -691,20 +695,22 @@ def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 	## make the color matrix
 	n, p = X.shape
 	base_clr = [190.0 / 255.0] * 3  ## light gray
+	black = [0.0, 0.0, 0.0]
 	
+	rgba_edge = makeColorMatrix(n, bg_color=black, bg_alpha=edge_alpha, ix=None)
 	rgba_clr = makeColorMatrix(n, bg_color=base_clr, bg_alpha=bg_alpha,
-		ix=clusters[:, 0], fg_color=clusters[:, 1], fg_alpha=0.75)
-
+		ix=clusters[:, 0], fg_color=clusters[:, 1], fg_alpha=fg_alpha)
+		
 	if p == 2:
 		fig, ax = plt.subplots()
-		ax.scatter(X[:,0], X[:,1], c=rgba_clr, **kwargs)
+		ax.scatter(X[:,0], X[:,1], c=rgba_clr, edgecolors=rgba_edge, **kwargs)
 		
 	elif p == 3:
 		fig = plt.figure()
 		ax = fig.add_subplot(111, projection='3d')
 		fig.subplots_adjust(bottom=0.0, top=1.0, left=-0.05, right=0.98)
 		ax.set_zlabel(zlab)
-		ax.scatter(X[:,0], X[:,1], X[:,2], c=rgba_clr, **kwargs)
+		ax.scatter(X[:,0], X[:,1], X[:,2], c=rgba_clr, edgecolors=rgba_edge, **kwargs)
 		
 	else:
 		fig, ax = plt.subplots()
