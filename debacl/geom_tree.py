@@ -72,7 +72,7 @@ class ConnectedComponent(object):
 		
 
 
-class LevelSetTree(object):
+class GeomTree(object):
 	"""
 	Defines methods and attributes for a level set tree, i.e. a collection of
 	connected components organized hierarchically.
@@ -95,61 +95,12 @@ class LevelSetTree(object):
 		self.subgraphs = {}
 		
 		
-	def prune(self, method='size-merge', **kwargs):
-		"""
-		Prune the tree.
-		
-		Parameters
-		----------
-		method : {'size-merge', 'size-cut'}
-		
-		gamma : integer
-			Nodes smaller than this will be merged (for 'size-merge') or cut
-			(for 'size-cut')
-		
-		Returns
-		-------
-		
-		Notes
-		-----
-		Modifies the tree in-place.
-		
-		"""
-		
-		if method == 'size-merge':
-			required = set(['gamma'])
-			if not set(kwargs.keys()).issuperset(required):
-				raise ValueError("Incorrect arguments for size-merge pruning.")
-			else:
-				gamma = kwargs.get('gamma')
-				self.mergeBySize(gamma)
-			
-		elif method == 'size-cut':
-			required = set(['gamma'])
-			if not set(kwargs.keys()).issuperset(required):
-				raise ValueError("Incorrect arguments for size-cut pruning.")
-			else:
-				gamma = kwargs.get('gamma')
-				self.cutBySize(gamma)			
-				
-		else:
-			print "Pruning method not understood. No changes were made to " + \
-				"the tree."
-	
-		
-	def summarize(self):
+	def __str__(self):
 		"""
 		Produce a tree summary table with Pandas. This can be printed to screen
 		or saved easily to CSV. This is much simpler than manually formatting
 		the strings in the CoAxLab version of DeBaCl, but it does require
 		Pandas.
-		
-		Parameters
-		----------
-		
-		Returns
-		-------
-		summary : pandas.DataFrame
 		"""
 		
 		summary = pd.DataFrame()
@@ -168,7 +119,40 @@ class LevelSetTree(object):
 			summary = summary.append(row)
 		
 		summary.set_index('key', inplace=True)
-		return summary
+		out = summary.to_string()
+		return out
+		
+		
+	def prune(self, method='size-merge', **kwargs):
+		"""
+		Prune the tree. A dispatch function to other methods.
+		
+		Parameters
+		----------
+		method : {'size-merge'}
+		
+		gamma : integer
+			Nodes smaller than this will be merged (for 'size-merge') or cut
+			(for 'size-cut')
+		
+		Notes
+		-----
+		Modifies the tree in-place.
+		
+		"""
+		
+		if method == 'size-merge':
+			required = set(['gamma'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for size-merge pruning.")
+			else:
+				gamma = kwargs.get('gamma')
+				self.mergeBySize(gamma)
+				
+		else:
+			print "Pruning method not understood. 'size-merge' is the only " +\
+			"pruning method currently implemented. No changes were made to " + \
+			"the tree."
 				
 			
 	def save(self, fname):
@@ -415,7 +399,7 @@ class LevelSetTree(object):
 			for i, ix in enumerate(color_nodes):
 				n_clr = np.alen(palette.colorset)
 				c = palette.colorset[i % n_clr, :]
-				subtree = makeSubtree(self, ix)
+				subtree = self.makeSubtree(ix)
 
 				## set verical colors
 				ix_replace = np.in1d(segmap, subtree.nodes.keys())
@@ -530,7 +514,7 @@ class LevelSetTree(object):
 			A completely indpendent level set tree, with 'ix' as the root node.
 		"""
 		
-		T = LevelSetTree(bg_sets=[], levels=[])
+		T = GeomTree(bg_sets=[], levels=[])
 		T.nodes[ix] = self.nodes[ix].copy()
 		T.nodes[ix].parent = None
 		queue = self.nodes[ix].children[:]
@@ -564,7 +548,7 @@ class LevelSetTree(object):
 			if v.parent==None and len(v.members) <= threshold]
 		
 		for root in small_roots:
-			root_tree = makeSubtree(self, root)
+			root_tree = self.makeSubtree(root)
 			for ix in root_tree.nodes.iterkeys():
 				del self.nodes[ix]
 			
@@ -622,51 +606,6 @@ class LevelSetTree(object):
 				
 			else:
 				pass  # do nothing here		
-							
-		
-		
-	def cutBySize(self, gamma):
-		"""
-		Prune a tree by removing all nodes with too few members.
-		
-		Parameters
-		----------
-		gamma : numeric
-			Specifies the pruning threshold.
-			
-		Notes
-		-----
-		Operates in-place on the levelSetTree.
-		"""
-				
-		self.nodes = {k: v for k, v in self.nodes.iteritems()
-			if len(v.members) > gamma}
-		
-		## remove pointers to children that no longer exist
-		for v in self.nodes.itervalues():
-			v.children = [ix for ix in v.children if ix in self.nodes.keys()]
-			
-		## if a node has only one child, collapse that node back into the parent
-		one_child_keys = [k for k, v in self.nodes.iteritems()
-			if len(v.children) == 1]
-		one_child_keys = np.sort(one_child_keys)[::-1]
-
-		for k in one_child_keys:
-			v = self.nodes[k]
-			k_child = v.children[0]
-			child = self.nodes[k_child]
-
-			# update the parent
-			v.end_level = child.end_level
-			v.end_mass = child.end_mass
-			v.children = child.children
-			
-			# update the grandchildren's parent
-			for c in v.children:
-				self.nodes[c].parent = k
-			
-			# remove the child node
-			del self.nodes[k_child]
 		
 			
 	def allModeCluster(self):
@@ -873,7 +812,7 @@ class LevelSetTree(object):
 		"""
 		
 		for ix in active_nodes:
-			subtree = makeSubtree(self, ix)
+			subtree = self.makeSubtree(ix)
 			
 			max_end_level = max([v.end_level for v in subtree.nodes.values()])
 			max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
@@ -1209,8 +1148,6 @@ class LevelSetTree(object):
 		return segments, splits, segmap, splitmap
 	
 	
-	
-	
 	def massToLevel(self, alpha):
 		"""
 		Convert the specified mass value into a level location.
@@ -1241,7 +1178,7 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def levelSetTree(X, k, gamma, n_grid=None, verbose=True):
+def geomTree(X, k, gamma, n_grid=None, verbose=True):
 	"""
 	Construct a level set tree, from soup to nuts. This function assumes a
 	k-nearest neighbor similarity graph and k-nearest neighbor density estimate,
@@ -1283,8 +1220,7 @@ def levelSetTree(X, k, gamma, n_grid=None, verbose=True):
 	W, k_radius = utl.knnGraph(X, k, self_edge=False)
 	fhat = utl.knnDensity(k_radius, n, p, k)
 	bg_sets, levels = utl.constructDensityGrid(fhat, mode='mass', n_grid=n_grid)
-	T = constructTree(W, levels, bg_sets, mode='density',
-		verbose=verbose)		
+	T = constructTree(W, levels, bg_sets, mode='density', verbose=verbose)		
 	T.prune(method='size-merge', gamma=gamma)
 		
 	return T
@@ -1333,7 +1269,7 @@ def constructTree(W, levels, bg_sets, mode='general', verbose=False):
 	G = igr.Graph.Adjacency(W.tolist(), mode=igr.ADJ_MAX)
 	G.vs['index'] = range(n)
 
-	T = LevelSetTree(bg_sets, levels)
+	T = GeomTree(bg_sets, levels)
 	cc0 = G.components()
 	
 	if mode == 'density':
@@ -1460,7 +1396,7 @@ def loadTree(fname):
 ### INTERACTIVE LEVEL SET TREE ANALYLSIS TOOLS ###
 ##################################################
 
-class TreeComponentTool(object):
+class ComponentGui(object):
 	"""
 	Allow the user to interactively select level set tree nodes for tree
 	coloring, subsetting, and scatter plots.
@@ -1624,7 +1560,7 @@ class TreeComponentTool(object):
 	
 
 
-class TreeClusterTool(object):
+class ClusterGui(object):
 	"""
 	Allow the user to interactively select level or mass values in a level set
 	tree and to see the clusters at that level.

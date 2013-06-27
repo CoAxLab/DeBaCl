@@ -22,12 +22,14 @@ import igraph as igr
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
+import utils as utl
+
 
 
 #####################
 ### BASIC CLASSES ###
 #####################
-class CD_Component(object):
+class ConnectedComponent(object):
 	"""
 	Defines a connected component for level set tree construction. A level set
 	tree is really just a set of ConnectedComponents.
@@ -55,7 +57,7 @@ class CD_Component(object):
 		component : CD_Component	
 		"""
 		
-		component = CD_Component(self.idnum, self.parent, self.children,
+		component = ConnectedComponent(self.idnum, self.parent, self.children,
 			self.start_radius, self.end_radius,	self.members)
 			
 		return component
@@ -63,7 +65,7 @@ class CD_Component(object):
 		
 		
 		
-class CD_Tree(object):
+class CDTree(object):
 	"""
 	Defines methods and attributes for a Chaudhuri-Dasgupta level set tree.
 	"""
@@ -73,19 +75,12 @@ class CD_Tree(object):
 		self.subgraphs = {}
 		
 	
-	def getSummary(self):
+	def __str__(self):
 		"""
 		Produce a tree summary table with Pandas. This can be printed to screen
 		or saved easily to CSV. This is much simpler than manually formatting
 		the strings in the CoAxLab version of DeBaCl, but it does require
 		Pandas.
-		
-		Parameters
-		----------
-		
-		Returns
-		-------
-		summary : pandas.DataFrame
 		"""
 		
 		summary = pd.DataFrame()
@@ -102,7 +97,67 @@ class CD_Tree(object):
 			summary = summary.append(row)
 		
 		summary.set_index('key', inplace=True)
-		return summary
+		out = summary.to_string()
+		return out
+		
+		
+	def prune(self, method='size-merge', **kwargs):
+		"""
+		Prune the tree. A dispatch function to other methods.
+		
+		Parameters
+		----------
+		method : {'size-merge'}
+		
+		gamma : integer
+			Nodes smaller than this will be merged (for 'size-merge') or cut
+			(for 'size-cut')
+		
+		Notes
+		-----
+		Modifies the tree in-place.
+		"""
+		
+		if method == 'size-merge':
+			required = set(['gamma'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for size-merge pruning.")
+			else:
+				gamma = kwargs.get('gamma')
+				self.mergeBySize(gamma)
+				
+		else:
+			print "Pruning method not understood. 'size-merge' is the only " +\
+			"pruning method currently implemented. No changes were made to " + \
+			"the tree."
+
+
+	def save(self, fname):
+		"""
+		Save a level set tree object to file.
+		
+		Saves a level set tree as a MATLAB struct using the scipy.io module.
+		Ignore the warning about using oned_as default value ('column').
+		
+		Parameters
+		----------
+		fname : string
+			File to save the tree to. The .mat extension is not necessary.
+		"""		
+
+		tree_dict = {
+			'bg_sets': self.bg_sets,
+			'levels': self.levels,
+			'idnums': [x.idnum for x in self.nodes.values()],
+			'start_radii': [x.start_radius for x in self.nodes.values()],
+			'end_radii': [x.end_radius for x in self.nodes.values()],
+			'parents': [(-1 if x.parent is None else x.parent)
+				for x in self.nodes.values()],
+			'children': [x.children for x in self.nodes.values()],
+			'members': [x.members for x in self.nodes.values()]
+			}
+
+		spio.savemat(fname, tree_dict)
 		
 		
 	def makeSubtree(self, ix):
@@ -120,7 +175,7 @@ class CD_Tree(object):
 			A completely indpendent level set tree, with 'ix' as the root node.
 		"""
 		
-		T = LevelSetTree(bg_sets=[], levels=[])
+		T = CDTree()
 		T.nodes[ix] = self.nodes[ix].copy()
 		T.nodes[ix].parent = None
 		queue = self.nodes[ix].children[:]
@@ -210,13 +265,13 @@ class CD_Tree(object):
 				pass  # do nothing here
 				
 				
-	def plot(self, width_mode='uniform', gap=0.05):
+	def plot(self, width='uniform', gap=0.05):
 		"""
 		Create a static plot of a Chaudhuri-Dasgupta level set tree.
 		
 		Parameters
 		----------
-		width_mode : {'uniform', 'mass'}, optional
+		width : {'uniform', 'mass'}, optional
 			Determines how much horzontal space each level set tree node is
 			given. The default of "uniform" gives each child node an equal
 			fraction of the parent node's horizontal space. If set to 'mass',
@@ -255,7 +310,7 @@ class CD_Tree(object):
 		ix_root = ix_root[seniority]
 		census = census[seniority]
 			
-		if width_mode == 'mass':
+		if width == 'mass':
 			weights = census / n
 			intervals = np.cumsum(weights)
 			intervals = np.insert(intervals, 0, 0.0)
@@ -266,7 +321,7 @@ class CD_Tree(object):
 		## Do a depth-first search on each root to get segments for each branch
 		for i, ix in enumerate(ix_root):
 			branch = self.constructBranchMap(ix, (intervals[i], intervals[i+1]),
-				width_mode)
+				width)
 			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
 			segments = dict(segments.items() + branch_segs.items())
@@ -284,19 +339,25 @@ class CD_Tree(object):
 		
 		
 		## Find the right tick marks for the plot
-		radius_ticks = np.sort(list(set(
-			[v.start_radius for v in self.nodes.itervalues()] + \
-			[v.end_radius for v in self.nodes.itervalues()])))
-		radius_tick_labels = [str(round(lvl, 2)) for lvl in radius_ticks]
+#		radius_ticks = np.sort(list(set(
+#			[v.start_radius for v in self.nodes.itervalues()] + \
+#			[v.end_radius for v in self.nodes.itervalues()])))
+#		radius_tick_labels = [str(round(lvl, 2)) for lvl in radius_ticks]
+
+		primary_ticks = [(x[0][1], x[1][1]) for x in segments.values()]
+		primary_ticks = np.unique(np.array(primary_ticks).flatten())
+		primary_labels = [str(round(tick, 2)) for tick in primary_ticks]
 		
 	
 		## Set up the plot framework
 		fig, ax = plt.subplots()
 		ax.set_position([0.11, 0.05, 0.78, 0.93])
-		ax.set_xlabel("Connected component")
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
 		ax.set_xticklabels([])
+		ax.yaxis.grid(color='gray')
+		ax.set_yticks(primary_ticks)
+		ax.set_yticklabels(primary_labels)
 
 
 		## Add the line segments
@@ -317,15 +378,205 @@ class CD_Tree(object):
 		rng = ymax - ymin
 		ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
 		ax.invert_yaxis()
-		ax.yaxis.grid(color='gray')
-
-		ax.set_yticks(radius_ticks)
-		ax.set_yticklabels(radius_tick_labels)
 				
 		return fig
 		
+
+	def getClusterLabels(self, method='all-mode', **kwargs):
+		"""
+		Umbrella function for retrieving custer labels from the level set tree.
 		
-	def constructBranchMap(self, ix, interval, width_mode):
+		Parameters
+		----------
+		method : {'all-mode', 'first-k', 'upper-set', 'k-level'}, optional
+			Method for obtaining cluster labels from the tree. 'all-mode' treats
+			each leaf of the tree as a separate cluter. 'first-k' finds the
+			first K non-overlapping clusters from the roots of the tree.
+			'upper-set' returns labels by cutting the tree at a specified
+			density (lambda) or mass (alpha) level. 'k-level' returns labels at
+			the lowest density level that has k nodes.
+			
+		k : integer
+			If method is 'first-k' or 'k-level', this is the desired number of
+			clusters.
+		
+ 		threshold : float
+ 			If method is 'upper-set', this is the threshold at which to cut the
+ 			tree.
+		
+		Returns
+		-------
+		labels : 2-dimensional numpy array
+			Each row corresponds to an observation. The first column indicates
+			the index of the observation in the original data matrix, and the
+			second column is the integer cluster label (starting at 0). Note
+			that the set of observations in this "foreground" set is typically
+			smaller than the original dataset.
+			
+		nodes : list
+			Indices of tree nodes corresponding to foreground clusters.
+		"""
+				
+		if method == 'all-mode':
+			labels, nodes = self.allModeCluster()
+			
+		elif method == 'first-k':
+			required = set(['k'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for the first-k " + \
+				"cluster labeling method.")		
+			else:
+				k = kwargs.get('k')
+				labels, nodes = self.firstKCluster(k)
+			
+		elif method == 'upper-set':
+			required = set(['threshold'])
+			if not set(kwargs.keys()).issuperset(required):
+				raise ValueError("Incorrect arguments for the upper-set " + \
+				"cluster labeling method.")		
+			else:
+				threshold = kwargs.get('threshold')
+				labels, nodes = self.upperSetCluster(threshold)
+								
+		else:
+			print 'method not understood'
+			labels = np.array([])
+			nodes = []
+
+ 		return labels, nodes
+ 		
+ 		
+ 	def upperSetCluster(self, threshold):
+		"""
+		Set foreground clusters by finding connected components at an upper
+		level set. This is slightly different than GeomTree.upperSetCluster in
+		that this method returns all members of tree nodes that cross the
+		desired threshold, rather than the components of the true upper level
+		set.
+				
+		Parameters
+		----------
+		threshold : float
+			The radius that defines the foreground set of points.
+		
+		Returns
+		-------
+		labels : 2-dimensional numpy array
+			Each row corresponds to an observation. The first column indicates
+			the index of the observation in the original data matrix, and the
+			second column is the integer cluster label (starting at 0). Note
+			that the set of observations in this "foreground" set is typically
+			smaller than the original dataset.
+			
+		nodes : list
+			Indices of tree nodes corresponding to foreground clusters.
+		"""
+	
+		## identify upper level points and the nodes active at the cut
+		nodes = [k for k, v in self.nodes.iteritems()
+			if v.start_radius >= threshold and v.end_radius < threshold]
+
+		## find intersection between upper set points and each active component
+		points = []
+		cluster = []
+
+		for i, c in enumerate(nodes):
+			points.extend(self.nodes[c].members)
+			cluster += ([i] * len(self.nodes[c].members))
+
+		labels = np.array([points, cluster], dtype=np.int).T		
+		return labels, nodes
+		
+
+	def allModeCluster(self):
+		"""
+		Set every leaf node as a foreground cluster.
+
+		Parameters
+		----------
+		
+		Returns
+		-------
+		labels : 2-dimensional numpy array
+			Each row corresponds to an observation. The first column indicates
+			the index of the observation in the original data matrix, and the
+			second column is the integer cluster label (starting at 0). Note
+			that the set of observations in this "foreground" set is typically
+			smaller than the original dataset.
+			
+		leaves : list
+			Indices of tree nodes corresponding to foreground clusters. This is
+			the same as 'nodes' for other clustering functions, but here they
+			are also the leaves of the tree.
+		"""
+	
+		leaves = [k for k, v in self.nodes.items() if v.children == []]
+		
+		## find components in the leaves
+		points = []
+		cluster = []
+
+		for i, k in enumerate(leaves):
+			points.extend(self.nodes[k].members)
+			cluster += ([i] * len(self.nodes[k].members))
+
+		labels = np.array([points, cluster], dtype=np.int).T		
+		return labels, leaves
+		
+		
+	def firstKCluster(self, k):
+		"""
+		Returns foreground cluster labels for the 'k' modes with the lowest
+		start levels. In principle, this is the 'k' leaf nodes with the smallest
+		indices, but this function double checks by finding and ordering all
+		leaf start values and ordering.
+		
+		Parameters
+		----------
+		k : integer
+			The desired number of clusters.
+		
+		Returns
+		-------
+		labels : 2-dimensional numpy array
+			Each row corresponds to an observation. The first column indicates
+			the index of the observation in the original data matrix, and the
+			second column is the integer cluster label (starting at 0). Note
+			that the set of observations in this "foreground" set is typically
+			smaller than the original dataset.
+			
+		nodes : list
+			Indices of tree nodes corresponding to foreground clusters.
+		"""
+		
+		parents = np.array([u for u, v in self.nodes.items()
+			if len(v.children) > 0])
+		roots = [u for u, v in self.nodes.items() if v.parent is None]
+		splits = [self.nodes[u].end_radius for u in parents]
+		order = np.argsort(splits)
+		star_parents = parents[order[:(k-len(roots))]]
+	
+		children = [u for u, v in self.nodes.items() if v.parent is None]
+		for u in star_parents:
+			children += self.nodes[u].children
+
+		nodes = [x for x in children if
+			sum(np.in1d(self.nodes[x].children, children))==0] 
+	
+	
+		points = []
+		cluster = []
+	
+		for i, c in enumerate(nodes):
+			cluster_pts = self.nodes[c].members
+			points.extend(cluster_pts)
+			cluster += ([i] * len(cluster_pts))
+
+		labels = np.array([points, cluster], dtype=np.int).T
+		return labels, nodes
+		
+		
+	def constructBranchMap(self, ix, interval, width):
 		"""
 		Map level set tree nodes to locations in a plot canvas. Finds the plot
 		coordinates of vertical line segments corresponding to LST nodes and
@@ -344,7 +595,7 @@ class CD_Tree(object):
 		interval: length 2 tuple of floats
 			Horizontal space allocated to node 'ix'.
 	
-		width_mode : {'uniform', 'mass'}, optional
+		width : {'uniform', 'mass'}, optional
 			Determines how much horzontal space each level set tree node is
 			given. See LevelSetTree.plot() for more information.
 	
@@ -405,7 +656,7 @@ class CD_Tree(object):
 			weights = weights[seniority]
 
 			## get relative branch intervals
-			if width_mode == 'mass':
+			if width == 'mass':
 				child_intervals = np.cumsum(weights)
 				child_intervals = np.insert(child_intervals, 0, 0.0)
 			else:
@@ -419,7 +670,7 @@ class CD_Tree(object):
 					interval[0] + child_intervals[j+1] * parent_range)
 
 				## recurse on the child
-				branch = self.constructBranchMap(child, branch_interval, width_mode)
+				branch = self.constructBranchMap(child, branch_interval, width)
 				branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
 				
 				segmap += branch_segmap
@@ -455,7 +706,7 @@ class CD_Tree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
+def cdTree(X, k, alpha=1.0, start='complete', verbose=False):
 	"""
 	Construct a Chaudhuri-Dasgupta level set tree. A level set tree is
 	constructed by identifying connected components of observations as edges are
@@ -517,11 +768,11 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 
 
 	## Instantiate the tree	
-	T = CD_Tree()
+	T = CDTree()
 	
 	if start == 'complete':
 		T.subgraphs[0] = G
-		T.nodes[0] = CD_Component(0, parent=None, children=[],
+		T.nodes[0] = ConnectedComponent(0, parent=None, children=[],
 			start_radius=r_levels[0], end_radius=None, members=G.vs['name'])
 
 	elif start == 'knn':
@@ -536,7 +787,7 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 		cc0 = G.components()
 		for i, c in enumerate(cc0):
 			T.subgraphs[i] = G.subgraph(c)
-			T.nodes[i] = CD_Component(i, parent=None, children=[], 
+			T.nodes[i] = ConnectedComponent(i, parent=None, children=[], 
 				start_radius=max_radius, end_radius=None,
 					members=G.vs[c]['name'])
 				
@@ -585,9 +836,9 @@ def makeCDTree(X, k, alpha=1.0, start='complete', verbose=False):
 							new_key = max(T.nodes.keys()) + 1
 							T.nodes[k].children.append(new_key)
 							activate_subgraphs[new_key] = H.subgraph(c)
-							T.nodes[new_key] = CD_Component(new_key, parent=k,
-									children=[], start_radius=r,
-									end_radius=None, members=H.vs[c]['name'])
+							T.nodes[new_key] = ConnectedComponent(new_key, parent=k,
+									children=[], start_radius=r, end_radius=None,
+									members=H.vs[c]['name'])
 								
 		# update active components
 		for k in deactivate_keys:
@@ -620,8 +871,8 @@ def loadTree(fname):
 	idnums = indata['idnums'].flatten()
 	levels = list(indata['levels'].flatten())
 	bg_sets = [np.array(x[0].flatten()) for x in indata['bg_sets']]
-	start_radius = indata['start_radius'].flatten()
-	end_radius = indata['end_radius'].flatten()
+	start_radii = indata['start_radii'].flatten()
+	end_radii = indata['end_radii'].flatten()
 	parents = [(None if x == -1 else x) for x in indata['parents'].flatten()]
 	children = [list(x[0].flatten()) for x in indata['children']]
 	members = [list(x[0].flatten()) for x in indata['members']]
@@ -635,8 +886,8 @@ def loadTree(fname):
 	## add nodes to the tree
 	nodes = {}
 	for i, k in enumerate(idnums):
-		nodes[k] = CD_Component(k, parents[i], children[i],
-			start_radius[i], end_radius[i], members[i])
+		nodes[k] = ConnectedComponent(k, parents[i], children[i],
+			start_radii[i], end_radii[i], members[i])
 		
 	T.nodes = nodes
 	return T
