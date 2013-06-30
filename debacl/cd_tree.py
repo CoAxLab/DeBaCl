@@ -15,7 +15,6 @@ working with generic level set trees.
 """
 
 import numpy as np
-import pandas as pd
 import scipy.spatial.distance as spd
 import scipy.io as spio
 import igraph as igr
@@ -23,6 +22,11 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
 import utils as utl
+
+try:
+	import pandas as pd
+except:
+	print "Pandas is not installed, so the print function will not work."
 
 
 

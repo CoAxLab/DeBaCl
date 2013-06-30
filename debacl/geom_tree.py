@@ -16,7 +16,6 @@ tools for interactive data analysis and clustering with level set trees.
 
 
 import numpy as np
-import pandas as pd
 import scipy.spatial.distance as spdist
 import scipy.io as spio
 import igraph as igr
@@ -25,6 +24,12 @@ from matplotlib.collections import LineCollection
 from matplotlib.widgets import Button
 
 import utils as utl
+
+try:
+	import pandas as pd
+except:
+	print "Pandas is not installed, so the print function will not work."
+
 
 
 
@@ -94,7 +99,7 @@ class GeomTree(object):
 		self.nodes = {}
 		self.subgraphs = {}
 		
-		
+				
 	def __str__(self):
 		"""
 		Produce a tree summary table with Pandas. This can be printed to screen
