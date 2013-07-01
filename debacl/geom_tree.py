@@ -14,22 +14,23 @@ Includes functions to construct and modify with level set tree objects, and
 tools for interactive data analysis and clustering with level set trees.
 """
 
-
-import numpy as np
-import scipy.spatial.distance as spdist
-import scipy.io as spio
-import igraph as igr
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-from matplotlib.widgets import Button
-
-import utils as utl
+try:
+	import numpy as np
+	import scipy.spatial.distance as spdist
+	import scipy.io as spio
+	import igraph as igr
+	import utils as utl
+except:
+	raise ImportError("Critical packages are not installed.")
 
 try:
 	import pandas as pd
+	import matplotlib.pyplot as plt
+	from matplotlib.collections import LineCollection
+	from matplotlib.widgets import Button
 except:
-	print "Pandas is not installed, so the print function will not work."
-
+	print "Matplotlib and/or Pandas packages are not installed, so plot and " +\
+		"print functions may fail."
 
 
 

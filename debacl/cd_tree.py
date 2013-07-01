@@ -14,19 +14,22 @@ set trees. A companion to debacl.py, which has a more developed set of tools for
 working with generic level set trees.
 """
 
-import numpy as np
-import scipy.spatial.distance as spd
-import scipy.io as spio
-import igraph as igr
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-
-import utils as utl
+try:
+	import numpy as np
+	import scipy.spatial.distance as spd
+	import scipy.io as spio
+	import igraph as igr
+	import utils as utl
+except:
+	raise ImportError("Critical packages are not installed.")
 
 try:
+	import matplotlib.pyplot as plt
+	from matplotlib.collections import LineCollection
 	import pandas as pd
 except:
-	print "Pandas is not installed, so the print function will not work."
+	print "Matplotlib and/or Pandas packages are not installed, so plot and " +\
+		"print functions may fail."
 
 
 
