@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl.py
 ## Created: 20120821
-## Updated: 20130625
+## Updated: 20130723
 ##############################################################
 
 ##############
@@ -329,8 +329,10 @@ class GeomTree(object):
 		
 						
 		## Set up the plot framework
+		frame_dims = [0.12, 0.05, 0.75, 0.93]
+		
 		fig, ax = plt.subplots()
-		ax.set_position([0.11, 0.05, 0.78, 0.93])
+		ax.set_position(frame_dims)
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
 		ax.set_xticklabels([])
@@ -350,7 +352,8 @@ class GeomTree(object):
 			ymin = min([v.start_level for v in self.nodes.itervalues()])
 			ymax = max([v.end_level for v in self.nodes.itervalues()])
 			rng = ymax - ymin
-			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)	
+			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
+			thickness = [1,] * len(thickness)
 
 		elif form == 'lambda':
 			ax.set_ylabel("lambda")
@@ -360,7 +363,7 @@ class GeomTree(object):
 			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
 			
 			ax2 = ax.twinx()
-			ax2.set_position([0.11, 0.05, 0.78, 0.93])
+			ax2.set_position(frame_dims)
 			ax2.set_ylabel("alpha", rotation=270)
 
 			alpha_ticks = np.sort(list(set(
@@ -380,7 +383,7 @@ class GeomTree(object):
 			ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
 			
 			ax2 = ax.twinx()
-			ax2.set_position([0.11, 0.05, 0.78, 0.93])
+			ax2.set_position(frame_dims)
 			ax2.set_ylabel("lambda")
 
 			lambda_ticks = np.sort(list(set(
