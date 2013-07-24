@@ -373,7 +373,7 @@ class GeomTree(object):
 			ax2.set_ylim(ax.get_ylim())
 		
 		elif form == 'alpha':
-			ax.set_ylabel("alpha", rotation=270)
+			ax.set_ylabel("alpha")
 			ymin = min([v.start_mass for v in self.nodes.itervalues()])
 			ymax = max([v.end_mass for v in self.nodes.itervalues()])
 			rng = ymax - ymin
@@ -381,7 +381,7 @@ class GeomTree(object):
 			
 			ax2 = ax.twinx()
 			ax2.set_position([0.11, 0.05, 0.78, 0.93])
-			ax2.set_ylabel("lambda")
+			ax2.set_ylabel("lambda", rotation=270)
 
 			lambda_ticks = np.sort(list(set(
 				[v.start_level for v in self.nodes.itervalues()] + \

@@ -160,7 +160,7 @@ def gaussianGraph(x, sigma, self_edge=False):
 	return W
 	
 
-def epsilonGraph(x, eps=None, q=0.05):
+def epsilonGraph(x, eps=None, q=0.05, self_edge=False):
 	"""
 	Constructs an epsilon-neighborhood graph adjacency matrix. Constructs a
 	graph where the rows of 'x' are vertices and pairs of vertices are connected
@@ -711,7 +711,8 @@ def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 		ax = fig.add_subplot(111, projection='3d')
 		fig.subplots_adjust(bottom=0.0, top=1.0, left=-0.05, right=0.98)
 		ax.set_zlabel(zlab)
-		ax.scatter(X[:,0], X[:,1], X[:,2], c=rgba_clr, edgecolors=rgba_edge, **kwargs)
+		ax.scatter(X[:,0], X[:,1], X[:,2], c=rgba_clr, edgecolors=rgba_edge,
+		 	**kwargs)
 		
 	else:
 		fig, ax = plt.subplots()
