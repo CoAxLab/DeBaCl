@@ -1457,13 +1457,13 @@ class ComponentGUI(object):
 		tooltip_string = "node:" + "\t" +\
 			r"$\lambda_1$:" + "\t" +\
 			r"$\lambda_2$:" + "\t" +\
-			r"$\alpha_2$:" + "\t" +\
 			r"$\alpha_1$:" + "\t" +\
+			r"$\alpha_2$:" + "\t" +\
 			"mass:"
 		self.tooltip = self.ax.text(0.5, 0.02, tooltip_string,
 			bbox=dict(fc='yellow', alpha=0.2, boxstyle='round,pad=0.3'), 		
 			transform=self.ax.transAxes, horizontalalignment='center',
-			verticalalignment='bottom')
+			verticalalignment='bottom', fontsize=14)
 		
 		segments.set_picker(15)
 		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
