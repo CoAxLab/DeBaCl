@@ -1449,7 +1449,7 @@ class ComponentGUI(object):
 		self.fhat = fhat
 		self.size = size
 		self.fig, self.segments, self.segmap, self.splits, \
-			self.splitmap = self.T.plot(self.form, gap=0.1, **kwargs)
+			self.splitmap = self.T.plot(self.form, gap=0.13, **kwargs)
 		
 		self.ax = self.fig.axes[0]
 		segments = self.ax.collections[0]  # the line collection
@@ -1457,13 +1457,13 @@ class ComponentGUI(object):
 		tooltip_string = "node:" + "\t" +\
 			r"$\lambda_1$:" + "\t" +\
 			r"$\lambda_2$:" + "\t" +\
+			"\n" + "mass:" + "\t" +\
 			r"$\alpha_1$:" + "\t" +\
-			r"$\alpha_2$:" + "\t" +\
-			"mass:"
+			r"$\alpha_2$:" + "\t"
 		self.tooltip = self.ax.text(0.5, 0.02, tooltip_string,
 			bbox=dict(fc='yellow', alpha=0.2, boxstyle='round,pad=0.3'), 		
 			transform=self.ax.transAxes, horizontalalignment='center',
-			verticalalignment='bottom', fontsize=14)
+			verticalalignment='bottom', fontsize=16)
 		
 		segments.set_picker(15)
 		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
@@ -1497,13 +1497,13 @@ class ComponentGUI(object):
 		self.ax.collections[1].set_color(splitclr)
 		
 		# rewrite text in the tooltip
-		names = ("node", r"$\lambda_1$", r"$\lambda_2$", r"$\alpha_1$",
-			r"$\alpha_2$", "mass")
+		names = ("node", r"$\lambda_1$", r"$\lambda_2$", "\nmass",
+			r"$\alpha_1$", r"$\alpha_2$")
 		values = (self.node_ix, round(self.T.nodes[self.node_ix].start_level, 2),
 			round(self.T.nodes[self.node_ix].end_level, 2),
+			round(len(self.component) * 1.0 / self.T.n, 2),
 			round(self.T.nodes[self.node_ix].start_mass, 2),
-			round(self.T.nodes[self.node_ix].end_mass, 2),
-			round(len(self.component) * 1.0 / self.T.n, 2))
+			round(self.T.nodes[self.node_ix].end_mass, 2))
 		pad = [5] + [8] * 4 + [4]
 		tooltip_string = ""
 			
