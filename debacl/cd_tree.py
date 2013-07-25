@@ -307,9 +307,11 @@ class CDTree(object):
 		splitmap = []
 
 		## Find the root connected components and corresponding plot intervals
-		ix_root = np.array([k for k, v in self.nodes.iteritems() if v.parent is None])
+		ix_root = np.array([k for k, v in self.nodes.iteritems()
+			if v.parent is None])
 		n_root = len(ix_root)
-		census = np.array([len(self.nodes[x].members) for x in ix_root], dtype=np.float)
+		census = np.array([len(self.nodes[x].members) for x in ix_root],
+			dtype=np.float)
 		n = sum(census)
 
 		## Order the roots by mass decreasing from left to right		
@@ -357,8 +359,10 @@ class CDTree(object):
 		
 	
 		## Set up the plot framework
+		frame_dims = [0.15, 0.05, 0.8, 0.93]
+		
 		fig, ax = plt.subplots()
-		ax.set_position([0.11, 0.05, 0.78, 0.93])
+		ax.set_position(frame_dims)
 		ax.set_xlim((-0.04, 1.04))
 		ax.set_xticks([])
 		ax.set_xticklabels([])
