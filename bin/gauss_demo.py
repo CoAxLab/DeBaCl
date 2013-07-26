@@ -75,7 +75,7 @@ import matplotlib.pyplot as plt
 
 
 ### Retrieve cluster assignments from the tree
-#uc, leaves = tree.allModeCluster()
+#uc, leaves = tree.getClusterLabels(method='all-mode')
 #print "cluster counts:", np.bincount(uc[:, 1])
 #print "leaf indices:", leaves
 
@@ -135,7 +135,7 @@ for i, (size, mu, sigma) in enumerate(zip(membership, ctr, sdev)):
 ## Scatterplot, to show the simulation worked
 fig, ax = plt.subplots()
 ax.scatter(X[:,0], X[:,1], s=50, c=g, alpha=0.4)
-#fig.show()
+fig.show()
 
 
 ## Construct the similarity graph and density estimate
@@ -163,32 +163,21 @@ tree.mergeBySize(gamma)
 print tree
 
 
-
 ## Interactive tools
-# Only uncomment and use one these at a time.
-#tool = gtree.ComponentGUI(tree, X, form='alpha', width='mass', output=['scatter'])
-tool = gtree.ClusterGUI(tree, X, form='kappa', width='mass', output=['scatter'])
+## Only uncomment and use one these at a time.
+tool = gtree.ComponentGUI(tree, X, form='alpha', width='mass', output=['scatter'])
+#tool = gtree.ClusterGUI(tree, X, form='kappa', width='mass', output=['scatter'])
 tool.show()
 
 
+## Plot upper level set clusters with the convenience function
+uc, nodes = tree.getClusterLabels(method='first-k', k=3)
 
-#### Retrieve cluster assignments from the interactive tools manually
-### This is especially useful for data with more than 3 dimensions, where the clusters
-### (or single component) cannot be plotted directly by the interactive tools.
-### Uncomment and paste the relevant code into the command line. Don't run the script
-### straight through with these lines uncommented.
-##uc = tool.getComponent()  # for TreeComponentTool
-##uc = tool.getClusters()  # for TreeClusterTool
+fig, ax = utl.plotForeground(X, uc, s=50, alpha=0.5)
+fig.show()
 
 
 
 
-#### Plot upper level set clusters manually
-### This does not work for 1D data.
-#base = [217.0/255] * 3
-#black = [0.0] * 3
-#edge = plutl.makeColorMatrix(n, bg_color=black, bg_alpha=0.35, ix=None)
-#fill = plutl.makeColorMatrix(n, bg_color=base, bg_alpha=0.72, ix=uc[:,0],
-#	fg_color=uc[:,1], fg_alpha=0.68)
-#fig = plutl.plotPoints(x, clr=fill, edgecolor=edge)
-#fig.show()
+
+
