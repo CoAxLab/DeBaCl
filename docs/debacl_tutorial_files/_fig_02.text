@@ -1,0 +1,25 @@
+iteration 0
+iteration 100
+iteration 200
+iteration 300
+iteration 400
+iteration 500
+iteration 600
+iteration 700
+iteration 800
+iteration 900
+iteration 1000
+iteration 1100
+iteration 1200
+iteration 1300
+iteration 1400
+       alpha1    alpha2 children   lambda1   lambda2 parent  size
+key                                                              
+0    0.000000  0.006667   [1, 2]  0.000000  0.013317   None  1500
+1    0.006667  0.029333   [3, 4]  0.013317  0.020052      0  1193
+2    0.006667  0.584000       []  0.013317  0.114642      0   297
+3    0.029333  1.000000       []  0.020052  0.330420      1   740
+4    0.029333  0.804667       []  0.020052  0.175467      1   427
+cluster counts: [297 740 427]
+leaf indices: [2, 3, 4]
+final cluster counts: [302 753 445]
