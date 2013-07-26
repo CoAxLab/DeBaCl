@@ -1383,7 +1383,7 @@ def loadTree(fname):
 		children = [[]]*len(idnums)
 	
 	## create tree
-	T = LevelSetTree(bg_sets, levels)
+	T = GeomTree(bg_sets, levels)
 	
 	## add nodes to the tree
 	nodes = {}
