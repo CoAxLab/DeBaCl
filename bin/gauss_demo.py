@@ -165,16 +165,16 @@ print tree
 
 ## Interactive tools
 ## Only uncomment and use one these at a time.
-tool = gtree.ComponentGUI(tree, X, form='alpha', width='mass', output=['scatter'])
-#tool = gtree.ClusterGUI(tree, X, form='kappa', width='mass', output=['scatter'])
+#tool = gtree.ComponentGUI(tree, X, form='alpha', width='mass', output=['scatter'])
+tool = gtree.ClusterGUI(tree, X, form='alpha', width='mass', output=['scatter'])
 tool.show()
 
 
-## Plot upper level set clusters with the convenience function
-uc, nodes = tree.getClusterLabels(method='first-k', k=3)
+### Plot upper level set clusters with the convenience function
+#uc, nodes = tree.getClusterLabels(method='first-k', k=3)
 
-fig, ax = utl.plotForeground(X, uc, s=50, alpha=0.5)
-fig.show()
+#fig, ax = utl.plotForeground(X, uc, s=50, alpha=0.5)
+#fig.show()
 
 
 

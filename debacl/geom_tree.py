@@ -1622,12 +1622,18 @@ class ClusterGUI(object):
 		
 		self.T = tree
 		self.X = X
-		self.form = form
 		self.output = output
 		self.size = size		
 		self.f = f
 		self.fhat = fhat
 		self.clusters = None
+		
+		if form == 'kappa':
+			print "Sorry, the upper level set selection process doesn't "+\
+				"work with the kappa tree. Showing the alpha tree instead."
+			form = 'alpha'
+			
+		self.form = form
 		
 		self.fig, self.segments, self.segmap, self.splits, \
 			self.splitmap = self.T.plot(self.form, **kwargs)
