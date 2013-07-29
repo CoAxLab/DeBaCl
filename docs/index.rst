@@ -6,11 +6,33 @@
 Welcome to DeBaCl's documentation!
 ==================================
 
+.. include:: ../README.rst
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
+
+Geometric Tree
+==============
+
+.. automodule:: geom_tree
+  :members:
+
+
+Chaudhuri-Dasgupta Tree
+=======================
+
+.. automodule:: cd_tree
+  :members:
+
+
+Utilities
+=======================
+
+.. automodule:: utils
+  :members:
 
 
 Indices and tables
