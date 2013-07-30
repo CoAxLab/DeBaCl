@@ -10,8 +10,10 @@
 ##############
 """
 Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
-Includes functions to construct and modify with level set tree objects, and
-tools for interactive data analysis and clustering with level set trees.
+Includes functions to construct and modify level set trees produced by standard
+geometric clustering on each level. Also defines tools for interactive data
+analysis and clustering with level set trees.
+
 """
 
 try:
@@ -60,9 +62,6 @@ class ConnectedComponent(object):
 	def copy(self):
 		"""
 		Creates and returns a copy of a ConnetedComponent object.
-		
-		Parameters
-		----------
 		
 		Returns
 		-------
@@ -428,7 +427,8 @@ class GeomTree(object):
 		
 	def getClusterLabels(self, method='all-mode', **kwargs):
 		"""
-		Umbrella function for retrieving custer labels from the level set tree.
+		Generic function for retrieving custer labels from the level set tree.
+		Dispatches a specific cluster labeling function.
 		
 		Parameters
 		----------
@@ -1211,13 +1211,13 @@ def geomTree(X, k, gamma, n_grid=None, verbose=True):
 		Size threshold for pruning small leaf nodes of the tree. Uses the
 		sizeMerge function to prune.
 		
-	verbose : boolean
-		Prints progress updates to the screen if True.
+	verbose : boolean, optional
+		Prints progress updates to the screen if True, the default.
 			
 	Returns
 	-------
 	T : LevelSetTree object
-		The pruned level set tree estimated from a k-nearest neighbor similariy
+		The pruned level set tree estimated from a k-nearest neighbor similarity
 		graph and density estimate.
 	"""
 
@@ -1550,7 +1550,7 @@ class ComponentGUI(object):
 			
 	def show(self):
 		"""
-		Show the instantiated TreeComponentTool (i.e. the interactive
+		Show the instantiated GUI window (i.e. the interactive
 		LevelSetTree plot).
 		"""
 		self.fig.show()

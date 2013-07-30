@@ -79,7 +79,7 @@ def knnGraph(x, k=None, q=0.05, self_edge=False):
 		The proportion of points to use as neighbors of a given observation.
 		Defaults to 0.05.
 		
-	self_edge : boolean
+	self_edge : boolean, optional
 		Flag to include or exclude (default) self-edges. Equivalent to having
 		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
 		adjacency matrix.
@@ -137,7 +137,7 @@ def gaussianGraph(x, sigma, self_edge=False):
 	sigma : float
 		The denominator of the Gaussian kernel.
 				
-	self_edge : boolean
+	self_edge : boolean, optional
 		Flag to include or exclude (default) self-edges. Equivalent to having
 		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
 		adjacency matrix.	
@@ -181,7 +181,7 @@ def epsilonGraph(x, eps=None, q=0.05, self_edge=False):
 		distance. 'eps' is set to the 'q' quantile of all (n choose 2) pairwise
 		distances, where n is the number of rows in 'x'.
 				
-	self_edge : boolean
+	self_edge : boolean, boolean
 		Flag to include or exclude (default) self-edges. Equivalent to having
 		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
 		adjacency matrix.
