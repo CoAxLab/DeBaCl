@@ -9,8 +9,8 @@ setup(
     scripts=['bin/gauss_demo.py'],
     url='https://github.com/CoAxLab/DeBaCl',
     license='LICENSE.txt',
-    description='Density-based clustering',
-    long_description=open('README.rst').read(),
+    description='Density-Based Clustering',
+    long_description=open('README.txt').read(),
     install_requires=[
         "python-igraph == 0.6.5",
         "numpy >= 1.7.0",
