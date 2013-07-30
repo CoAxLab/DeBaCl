@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(
-    name='DeBaCl',
+    name='debacl',
     version='0.2.0',
     author='Brian P. Kent',
     author_email='bpkent@gmail.com',
