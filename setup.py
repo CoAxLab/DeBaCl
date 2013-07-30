@@ -6,13 +6,15 @@ setup(
     author='Brian P. Kent',
     author_email='bpkent@gmail.com',
     packages=['debacl', 'debacl.test'],
+    scripts=['bin/gauss_demo.py'],
     url='https://github.com/CoAxLab/DeBaCl',
     license='LICENSE.txt',
     description='Density-based clustering',
-    long_description=open('README.txt').read(),
+    long_description=open('README.rst').read(),
     install_requires=[
         "python-igraph == 0.6.5",
         "numpy >= 1.7.0",
         "scipy >= 0.11.0",
+	"matplotlib >= 1.2.0"
     ],
 )
