@@ -12,9 +12,9 @@ in computational efficiency, flexible algorithms, and an emphasis on
 modularity and user customizability.
 
 The `tutorial for DeBaCl
-<http://nbviewer.ipython.org/urls/raw.github.com/CoAxLa
-b/DeBaCl/develop/docs/debacl_tutorial.ipynb>`_ is an IPython Notebook. It is
-viewable on nbviewer, or as a PDF at docs/debacl_tutorial.pdf.
+<http://nbviewer.ipython.org/url/raw.github.com/CoAxLab/DeBaCl/master/docs/debacl_tutorial.ipynb>`_
+is an IPython Notebook. It is viewable on nbviewer, or as a PDF at
+docs/debacl_tutorial.pdf.
 
 The PDF user manual contains documentation for each function. It can be found
 in the GitHub repository at docs/debacl_manual.pdf. A paper describing the
