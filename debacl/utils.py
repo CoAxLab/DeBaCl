@@ -78,36 +78,6 @@ def knn_graph(x, k=None):
 	return edge_list, k_radius
 	
 	
-def gaussian_graph(x, sigma):
-	"""
-	Construct a complete graph adjacency matrix with a Gaussian similarity
-	kernel. Uses the rows of 'x' as vertices in a graph and connects each pair
-	of vertices with an edge whose weight is the Gaussian kernel of the distance
-	between the two vertices.
-	
-	Parameters
-	----------
-	x : 2D numpy array
-		Rows of 'x' are locations of graph vertices.
-
-	sigma : float
-		The denominator of the Gaussian kernel.
-	
-	Returns
-	-------
-	W : 2-dimensional numpy array of floats
-		Adjacency matrix of the Gaussian kernel complete graph on rows of 'x'.
-		Each entry is a float representing the gaussian similarity between the
-		corresponding rows of 'x'.
-	"""
-	
-	d = spdist.pdist(x, metric='sqeuclidean')
-	W = np.exp(-1 * d / sigma)
-	W = spdist.squareform(W)
-	
-	return W
-	
-
 def epsilon_graph(x, eps):
 	"""
 	Construct an epsilon-neighborhood graph, represented by an edge list. The
@@ -135,6 +105,24 @@ def epsilon_graph(x, eps):
 	edge_list = list(set(edge_list))
 
 	return edge_list
+
+
+def remove_self_edges(edges):
+	"""
+	Removes self-edges from an edge list.
+
+	Parameters
+	----------
+	edges : list [tuple [int]]
+		Input edge list, possibly with self edges.
+
+	Returns
+	-------
+	edges : list [tuple [int]]
+		Edge list with no self edges.
+	"""
+	clean_edges = [x for x in edges if not x[0] == x[1]]
+	return clean_edges
 
 
 
