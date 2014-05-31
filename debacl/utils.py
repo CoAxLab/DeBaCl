@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl_utils.py
 ## Created: 20120718
-## Updated: 20130625
+## Updated: 20140530
 ## A library of helper functions for the DEnsity-BAsed CLustering (DeBaCl)
 ## package.
 ###########################################
@@ -25,46 +25,14 @@ from matplotlib import ticker
 
 
 
-#################################
-### GENERIC UTILITY FUNCTIONS ###
-#################################
-
-def drawSample(n, k):
-	"""
-	Draw a sample of size k from n items without replacement. Chooses k indices
-	from range(n) without replacement by shuffling range(n) uniformly over all
-	permutations. In numpy 1.7 and beyond, the "choice" function is a better
-	option.
-	
-	Parameters
-	----------
-	n : int
-		Total number of objects.
-		
-	k : int
-		Sample size.
-		
-	Returns
-	-------
-	ix_keep : list of ints
-		Indices of objects selected in the sample.
-	"""
-	
-	ix = np.arange(n)
-	np.random.shuffle(ix)
-	ix_keep = ix[0:k]
-	
-	return ix_keep
-
-
-
-
 #####################################
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-def knnGraph(x, k=None, q=0.05, self_edge=False):
-	"""Compute the symmetric k-NN adjacency matrix for a set of points.
+def knn_graph(x, k=None):
+	"""
+	Compute the symmetric k-NN adjacency matrix for a set of points. Assume
+	Euclidean distance metric.
 	
 	Parameters
 	----------
@@ -73,58 +41,46 @@ def knnGraph(x, k=None, q=0.05, self_edge=False):
 	
 	k : int, optional
 		The number of points to consider as neighbors of any given observation.
-		If not specified, use the default value of 'q'.
-	
-	q : float, optional
-		The proportion of points to use as neighbors of a given observation.
-		Defaults to 0.05.
-		
-	self_edge : boolean, optional
-		Flag to include or exclude (default) self-edges. Equivalent to having
-		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
-		adjacency matrix.
 	
 	Returns
 	-------
-	W : 2-dimensional numpy array of booleans
-		A 2D numpy array of shape n x n, where n is the number of rows in 'x'.
-		The entry at position (i, j) is True if observations i and j are
-		neighbors, False otherwise.
+	neighbors : 2-dimensional numpy array [int]
+		A 2-dimensional numpy array of shape (n, k), where n is the number of
+		rows in 'x'. The entry at position (i, j) is the index of the j'th
+		nearest neighbor to the point at row index i.
 		
-	k_radius : list of float
-		For each row of 'x' the distance to its k-1'th nearest neighbor.
+	k_radius : list [float]
+		For each row of 'x' the distance to its k'th nearest neighbor (including
+		itself).
 	"""
 
 	n, p = x.shape
-	if k == None:
-		k = int(round(q * n))
 
+	## Find the index of the nearest neighbors for each point
 	d = spdist.pdist(x, metric='euclidean')
 	D = spdist.squareform(d)
 			
-	## identify which indices count as neighbors for each node
 	rank = np.argsort(D, axis=1)
-	ix_nbr = rank[:, 0:k]   # should this be k+1 to match Kpotufe paper?
-	ix_row = np.tile(np.arange(n), (k, 1)).T
-	
-	## make adjacency matrix for unweighted graph
-	W = np.zeros(D.shape, dtype=np.bool)
-	W[ix_row, ix_nbr] = True
-	W = np.logical_or(W, W.T)
-	
-	if not self_edge:
-		np.fill_diagonal(W, False)
-	
-	## find the radius of the k'th neighbor
-	k_nbr = ix_nbr[:, -1]
+	idx_neighbor = rank[:, 0:k]
+
+	## Convert to an edge list
+	edge_list = []
+	for i, row in enumerate(idx_neighbor):
+		v_incident = [tuple(sorted((i, v))) for v in row]
+		edge_list += v_incident[:]
+
+	edge_list = list(set(edge_list))
+
+	## Retrieve the k-neighbor radius
+	k_nbr = idx_neighbor[:, -1]
 	k_radius = D[np.arange(n), k_nbr]
 		
-	return W, k_radius
+	return edge_list, k_radius
 	
 	
-def gaussianGraph(x, sigma, self_edge=False):
+def gaussian_graph(x, sigma):
 	"""
-	Constructs a complete graph adjacency matrix with a Gaussian similarity
+	Construct a complete graph adjacency matrix with a Gaussian similarity
 	kernel. Uses the rows of 'x' as vertices in a graph and connects each pair
 	of vertices with an edge whose weight is the Gaussian kernel of the distance
 	between the two vertices.
@@ -136,11 +92,6 @@ def gaussianGraph(x, sigma, self_edge=False):
 
 	sigma : float
 		The denominator of the Gaussian kernel.
-				
-	self_edge : boolean, optional
-		Flag to include or exclude (default) self-edges. Equivalent to having
-		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
-		adjacency matrix.	
 	
 	Returns
 	-------
@@ -154,60 +105,36 @@ def gaussianGraph(x, sigma, self_edge=False):
 	W = np.exp(-1 * d / sigma)
 	W = spdist.squareform(W)
 	
-	if not self_edge:
-		np.fill_diagonal(W, False)
-	
 	return W
 	
 
-def epsilonGraph(x, eps=None, q=0.05, self_edge=False):
+def epsilon_graph(x, eps):
 	"""
-	Constructs an epsilon-neighborhood graph adjacency matrix. Constructs a
-	graph where the rows of 'x' are vertices and pairs of vertices are connected
-	by edges if they are within euclidean distance epsilon of each other. Return
-	the adjacency matrix for this graph.
+	Construct an epsilon-neighborhood graph, represented by an edge list. The
+	rows of 'x' are vertices and pairs of vertices are connected by edges if
+	they are within euclidean distance epsilon of each other.
 	
 	Parameters
 	----------
 	x : 2D numpy array
 		The rows of x are the observations which become graph vertices.
 		
-	eps : float, optional
+	eps : float
 		The distance threshold for neighbors. If unspecified, defaults to the
 		proportion in 'q'.
 		
-	q : float, optional
-		If 'eps' is unspecified, this determines the neighbor threshold
-		distance. 'eps' is set to the 'q' quantile of all (n choose 2) pairwise
-		distances, where n is the number of rows in 'x'.
-				
-	self_edge : boolean, boolean
-		Flag to include or exclude (default) self-edges. Equivalent to having
-		1's (self-edge = True) or 0's (self-edge = False) on the diagonal of the
-		adjacency matrix.
-		
 	Returns
 	-------
-	W : 2-dimensional numpy array of booleans
-		The adjacency matrix for the graph.
-
-	eps: float
-		The neighbor threshold distance, useful particularly if not initially
-		specified.
+	neighbors : 2-dimensional numpy array [int]
 	"""
 	
 	d = spdist.pdist(x, metric='euclidean')
 	D = spdist.squareform(d)
+	idx_neighbor = np.where(D <= eps)
+	edge_list = [tuple(sorted(x)) for x in zip(idx_neighbor[0], idx_neighbor[1])]
+	edge_list = list(set(edge_list))
 
-	if eps == None:
-		eps = np.percentile(d, round(q*100))
-		
-	W = D <= eps
-	
-	if not self_edge:
-		np.fill_diagonal(W, False)
-
-	return W, eps
+	return edge_list
 
 
 
@@ -215,7 +142,7 @@ def epsilonGraph(x, eps=None, q=0.05, self_edge=False):
 ### DENSITY ESTIMATION ###
 ##########################
 
-def knnDensity(k_radius, n, p, k):
+def knn_density(k_radius, n, p, k):
 	"""
 	Compute the kNN density estimate for a set of points.	
 	
