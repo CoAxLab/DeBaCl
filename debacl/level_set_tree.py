@@ -1,8 +1,8 @@
 ##############################################################
 ## Brian P. Kent
-## debacl.py
+## level_set_tree.py
 ## Created: 20120821
-## Updated: 20130625
+## Updated: 20140623
 ##############################################################
 
 ##############
@@ -13,17 +13,13 @@ Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 Includes functions to construct and modify level set trees produced by standard
 geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
-
 """
 
-try:
-	import numpy as np
-	import scipy.spatial.distance as spdist
-	import scipy.io as spio
-	import igraph as igr
-	import utils as utl
-except:
-	raise ImportError("Critical packages are not installed.")
+import numpy as np
+import scipy.spatial.distance as spd
+import scipy.io as spio
+import networkx as nx
+import utils as utl  # DeBaCl utils
 
 try:
 	import pandas as pd
@@ -31,7 +27,7 @@ try:
 	from matplotlib.collections import LineCollection
 	from matplotlib.widgets import Button
 except:
-	print "Matplotlib and/or Pandas packages are not installed, so plot and " +\
+	print "Matplotlib and/or Pandas are not installed, so plot and " +\
 		"print functions may fail."
 
 
@@ -58,29 +54,25 @@ class ConnectedComponent(object):
 		self.end_mass = end_mass
 		self.members = members
 		
-		
 	def copy(self):
 		"""
-		Creates and returns a copy of a ConnetedComponent object.
+		Create and return a copy of a ConnetedComponent object.
 		
 		Returns
 		-------
 		component : ConnectedComponent	
-
 		"""
 		
-		component = ConnectedComponent(self.idnum, self.parent, self.children,
+		return ConnectedComponent(self.idnum, self.parent, self.children,
 			self.start_level, self.end_level, self.start_mass, self.end_mass,
 			self.members)
-			
-		return component
-		
+				
 
-
-class GeomTree(object):
+class LevelSetTree(object):
 	"""
-	Defines methods and attributes for a level set tree, i.e. a collection of
-	connected components organized hierarchically.
+	The level set tree. The level set tree is a collection of connected
+	components organized hierarchically, based on a k-nearest neighbors density
+	estimate and connectivity graph.
 	
 	Parameters
 	----------
@@ -98,7 +90,6 @@ class GeomTree(object):
 		self.n = sum([len(x) for x in bg_sets])
 		self.nodes = {}
 		self.subgraphs = {}
-		
 				
 	def __str__(self):
 		"""
@@ -126,7 +117,6 @@ class GeomTree(object):
 		summary.set_index('key', inplace=True)
 		out = summary.to_string()
 		return out
-		
 		
 	def prune(self, method='size-merge', **kwargs):
 		"""
@@ -158,8 +148,7 @@ class GeomTree(object):
 			print "Pruning method not understood. 'size-merge' is the only " +\
 			"pruning method currently implemented. No changes were made to " + \
 			"the tree."
-				
-			
+							
 	def save(self, fname):
 		"""
 		Save a level set tree object to file.
@@ -191,7 +180,6 @@ class GeomTree(object):
 			}
 
 		spio.savemat(fname, tree_dict)
-		
 		
 	def plot(self, form, width='uniform', sort=True, gap=0.05, color_nodes=None):
 		"""
@@ -423,9 +411,8 @@ class GeomTree(object):
 		ax.add_collection(splitcol)
 				
 		return fig, segments, segmap, splits, splitmap
-			
-		
-	def getClusterLabels(self, method='all-mode', **kwargs):
+				
+	def get_cluster_labels(self, method='all-mode', **kwargs):
 		"""
 		Generic function for retrieving custer labels from the level set tree.
 		Dispatches a specific cluster labeling function.
@@ -503,9 +490,8 @@ class GeomTree(object):
 			nodes = []
 
  		return labels, nodes
- 		
- 		
-	def makeSubtree(self, ix):
+ 			
+	def make_subtree(self, ix):
 		"""
 		Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
 	
@@ -532,8 +518,7 @@ class GeomTree(object):
 	
 		return T
  		
- 		
- 	def mergeBySize(self, threshold):
+ 	def _merge_by_size(self, threshold):
 		"""
 		Prune splits from a tree based on size of child nodes. Merge members of
 		child nodes rather than removing them.
@@ -613,8 +598,7 @@ class GeomTree(object):
 			else:
 				pass  # do nothing here		
 		
-			
-	def allModeCluster(self):
+	def _all_mode_cluster(self):
 		"""
 		Set every leaf node as a foreground cluster.
 
@@ -649,8 +633,7 @@ class GeomTree(object):
 		labels = np.array([points, cluster], dtype=np.int).T		
 		return labels, leaves
 		
-		
-	def firstKCluster(self, k):
+	def _first_K_cluster(self, k):
 		"""
 		Returns foreground cluster labels for the 'k' modes with the lowest
 		start levels. In principle, this is the 'k' leaf nodes with the smallest
@@ -700,9 +683,8 @@ class GeomTree(object):
 
 		labels = np.array([points, cluster], dtype=np.int).T
 		return labels, nodes
-	
-				
-	def upperSetCluster(self, threshold, scale='alpha'):
+		
+	def _upper_set_cluster(self, threshold, scale='alpha'):
 		"""
 		Set foreground clusters by finding connected components at an upper
 		level set or upper mass set.
@@ -758,8 +740,7 @@ class GeomTree(object):
 		labels = np.array([points, cluster], dtype=np.int).T		
 		return labels, nodes
 		
-
-	def firstKLevelCluster(self, k):
+	def _first_K_level_cluster(self, k):
 		"""
 		Use the first K clusters to appear in the level set tree as foreground
 		clusters. In general, K-1 clusters will appear at a lower level than the
@@ -803,8 +784,7 @@ class GeomTree(object):
 		labels = np.array([points, cluster], dtype=np.int).T
 		return labels, nodes
 
-
-	def collapseLeaves(self, active_nodes):
+	def _collapse_eaves(self, active_nodes):
 		"""
 		Removes descendent nodes for the branches in 'active_nodes'.
 		
@@ -831,8 +811,7 @@ class GeomTree(object):
 				if u != ix:
 					del self.nodes[u]
 
-
-	def findKCut(self, k):
+	def find_K_cut(self, k):
 		"""
 		Find the lowest level cut that has k connected components. If there are
 		no levels that have k components, then find the lowest level that has at
@@ -873,8 +852,7 @@ class GeomTree(object):
 				
 		return cut
 		
-		
-	def constructBranchMap(self, ix, interval, scale, width, sort):
+	def _construct_branch_map(self, ix, interval, scale, width, sort):
 		"""
 		Map level set tree nodes to locations in a plot canvas. Finds the plot
 		coordinates of vertical line segments corresponding to LST nodes and
@@ -1019,8 +997,7 @@ class GeomTree(object):
 	
 		return segments, splits, segmap, splitmap
 
-
-	def constructMassMap(self, ix, start_pile, interval, width_mode):
+	def _construct_mass_map(self, ix, start_pile, interval, width_mode):
 		"""
 		Map level set tree nodes to locations in a plot canvas. Finds the plot
 		coordinates of vertical line segments corresponding to LST nodes and
@@ -1153,8 +1130,7 @@ class GeomTree(object):
 			
 		return segments, splits, segmap, splitmap
 	
-	
-	def massToLevel(self, alpha):
+	def _mass_to_level(self, alpha):
 		"""
 		Convert the specified mass value into a level location.
 		
@@ -1179,74 +1155,101 @@ class GeomTree(object):
 
 
 
-	
 #############################################
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def geomTree(X, k, gamma, n_grid=None, verbose=True):
+def construct_density_grid(density, mode='mass', num_levels=None):
 	"""
-	Construct a level set tree, from soup to nuts. This function assumes a
-	k-nearest neighbor similarity graph and k-nearest neighbor density estimate,
-	which is less flexible than building the similarity graphy, estimating the
-	(pseudo-) density, constructing the tree, and pruning with separate
-	functions.
-	
+	Create the inputs to level set tree estimation by pruning observations from
+	a density estimate at successively higher levels. This function merely
+	records the density levels and which points will be removed at each level,
+	but it does not do the actual tree construction.
+
 	Parameters
 	----------
-	X : 2-dimensional numpy array
-		The data matrix. Rows are observations.
-		
-	k : integer
-		Number of observations to consider as neighbors to a given point, in
-		both the k-nearest neighbor similarity graph and k-nearest neighbor
-		density estimate.
-		
-	n_grid : integer
-		Number of cells in the density level mesh. If None, level sets are
-		computed and decomposed as each observation is removed from the upper
-		level set.
-		
-	gamma : integer
-		Size threshold for pruning small leaf nodes of the tree. Uses the
-		sizeMerge function to prune.
-		
-	verbose : boolean, optional
-		Prints progress updates to the screen if True, the default.
+	density : numpy array		
+		Values of a density estimate. The coordinates of the observation are not
+		needed for this function.
 			
+	mode : {'mass', 'levels'}, optional
+		If 'mass', the level set tree will be built by removing a constant
+		number of points (mass) at each iteration. If 'levels', the density
+		levels are evenly spaced between 0 and the maximum density estimate
+		value. If 'num_levels' is 'None', the 'mass' option removes 1 point at a
+		time and the 'levels' option iterates through unique values of the
+		'density' array.
+	
+	num_levels : int, optional
+		Number of density levels at which to construct the level set tree.
+		This is essentially the resolution of a level set tree built for the
+		'density' array.
+	
 	Returns
 	-------
-	T : LevelSetTree object
-		The pruned level set tree estimated from a k-nearest neighbor similarity
-		graph and density estimate.
-	"""
-
-	n, p = X.shape
+	background_sets : list of lists	
+		The points to remove in each iteration of level set tree construction.
+		For a given density level, these are the points that have lower density
+		than the level, but higher density than the immediately smaller density
+		level.
 	
-	W, k_radius = utl.knnGraph(X, k, self_edge=False)
-	fhat = utl.knnDensity(k_radius, n, p, k)
-	bg_sets, levels = utl.constructDensityGrid(fhat, mode='mass', n_grid=n_grid)
-	T = constructTree(W, levels, bg_sets, mode='density', verbose=verbose)		
-	T.prune(method='size-merge', gamma=gamma)
-		
-	return T
+	levels : numpy array	
+		Grid of density levels that will define the iterations in level set tree
+		construction.
+	"""
+	
+	n = len(density)
+	
+	if mode == 'mass':  # remove blocks of points of uniform mass
+		pt_order = np.argsort(density)
+		bin_size = n / num_levels  # this should be only the integer part
 
+		if num_levels is None:
+			background_sets = [[pt_order[i]] for i in range(n)]
+			levels = density[pt_order]
+		else:
+			background_sets = [pt_order[i:(i + bin_size)]
+				for i in range(0, n, bin_size)]
+			levels = [max(density[x]) for x in background_sets]
+			
+	elif mode == 'levels':  # remove points at evenly spaced density levels
+		uniq_dens = np.unique(density)
+		uniq_dens.sort()
 
-def constructTree(W, levels, bg_sets, mode='general', verbose=False):
+		if num_levels is None:
+			background_sets = [list(np.where(density == uniq_dens[i])[0])
+				for i in range(len(uniq_dens))]
+			levels = uniq_dens
+		else:
+			grid = np.linspace(0., np.max(uniq_dens), num_levels)
+			levels = grid.copy()
+			grid = np.insert(grid, 0, -1)
+			background_sets = [list(np.where(np.logical_and(density > grid[i],
+				density <= grid[i + 1]))[0]) for i in range(num_levels)]
+	
+	else:
+		raise ValueError("Sorry, that's not a valid mode.")
+	
+	return background_sets, levels
+
+def construct_tree(adjacency_list, density_levels, background_sets,
+	verbose=False):
 	"""
 	Construct a level set tree. A level set tree is constructed by identifying
-	connected components of observations at successively higher levels of a
-	probability density estimate.
+	connected components of in a k-nearest neighbors graph at successively
+	higher levels of a probability density estimate.
 	
 	Parameters
 	----------
-	W : 2D array
-		An adjacency matrix for a similarity graph on the data.
+	adjacency_list : numpy array[int]		
+		Adjacency list of the k-nearest neighbors graph on the data. Each row
+		represents one of the 'n' observations, while the columns indicate the
+		indices of the k-nearest neighbors, in order of increasing distance.
 			
-	levels: array
-		Defines the density levels where connected components will be computed.
-		Typically this includes all unique values of a function evaluated on the
-		data points.
+	levels: numpy array[float]
+		Density levels at which connected components are computed. Typically
+		this includes all unique values of a probability density estimate, but
+		it can be a coarser grid for fast approximate tree estimates.
 	
 	bg_sets: list of lists
 		Specify which points to remove as background at each density level in
@@ -1349,8 +1352,7 @@ def constructTree(W, levels, bg_sets, mode='general', verbose=False):
 		
 	return T
 
-
-def loadTree(fname):
+def load_tree(fname):
 	"""
 	Load a saved tree from file.
 	
@@ -1394,7 +1396,6 @@ def loadTree(fname):
 		
 	T.nodes = nodes
 	return T
-
 
 
 
@@ -1468,7 +1469,6 @@ class ComponentGUI(object):
 		segments.set_picker(15)
 		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
 		self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
-
 		
 	def handle_pick(self, event):
 		"""
@@ -1547,7 +1547,6 @@ class ComponentGUI(object):
 			subfig = self.subtree.plot(self.form)[0]
 			subfig.show()
 			
-			
 	def show(self):
 		"""
 		Show the instantiated GUI window (i.e. the interactive
@@ -1555,29 +1554,24 @@ class ComponentGUI(object):
 		"""
 		self.fig.show()
 		
-		
-	def getComponent(self):
+	def get_component(self):
 		"""
 		Return the members of the currently selected level set tree node.
 		"""
 		return self.component
 
-
-	def getSubtree(self):
+	def get_subtree(self):
 		"""
 		Return the subtree with the currently selected node as root.
 		"""
 		return self.subtree
-		
-		
-	def getIndex(self):
+	
+	def get_index(self):
 		"""
 		Return the index of the currently selected tree node.
 		"""
 		return self.node_ix
 		
-	
-
 
 class ClusterGUI(object):
 	"""
@@ -1642,7 +1636,6 @@ class ClusterGUI(object):
 		self.line = self.ax.axhline(y=0, color='blue', linewidth=1.0)
 		self.fig.canvas.mpl_connect('button_press_event', self.handle_click)
 		
-		
 	def handle_click(self, event):
 		"""
 		Deals with a user click on the interactive plot.
@@ -1705,15 +1698,13 @@ class ClusterGUI(object):
 					bg_alpha=0.72, fg_alpha=0.68, edge_alpha=0.68, s=self.size)
 				fig.show()
 			
-					
 	def show(self):
 		"""
 		Show the interactive plot canvas.
 		"""
 		self.fig.show()
 		
-		
-	def getClusters(self):
+	def get_clusters(self):
 		"""
 		Return the cluster memberships for the currently selected level or mass
 		value.

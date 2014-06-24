@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl_utils.py
 ## Created: 20120718
-## Updated: 20140530
+## Updated: 20140623
 ## A library of helper functions for the DEnsity-BAsed CLustering (DeBaCl)
 ## package.
 ###########################################
@@ -15,13 +15,17 @@ General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 """
 
 import numpy as np
-import scipy.spatial.distance as spdist
+import scipy.spatial.distance as spd
 import scipy.special as spspec
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib as mpl
-from matplotlib import ticker
+try:
+	import matplotlib.pyplot as plt
+	from mpl_toolkits.mplot3d import Axes3D
+	import matplotlib as mpl
+	from matplotlib import ticker
+except:
+	raise ImportError("Matplotlib could not be loaded. " +\
+		"DeBaCl plot functions will not work.")
 
 
 
@@ -29,53 +33,64 @@ from matplotlib import ticker
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-def knn_graph(x, k=None):
+def knn_graph(X, k, output_type='adjacency-list'):
 	"""
-	Compute the symmetric k-NN adjacency matrix for a set of points. Assume
+	Compute the symmetric k-nearest neighbor graph for a set of points. Assume
 	Euclidean distance metric.
 	
 	Parameters
 	----------
-	x : numpy array
+	X : numpy array
 		Data points, with each row as an observation.
 	
-	k : int, optional
+	k : int
 		The number of points to consider as neighbors of any given observation.
+
+	output_type : {'adjacency-list', 'edge-list'}
+		Form of the graph representation.
 	
 	Returns
 	-------
-	neighbors : 2-dimensional numpy array [int]
-		A 2-dimensional numpy array of shape (n, k), where n is the number of
-		rows in 'x'. The entry at position (i, j) is the index of the j'th
-		nearest neighbor to the point at row index i.
+	neighbors : numpy array [int]
+		A 2-dimensional numpy array representing the k-nearest neighbor graph.
+		If output_type is 'adjacency-list', this is a 'n x k' matrix, where 'n'
+		is the number of rows in 'X'. The entry at position (i, j) is the index
+		of the j'th nearest neighbor to the point at row index i. If output_type
+		is 'edge-list', this is a two-column numpy array where each row
+		corresponds to an edge in the graph. The edges are undirected and
+		duplicates are removed.
 		
 	k_radius : list [float]
-		For each row of 'x' the distance to its k'th nearest neighbor (including
+		For each row of 'X' the distance to its k'th nearest neighbor (including
 		itself).
 	"""
 
-	n, p = x.shape
+	n, p = X.shape
 
 	## Find the index of the nearest neighbors for each point
-	d = spdist.pdist(x, metric='euclidean')
-	D = spdist.squareform(d)
+	d = spd.pdist(X, metric='euclidean')
+	D = spd.squareform(d)
 			
 	rank = np.argsort(D, axis=1)
 	idx_neighbor = rank[:, 0:k]
 
-	## Convert to an edge list
-	edge_list = []
-	for i, row in enumerate(idx_neighbor):
-		v_incident = [tuple(sorted((i, v))) for v in row]
-		edge_list += v_incident[:]
-
-	edge_list = list(set(edge_list))
-
 	## Retrieve the k-neighbor radius
 	k_nbr = idx_neighbor[:, -1]
 	k_radius = D[np.arange(n), k_nbr]
+
+	## Convert to an edge list, if desired
+	if output_type == 'edge_list':
+		neighbors = []
+		for i, row in enumerate(idx_neighbor):
+			v_incident = [tuple(sorted((i, v))) for v in row]
+			neighbors += v_incident[:]
+
+		neighbors = list(set(neighbors))
+
+	else:  # output_type == 'adjacency_list'
+		neighbors = idx_neighbor
 		
-	return edge_list, k_radius
+	return neighbors, k_radius
 	
 	
 def epsilon_graph(x, eps):
@@ -98,8 +113,8 @@ def epsilon_graph(x, eps):
 	neighbors : 2-dimensional numpy array [int]
 	"""
 	
-	d = spdist.pdist(x, metric='euclidean')
-	D = spdist.squareform(d)
+	d = spd.pdist(x, metric='euclidean')
+	D = spd.squareform(d)
 	idx_neighbor = np.where(D <= eps)
 	edge_list = [tuple(sorted(x)) for x in zip(idx_neighbor[0], idx_neighbor[1])]
 	edge_list = list(set(edge_list))
@@ -168,77 +183,7 @@ def knn_density(k_radius, n, p, k):
 ### LEVEL SET TREE CLUSTERING PIPELINE ###
 ##########################################
 
-def constructDensityGrid(density, mode='mass', n_grid=None):
-	"""
-	Create the inputs to a level set tree object. Create a list of lists of
-	points to remove at each iteration of a level set or mass tree. Also create
-	a list of the density level at each iteration.
-	
-	Parameters
-	----------
-	density : 1D numpy array
-		An array with one value for each data point. Typically this is a density
-		estimate, but it can be any function.
-			
-	mode : {'mass', 'levels'}, optional
-		Determines if the tree should be built by removing a constant number of
-		points (mass) at each iteration, or on a grid of evenly spaced density
-		levels. If 'n_grid' is set to None, the 'mass' option will remove 1
-		point at a time and the 'levels' option will iterate through every
-		unique value of the 'density' array.
-	
-	n_grid : int, optional
-		The number of tree heights at which to estimate connected components.
-		This is essentially the resolution of a level set tree built for the
-		'density' array.
-	
-	Returns
-	-------
-	bg_sets : list of lists
-		Defines the points to remove as background at each iteration of level
-		set tree construction.
-	
-	levels : array-like
-		The density level at each iteration of level set tree construction.
-	"""
-	
-	n = len(density)
-	
-	if mode == 'mass':
-		pt_order = np.argsort(density)
-
-		if n_grid is None:
-			bg_sets = [[pt_order[i]] for i in range(n)]
-			levels = density[pt_order]
-		else:
-			grid = np.linspace(0, n, n_grid)
-			bg_sets = [pt_order[grid[i]:grid[i+1]] for i in range(n_grid-1)]
-			levels = [max(density[x]) for x in bg_sets]
-			
-	elif mode == 'levels':
-		uniq_dens = np.unique(density)
-		uniq_dens.sort()
-
-		if n_grid is None:
-			bg_sets = [list(np.where(density==uniq_dens[i])[0])
-				for i in range(len(uniq_dens))]
-			levels = uniq_dens
-		else:
-			grid = np.linspace(np.min(uniq_dens), np.max(uniq_dens), n_grid)
-			levels = grid.copy()
-			grid = np.insert(grid, 0, -1)
-			bg_sets = [list(np.where(np.logical_and(density > grid[i],
-				density <= grid[i+1]))[0]) for i in range(n_grid)]
-	
-	else:
-		bg_sets = []
-		levels = []
-		print "Sorry, didn't understand that mode."
-	
-	return bg_sets, levels
-
-
-def assignBackgroundPoints(X, clusters, method=None, k=1):
+def assign_background_points(X, clusters, method=None, k=1):
 	"""
 	Assign level set tree background points to existing foreground clusters.
 	This function packages a few very basic classification methods. Any
@@ -302,7 +247,7 @@ def assignBackgroundPoints(X, clusters, method=None, k=1):
 		X_background = X[ix_background, :]
 
 		# distance between each background point and all cluster centers
-		d = spdist.cdist(X_background, ctrs)
+		d = spd.cdist(X_background, ctrs)
 		ctr_min = np.argmin(d, axis=1)
 		assignments[ix_background] = labels[ctr_min]	
 
@@ -314,7 +259,7 @@ def assignBackgroundPoints(X, clusters, method=None, k=1):
 		# find distances between background and upper points
 		X_background = X[ix_background, :]
 		X_upper = X[clusters[:,0]]
-		d = spdist.cdist(X_background, X_upper)
+		d = spd.cdist(X_background, X_upper)
 
 		# find the k-nearest neighbors
 		rank = np.argsort(d, axis=1)
@@ -417,7 +362,7 @@ class Palette(object):
 					]) / 255.0
 	
 					
- 	def applyColorset(self, ix):
+ 	def apply_colorset(self, ix):
  		"""
  		Turn a numpy array of group labels (integers) into RGBA colors.
  		"""
@@ -425,7 +370,7 @@ class Palette(object):
 		return self.colorset[ix % n_clr] 		
  	 	
  	
-def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
+def make_color_matrix(n, bg_color, bg_alpha, ix=None,
 	fg_color=[228/255.0, 26/255.0, 28/255.0], fg_alpha=1.0):
 	"""
 	Construct the RGBA color parameter for a matplotlib plot.
@@ -486,7 +431,7 @@ def makeColorMatrix(n, bg_color, bg_alpha, ix=None,
 	return rgba
 	
 	
-def clusterHistogram(x, cluster, fhat=None, f=None, levels=None):
+def cluster_histogram(x, cluster, fhat=None, f=None, levels=None):
 	"""
 	Plot a histogram and illustrate the location of selected cluster points.
 	
@@ -566,7 +511,7 @@ def clusterHistogram(x, cluster, fhat=None, f=None, levels=None):
 	return fig
 	
 
-def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
+def plot_foreground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 	fg_alpha=0.75, bg_alpha=0.3, edge_alpha=1.0, **kwargs):
 	"""
 	Draw a scatter plot of 2D or 3D data, colored according to foreground
@@ -639,7 +584,7 @@ def plotForeground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 	return fig, ax
 
 
-def setPlotParams(axes_titlesize=22, axes_labelsize=18, xtick_labelsize=14,
+def set_plot_params(axes_titlesize=22, axes_labelsize=18, xtick_labelsize=14,
 	ytick_labelsize=14, figsize=(9, 9), n_ticklabel=4):
 	"""
 	A handy function for setting matplotlib parameters without adding trival
