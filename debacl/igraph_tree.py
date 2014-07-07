@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## level_set_tree.py
 ## Created: 20120821
-## Updated: 20140706
+## Updated: 20140623
 ##############################################################
 
 ##############
@@ -15,15 +15,11 @@ geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
 """
 
-try:
-	import numpy as np
-	import scipy.spatial.distance as spd
-	import scipy.io as spio
-	import networkx as nx
-	import utils as utl  # DeBaCl utils
-except:
-	raise ImportError("DeBaCl requires the numpy, scipy, and networkx " + \
-		"packages for basic level set tree construction.")
+import numpy as np
+import scipy.spatial.distance as spd
+import scipy.io as spio
+import networkx as nx
+import utils as utl  # DeBaCl utils
 
 try:
 	import pandas as pd
@@ -1163,7 +1159,7 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def density_grid(density, mode='mass', num_levels=None):
+def construct_density_grid(density, mode='mass', num_levels=None):
 	"""
 	Create the inputs to level set tree estimation by pruning observations from
 	a density estimate at successively higher levels. This function merely
@@ -1206,12 +1202,12 @@ def density_grid(density, mode='mass', num_levels=None):
 	
 	if mode == 'mass':  # remove blocks of points of uniform mass
 		pt_order = np.argsort(density)
+		bin_size = n / num_levels  # this should be only the integer part
 
 		if num_levels is None:
 			background_sets = [[pt_order[i]] for i in range(n)]
 			levels = density[pt_order]
 		else:
-			bin_size = n / num_levels  # this should be only the integer part
 			background_sets = [pt_order[i:(i + bin_size)]
 				for i in range(0, n, bin_size)]
 			levels = [max(density[x]) for x in background_sets]
@@ -1236,7 +1232,7 @@ def density_grid(density, mode='mass', num_levels=None):
 	
 	return background_sets, levels
 
-def construct_tree(adjacency_list, density_levels, background_sets,
+def igraph_tree(adjacency_list, density_levels, background_sets,
 	verbose=False):
 	"""
 	Construct a level set tree. A level set tree is constructed by identifying
@@ -1245,10 +1241,10 @@ def construct_tree(adjacency_list, density_levels, background_sets,
 	
 	Parameters
 	----------
-	adjacency_list : dict [list [int]]
-		Adjacency list of the k-nearest neighbors graph on the data. Each key
-		represents represents one of the 'n' observations, while the values are
-		lists containing the indices of the k-nearest neighbors.
+	adjacency_list : numpy array[int]		
+		Adjacency list of the k-nearest neighbors graph on the data. Each row
+		represents one of the 'n' observations, while the columns indicate the
+		indices of the k-nearest neighbors, in order of increasing distance.
 			
 	levels: numpy array[float]
 		Density levels at which connected components are computed. Typically
@@ -1275,75 +1271,78 @@ def construct_tree(adjacency_list, density_levels, background_sets,
 		See the LevelSetTree class for attributes and method definitions.
 	"""
 	
-	## Initialize the graph and cluster tree
-	n = len(density_levels)
+	n = np.alen(W)
 	levels = [float(x) for x in density_levels]
-	G = nx.from_dict_of_lists(adjacency_list)
-	T = LevelSetTree(background_sets, density_levels)
 	
+	## Initialize the graph and cluster tree
+	G = igr.Graph.Adjacency(W.tolist(), mode=igr.ADJ_MAX)
+	G.vs['index'] = range(n)
 
-	## Figure out roots of the tree
-	cc0 = nx.connected_components(G)
-
-	for i, c in enumerate(cc0):  # c is only the vertex list, not the subgraph
+	T = GeomTree(bg_sets, levels)
+	cc0 = G.components()
+	
+	if mode == 'density':
+		start_level = 0.0
+	else:
+		start_level = float(np.min(levels) - 0.000001)
+		
+	for i, c in enumerate(cc0):
 		T.subgraphs[i] = G.subgraph(c)
 		T.nodes[i] = ConnectedComponent(i, parent=None, children=[],
-			start_level=0., end_level=None, start_mass=0., end_mass=None,
-			members=c)
-
+			start_level=start_level, end_level=None, start_mass=0.0,
+			end_mass=None, members=G.vs[c]['index'])
+	
 	
 	# Loop through the removal grid
-	for i, level in enumerate(density_levels):
+	for i, (level, bg) in enumerate(zip(levels, bg_sets)):
+	
 		if verbose and i % 100 == 0:
-			print "iteration", 
-
-		bg = background_sets[i]
-
-
-		## compute the mass after the current bg set is removed
-		old_vcount = sum([x.number_of_nodes() for x in T.subgraphs.itervalues()])
-		current_mass = 1. - ((old_vcount - len(bg)) / float(n))
-		print "current mass: ", current_mass
+			print "iteration", i
 		
+		# compute mass and level
+		mass = 1.0 - (sum([x.vcount() for
+			x in T.subgraphs.itervalues()]) - len(bg)) / (1.0 * n)
 
 		# loop through active components, i.e. subgraphs
-		deactivate_keys = []     # subgraphs to deactivate at the end of the iter
-		activate_subgraphs = {}  # new subgraphs to add at the end of the iter
+		deactivate_keys = []
+		activate_subgraphs = {}
 		
 		for (k, H) in T.subgraphs.iteritems():
-
-			## remove nodes at the current level
-			H.remove_nodes_from(bg)
-
-			## check if subgraph has vanished
-			if H.number_of_nodes() == 0:
-				T.nodes[k].end_level = level
-				T.nodes[k].end_mass = current_mass
-				deactivate_keys.append(k)
-
-			else:  # subgraph hasn't vanishes
- 
- 				## check if subgraph now has multiple connected components
- 				# NOTE: this is *the* bottleneck
-				if not nx.is_connected(H):
-
-					## deactivate the parent subgraph
+			cutpoints = H.vs.select(index_in = bg)
+			
+			if len(cutpoints) > 0:
+			
+				# remove the cutpoints
+				maxdeg = cutpoints.maxdegree()
+				cutpoints.delete()
+		
+				# check if component has vanished
+				if H.vcount() == 0:
 					T.nodes[k].end_level = level
-					T.nodes[k].end_mass = current_mass
+					T.nodes[k].end_mass = mass
 					deactivate_keys.append(k)
-
-					## start a new subgraph & node for each child component
-					cc = nx.connected_components(H)
-
-					for c in cc:
-						new_key = max(T.nodes.keys()) + 1
-						T.nodes[k].children.append(new_key)
-						activate_subgraphs[new_key] = H.subgraph(c)
-
-						T.nodes[new_key] = ConnectedComponent(new_key,
-							parent=k, children=[], start_level=level,
-							end_level=None, start_mass=current_mass,
-							end_mass=None, members=c)
+					
+				else:
+					cc = H.components()
+					
+					# check if component splits
+					if len(cc) > 1:
+						
+						# retire the parent component			
+						deactivate_keys.append(k)
+						T.nodes[k].end_level = level
+						T.nodes[k].end_mass = mass
+						
+						# start a new component for each child
+						for c in cc:
+							new_key = max(T.nodes.keys()) + 1
+							T.nodes[k].children.append(new_key)
+							activate_subgraphs[new_key] = H.subgraph(c)
+						
+							T.nodes[new_key] = ConnectedComponent(new_key,
+								parent=k, children=[], start_level=level,
+								end_level=None, start_mass=mass, end_mass=None,
+								members=H.vs[c]['index'])
 											
 		# update active components
 		for k in deactivate_keys:
