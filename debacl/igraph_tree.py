@@ -23,31 +23,6 @@ except:
 		"construction requires the igraph package.")
 
 
-
-##############################################################
-## Brian P. Kent
-## igraph_tree.py
-## Created: 20140707
-## Updated: 20140707
-##############################################################
-
-"""
-Tree construction methods that utilize the igraph package. igraph is faster than
-networkx at computing connected components at each level of the tree, but is
-typically more difficult to install. As such, the main tree construction tools
-are in level_set_tree.py, which is based on networkx, while the igraph version
-remains in this module for those who require more speed.
-"""
-
-import level_set_tree as lst  # main tree methods
-
-try:
-	import igraph as igr
-except:
-	raise ImportError("igraph failed to load. The igraph-based tree " + \
-		"construction requires the igraph package.")
-
-
 def construct_tree(adjacency_list, density_levels, background_sets,
 	verbose=False):
 	"""
