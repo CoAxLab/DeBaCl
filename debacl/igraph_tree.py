@@ -1,1238 +1,54 @@
 ##############################################################
 ## Brian P. Kent
-## level_set_tree.py
-## Created: 20120821
-## Updated: 20140623
+## igraph_tree.py
+## Created: 20140707
+## Updated: 20140707
 ##############################################################
 
-##############
-### SET UP ###
-##############
 """
-Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
-Includes functions to construct and modify level set trees produced by standard
-geometric clustering on each level. Also defines tools for interactive data
-analysis and clustering with level set trees.
+Tree construction methods that utilize the igraph package. igraph is faster than
+networkx at computing connected components at each level of the tree, but is
+typically more difficult to install. As such, the main tree construction tools
+are in level_set_tree.py, which is based on networkx, while the igraph version
+remains in this module for those who require more speed.
 """
 
-import numpy as np
-import scipy.spatial.distance as spd
-import scipy.io as spio
-import networkx as nx
-import utils as utl  # DeBaCl utils
+import level_set_tree as lst  # main tree methods
+import utils as utl  		  # DeBaCl utilities
 
 try:
-	import pandas as pd
-	import matplotlib.pyplot as plt
-	from matplotlib.collections import LineCollection
-	from matplotlib.widgets import Button
+	import igraph as igr
 except:
-	print "Matplotlib and/or Pandas are not installed, so plot and " +\
-		"print functions may fail."
+	raise ImportError("igraph failed to load. The igraph-based tree " + \
+		"construction requires the igraph package.")
 
 
 
-#####################
-### BASIC CLASSES ###
-#####################
+##############################################################
+## Brian P. Kent
+## igraph_tree.py
+## Created: 20140707
+## Updated: 20140707
+##############################################################
 
-class ConnectedComponent(object):
-	"""
-	Defines a connected component for level set tree construction. A level set
-	tree is really just a set of ConnectedComponents.
-	"""
-	
-	def __init__(self, idnum, parent, children, start_level, end_level,
-		start_mass, end_mass, members):
-		
-		self.idnum = idnum
-		self.parent = parent
-		self.children = children
-		self.start_level = start_level
-		self.end_level = end_level
-		self.start_mass = start_mass
-		self.end_mass = end_mass
-		self.members = members
-		
-	def copy(self):
-		"""
-		Create and return a copy of a ConnetedComponent object.
-		
-		Returns
-		-------
-		component : ConnectedComponent	
-		"""
-		
-		return ConnectedComponent(self.idnum, self.parent, self.children,
-			self.start_level, self.end_level, self.start_mass, self.end_mass,
-			self.members)
-				
+"""
+Tree construction methods that utilize the igraph package. igraph is faster than
+networkx at computing connected components at each level of the tree, but is
+typically more difficult to install. As such, the main tree construction tools
+are in level_set_tree.py, which is based on networkx, while the igraph version
+remains in this module for those who require more speed.
+"""
 
-class LevelSetTree(object):
-	"""
-	The level set tree. The level set tree is a collection of connected
-	components organized hierarchically, based on a k-nearest neighbors density
-	estimate and connectivity graph.
-	
-	Parameters
-	----------
-	bg_sets : list of lists
-		The observations removed as background points at each successively
-		higher density level.
-	
-	levels : array_like
-		The probability density level associated with each element in 'bg_sets'.
-	"""
-	
-	def __init__(self, bg_sets, levels):
-		self.bg_sets = bg_sets
-		self.levels = levels
-		self.n = sum([len(x) for x in bg_sets])
-		self.nodes = {}
-		self.subgraphs = {}
-				
-	def __str__(self):
-		"""
-		Produce a tree summary table with Pandas. This can be printed to screen
-		or saved easily to CSV. This is much simpler than manually formatting
-		the strings in the CoAxLab version of DeBaCl, but it does require
-		Pandas.
-		"""
-		
-		summary = pd.DataFrame()
-		for u, v in self.nodes.items():
-			row = {
-				'key': u,
-				'lambda1': v.start_level,
-				'lambda2': v.end_level,
-				'alpha1': v.start_mass,
-				'alpha2': v.end_mass,
-				'size': len(v.members),
-				'parent': v.parent,
-				'children': v.children
-				}
-			row = pd.DataFrame([row])
-			summary = summary.append(row)
-		
-		summary.set_index('key', inplace=True)
-		out = summary.to_string()
-		return out
-		
-	def prune(self, method='size-merge', **kwargs):
-		"""
-		Prune the tree. A dispatch function to other methods.
-		
-		Parameters
-		----------
-		method : {'size-merge'}
-		
-		gamma : integer
-			Nodes smaller than this will be merged (for 'size-merge') or cut
-			(for 'size-cut')
-		
-		Notes
-		-----
-		Modifies the tree in-place.
-		
-		"""
-		
-		if method == 'size-merge':
-			required = set(['gamma'])
-			if not set(kwargs.keys()).issuperset(required):
-				raise ValueError("Incorrect arguments for size-merge pruning.")
-			else:
-				gamma = kwargs.get('gamma')
-				self.mergeBySize(gamma)
-				
-		else:
-			print "Pruning method not understood. 'size-merge' is the only " +\
-			"pruning method currently implemented. No changes were made to " + \
-			"the tree."
-							
-	def save(self, fname):
-		"""
-		Save a level set tree object to file.
-		
-		Saves a level set tree as a MATLAB struct using the scipy.io module.
-		Ignore the warning about using oned_as default value ('column').
-		
-		Parameters
-		----------
-		fname : string
-			File to save the tree to. The .mat extension is not necessary.
-			
-		Returns
-		-------
-		"""		
+import level_set_tree as lst  # main tree methods
 
-		tree_dict = {
-			'bg_sets': self.bg_sets,
-			'levels': self.levels,
-			'idnums': [x.idnum for x in self.nodes.values()],
-			'start_levels': [x.start_level for x in self.nodes.values()],
-			'end_levels': [x.end_level for x in self.nodes.values()],
-			'start_mass': [x.start_mass for x in self.nodes.values()],
-			'end_mass': [x.end_mass for x in self.nodes.values()],
-			'parents': [(-1 if x.parent is None else x.parent)
-				for x in self.nodes.values()],
-			'children': [x.children for x in self.nodes.values()],
-			'members': [x.members for x in self.nodes.values()]
-			}
-
-		spio.savemat(fname, tree_dict)
-		
-	def plot(self, form, width='uniform', sort=True, gap=0.05, color_nodes=None):
-		"""
-		Create a level set tree plot in Matplotlib.
-		
-		Parameters
-		----------
-		form : {'lambda', 'alpha', 'kappa', 'old'}
-			Determines main form of the plot. 'lambda' is the traditional plot
-			where the vertical scale is density levels, but plot improvements
-			such as mass sorting of the nodes and colored nodes are allowed and
-			the secondary 'alpha' scale is visible (but not controlling). The
-			'old' form uses density levels for vertical scale but does not allow
-			plot tweaks and does not show the secondary 'alpha' scale. The
-			'alpha' setting makes the uppper level set mass the primary vertical
-			scale, leaving the 'lambda' scale in place for reference. 'kappa'
-			makes node mass the vertical scale, so that each node's vertical
-			height is proportional to its mass excluding the mass of the node's
-			children.
-			
-		width : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is
-			given. The default of "uniform" gives each child node an equal
-			fraction of the parent node's horizontal space. If set to 'mass',
-			then horizontal space is allocated proportional to the mass (i.e.
-			fraction of points) of a node relative to its siblings.
-		
-		sort : bool, optional
-			If True, sort sibling nodes from most to least points and draw left
-			to right. Also sorts root nodes in the same way.
-			
-		gap : float, optional
-			Fraction of vertical space to leave at the bottom. Default is 5%,
-			and 0% also works well. Higher values are used for interactive tools
-			to make room for buttons and messages.
-			
-		color_nodes : list, optional
-			Each entry should be a valid index in the level set tree that will
-			be colored uniquely.
-			
-		Returns
-		-------
-		fig : matplotlib figure
-			Use fig.show() to view, fig.savefig() to save, etc.
-			
-		segments : dict
-			A dictionary with values that contain the coordinates of vertical
-			line segment endpoints. This is only useful to the interactive
-			analysis tools.
-		
-		segmap : list
-			Indicates the order of the vertical line segments as returned by the
-			recursive coordinate mapping function, so they can be picked by the
-			user in the interactive tools.
-		
-		splits : dict
-			Dictionary values contain the coordinates of horizontal line
-			segments (i.e. node splits).
-			
-		splitmap : list
-			Indicates the order of horizontal line segments returned by
-			recursive coordinate mapping function, for use with interactive
-			tools.
-		"""
-		
-		## Validate input
-		if form == 'old':
-			sort = False
-			color_nodes = None
-			width = 'uniform'
-			
-
-		## Initialize the plot containers
-		segments = {}
-		splits = {}
-		segmap = []
-		splitmap = []
-		
-
-		## Find the root connected components and corresponding plot intervals
-		ix_root = np.array([k for k, v in self.nodes.iteritems()
-			if v.parent is None])
-		n_root = len(ix_root)
-		census = np.array([len(self.nodes[x].members) for x in ix_root],
-			dtype=np.float)
-		n = sum(census)
-		
-		if sort is True:
-			seniority = np.argsort(census)[::-1]
-			ix_root = ix_root[seniority]
-			census = census[seniority]
-			
-		if width == 'mass':
-			weights = census / n
-			intervals = np.cumsum(weights)
-			intervals = np.insert(intervals, 0, 0.0)
-		else:
-			intervals = np.linspace(0.0, 1.0, n_root+1)
-		
-		
-		## Do a depth-first search on each root to get segments for each branch
-		for i, ix in enumerate(ix_root):
-			if form == 'kappa':
-				branch = self.constructMassMap(ix, 0.0, (intervals[i],
-					intervals[i+1]), width)
-			elif form == 'old':
-				branch = self.constructBranchMap(ix, (intervals[i],
-					intervals[i+1]), 'lambda', width, sort)			
-			else:
-				branch = self.constructBranchMap(ix, (intervals[i],
-					intervals[i+1]), form, width, sort)
-		
-			branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
-			segments = dict(segments.items() + branch_segs.items())
-			splits = dict(splits.items() + branch_splits.items())
-			segmap += branch_segmap
-			splitmap += branch_splitmap
-
-			
-		## get the the vertical line segments in order of the segment map (segmap)
-		verts = [segments[k] for k in segmap]
-		lats = [splits[k] for k in splitmap]
+try:
+	import igraph as igr
+except:
+	raise ImportError("igraph failed to load. The igraph-based tree " + \
+		"construction requires the igraph package.")
 
 
-		## Find the fraction of nodes in each segment (to use as linewidths)
-		thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n)
-			for x in segmap]
-
-		
-		## Get the relevant vertical ticks
-		primary_ticks = [(x[0][1], x[1][1]) for x in segments.values()]
-		primary_ticks = np.unique(np.array(primary_ticks).flatten())
-		primary_labels = [str(round(tick, 2)) for tick in primary_ticks]
-		
-						
-		## Set up the plot framework
-		fig, ax = plt.subplots()
-		ax.set_position([0.11, 0.05, 0.78, 0.93])
-		ax.set_xlim((-0.04, 1.04))
-		ax.set_xticks([])
-		ax.set_xticklabels([])
-		ax.yaxis.grid(color='gray')
-		ax.set_yticks(primary_ticks)
-		ax.set_yticklabels(primary_labels)
-
-				
-		## Form-specific details
-		if form == 'kappa':
-			kappa_max = max(primary_ticks)
-			ax.set_ylim((-1.0 * gap * kappa_max, 1.04*kappa_max))
-			ax.set_ylabel("mass")
-			
-		elif form == 'old':
-			ax.set_ylabel("lambda")
-			ymin = min([v.start_level for v in self.nodes.itervalues()])
-			ymax = max([v.end_level for v in self.nodes.itervalues()])
-			rng = ymax - ymin
-			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)	
-
-		elif form == 'lambda':
-			ax.set_ylabel("lambda")
-			ymin = min([v.start_level for v in self.nodes.itervalues()])
-			ymax = max([v.end_level for v in self.nodes.itervalues()])
-			rng = ymax - ymin
-			ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
-			
-			ax2 = ax.twinx()
-			ax2.set_position([0.11, 0.05, 0.78, 0.93])
-			ax2.set_ylabel("alpha", rotation=270)
-
-			alpha_ticks = np.sort(list(set(
-				[v.start_mass for v in self.nodes.itervalues()] + \
-				[v.end_mass for v in self.nodes.itervalues()])))
-			alpha_labels = [str(round(m, 2)) for m in alpha_ticks]
-
-			ax2.set_yticks(primary_ticks)
-			ax2.set_yticklabels(alpha_labels)		
-			ax2.set_ylim(ax.get_ylim())
-		
-		elif form == 'alpha':
-			ax.set_ylabel("alpha")
-			ymin = min([v.start_mass for v in self.nodes.itervalues()])
-			ymax = max([v.end_mass for v in self.nodes.itervalues()])
-			rng = ymax - ymin
-			ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
-			
-			ax2 = ax.twinx()
-			ax2.set_position([0.11, 0.05, 0.78, 0.93])
-			ax2.set_ylabel("lambda", rotation=270)
-
-			lambda_ticks = np.sort(list(set(
-				[v.start_level for v in self.nodes.itervalues()] + \
-				[v.end_level for v in self.nodes.itervalues()])))
-			lambda_labels = [str(round(lvl, 2)) for lvl in lambda_ticks]
-
-			ax2.set_ylim(ax.get_ylim())
-			ax2.set_yticks(primary_ticks)
-			ax2.set_yticklabels(lambda_labels)
-						
-		else:
-			raise ValueError('Plot form not understood')				
-
-				
-		## Add the line segments
-		segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
-		splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
-
-		palette = utl.Palette()
-		if color_nodes is not None:
-			for i, ix in enumerate(color_nodes):
-				n_clr = np.alen(palette.colorset)
-				c = palette.colorset[i % n_clr, :]
-				subtree = self.makeSubtree(ix)
-
-				## set verical colors
-				ix_replace = np.in1d(segmap, subtree.nodes.keys())
-				segclr[ix_replace] = c
-
-				## set horizontal colors
-				if splitmap:
-					ix_replace = np.in1d(splitmap, subtree.nodes.keys())
-					splitclr[ix_replace] = c
-						
-		linecol = LineCollection(verts, linewidths=thickness, colors=segclr)
-		ax.add_collection(linecol)
-		linecol.set_picker(20)
-	
-		splitcol = LineCollection(lats, colors=splitclr)
-		ax.add_collection(splitcol)
-				
-		return fig, segments, segmap, splits, splitmap
-				
-	def get_cluster_labels(self, method='all-mode', **kwargs):
-		"""
-		Generic function for retrieving custer labels from the level set tree.
-		Dispatches a specific cluster labeling function.
-		
-		Parameters
-		----------
-		method : {'all-mode', 'first-k', 'upper-set', 'k-level'}, optional
-			Method for obtaining cluster labels from the tree. 'all-mode' treats
-			each leaf of the tree as a separate cluter. 'first-k' finds the
-			first K non-overlapping clusters from the roots of the tree.
-			'upper-set' returns labels by cutting the tree at a specified
-			density (lambda) or mass (alpha) level. 'k-level' returns labels at
-			the lowest density level that has k nodes.
-			
-		k : integer
-			If method is 'first-k' or 'k-level', this is the desired number of
-			clusters.
-		
- 		threshold : float
- 			If method is 'upper-set', this is the threshold at which to cut the
- 			tree.
-		
-		scale : {'lambda', 'alpha'}
-			If method is 'upper-set', this is vertical scale which 'threshold'
-			refers to. 'lambda' corresponds to a density level, 'alpha'
-			corresponds to a mass level.
-		
-		Returns
-		-------
-		labels : 2-dimensional numpy array
-			Each row corresponds to an observation. The first column indicates
-			the index of the observation in the original data matrix, and the
-			second column is the integer cluster label (starting at 0). Note
-			that the set of observations in this "foreground" set is typically
-			smaller than the original dataset.
-			
-		nodes : list
-			Indices of tree nodes corresponding to foreground clusters.
-		"""
-				
-		if method == 'all-mode':
-			labels, nodes = self.allModeCluster()
-			
-		elif method == 'first-k':
-			required = set(['k'])
-			if not set(kwargs.keys()).issuperset(required):
-				raise ValueError("Incorrect arguments for the first-k " + \
-				"cluster labeling method.")		
-			else:
-				k = kwargs.get('k')
-				labels, nodes = self.firstKCluster(k)
-			
-		elif method == 'upper-set':
-			required = set(['threshold', 'scale'])
-			if not set(kwargs.keys()).issuperset(required):
-				raise ValueError("Incorrect arguments for the upper-set " + \
-				"cluster labeling method.")		
-			else:
-				threshold = kwargs.get('threshold')
-				scale = kwargs.get('scale')
-				labels, nodes = self.upperSetCluster(threshold, scale)
-
-		elif method == 'k-level':
-			required = set(['k'])
-			if not set(kwargs.keys()).issuperset(required):
-				raise ValueError("Incorrect arguments for the k-level " + \
-				"cluster labeling method.")		
-			else:
-				k = kwargs.get('k')
-				labels, nodes = self.firstKLevelCluster(k)
-									
-		else:
-			print 'method not understood'
-			labels = np.array([])
-			nodes = []
-
- 		return labels, nodes
- 			
-	def make_subtree(self, ix):
-		"""
-		Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
-	
-		Parameters
-		----------
-		ix : int
-			Node to use at the root of the new tree.
-	
-		Returns
-		-------
-		T : LevelSetTree
-			A completely indpendent level set tree, with 'ix' as the root node.
-		"""
-		
-		T = GeomTree(bg_sets=[], levels=[])
-		T.nodes[ix] = self.nodes[ix].copy()
-		T.nodes[ix].parent = None
-		queue = self.nodes[ix].children[:]
-	
-		while len(queue) > 0:
-			branch_ix = queue.pop()
-			T.nodes[branch_ix] = self.nodes[branch_ix]
-			queue += self.nodes[branch_ix].children
-	
-		return T
- 		
- 	def _merge_by_size(self, threshold):
-		"""
-		Prune splits from a tree based on size of child nodes. Merge members of
-		child nodes rather than removing them.
-		
-		Parameters
-		----------
-		threshold : numeric
-			Tree branches with fewer members than this will be merged into
-			larger siblings or parents.
-		
-		Notes
-		-----
-		Modifies a level set tree in-place.
-		"""
-		
-		## remove small root branches
-		small_roots = [k for k, v in self.nodes.iteritems()
-			if v.parent==None and len(v.members) <= threshold]
-		
-		for root in small_roots:
-			root_tree = self.makeSubtree(root)
-			for ix in root_tree.nodes.iterkeys():
-				del self.nodes[ix]
-			
-		
-		## main pruning
-		parents = [k for k, v in self.nodes.iteritems() if len(v.children) >= 1]
-		parents = np.sort(parents)[::-1]
-		
-		for ix_parent in parents:
-			parent = self.nodes[ix_parent]
-			
-			# get size of each child
-			kid_size = {k: len(self.nodes[k].members) for k in parent.children}
-
-			# count children larger than 'threshold'
-			n_bigkid = sum(np.array(kid_size.values()) >= threshold)
-			
-			if n_bigkid == 0:
-				# update parent's end level and end mass
-				parent.end_level = max([self.nodes[k].end_level
-					for k in parent.children])
-				parent.end_mass = max([self.nodes[k].end_mass
-					for k in parent.children])
-
-				# remove small kids from the tree
-				for k in parent.children:
-					del self.nodes[k]
-				parent.children = []
-				
-			elif n_bigkid == 1:
-				pass
-				# identify the big kid
-				ix_bigkid = [k for k, v in kid_size.iteritems()
-					if v >= threshold][0]
-				bigkid = self.nodes[ix_bigkid]
-					
-				# update k's end level and end mass
-				parent.end_level = bigkid.end_level
-				parent.end_mass = bigkid.end_mass
-				
-				# set grandkids' parent to k
-				for c in bigkid.children:
-					self.nodes[c].parent = ix_parent
-				
-				# delete small kids
-				for k in parent.children:
-					if k != ix_bigkid:
-						del self.nodes[k]
-				
-				# set k's children to grandkids
-				parent.children = bigkid.children
-
-				# delete the single bigkid
-				del self.nodes[ix_bigkid]
-				
-			else:
-				pass  # do nothing here		
-		
-	def _all_mode_cluster(self):
-		"""
-		Set every leaf node as a foreground cluster.
-
-		Parameters
-		----------
-		
-		Returns
-		-------
-		labels : 2-dimensional numpy array
-			Each row corresponds to an observation. The first column indicates
-			the index of the observation in the original data matrix, and the
-			second column is the integer cluster label (starting at 0). Note
-			that the set of observations in this "foreground" set is typically
-			smaller than the original dataset.
-			
-		leaves : list
-			Indices of tree nodes corresponding to foreground clusters. This is
-			the same as 'nodes' for other clustering functions, but here they
-			are also the leaves of the tree.
-		"""
-	
-		leaves = [k for k, v in self.nodes.items() if v.children == []]
-		
-		## find components in the leaves
-		points = []
-		cluster = []
-
-		for i, k in enumerate(leaves):
-			points.extend(self.nodes[k].members)
-			cluster += ([i] * len(self.nodes[k].members))
-
-		labels = np.array([points, cluster], dtype=np.int).T		
-		return labels, leaves
-		
-	def _first_K_cluster(self, k):
-		"""
-		Returns foreground cluster labels for the 'k' modes with the lowest
-		start levels. In principle, this is the 'k' leaf nodes with the smallest
-		indices, but this function double checks by finding and ordering all
-		leaf start values and ordering.
-		
-		Parameters
-		----------
-		k : integer
-			The desired number of clusters.
-		
-		Returns
-		-------
-		labels : 2-dimensional numpy array
-			Each row corresponds to an observation. The first column indicates
-			the index of the observation in the original data matrix, and the
-			second column is the integer cluster label (starting at 0). Note
-			that the set of observations in this "foreground" set is typically
-			smaller than the original dataset.
-			
-		nodes : list
-			Indices of tree nodes corresponding to foreground clusters.
-		"""
-		
-		parents = np.array([u for u, v in self.nodes.items()
-			if len(v.children) > 0])
-		roots = [u for u, v in self.nodes.items() if v.parent is None]
-		splits = [self.nodes[u].end_level for u in parents]
-		order = np.argsort(splits)
-		star_parents = parents[order[:(k-len(roots))]]
-	
-		children = [u for u, v in self.nodes.items() if v.parent is None]
-		for u in star_parents:
-			children += self.nodes[u].children
-
-		nodes = [x for x in children if
-			sum(np.in1d(self.nodes[x].children, children))==0] 
-	
-	
-		points = []
-		cluster = []
-	
-		for i, c in enumerate(nodes):
-			cluster_pts = self.nodes[c].members
-			points.extend(cluster_pts)
-			cluster += ([i] * len(cluster_pts))
-
-		labels = np.array([points, cluster], dtype=np.int).T
-		return labels, nodes
-		
-	def _upper_set_cluster(self, threshold, scale='alpha'):
-		"""
-		Set foreground clusters by finding connected components at an upper
-		level set or upper mass set.
-		
-		Parameters
-		----------
-		threshold : float
-			The level or mass value that defines the foreground set of points,
-			depending on 'scale'.
-		
-		scale : {'alpha', 'lambda'}
-			Determines if the 'cut' threshold is a density level value or a mass
-			value (i.e. fraction of data in the background set)
-		
-		Returns
-		-------
-		labels : 2-dimensional numpy array
-			Each row corresponds to an observation. The first column indicates
-			the index of the observation in the original data matrix, and the
-			second column is the integer cluster label (starting at 0). Note
-			that the set of observations in this "foreground" set is typically
-			smaller than the original dataset.
-			
-		nodes : list
-			Indices of tree nodes corresponding to foreground clusters.
-		"""
-	
-		## identify upper level points and the nodes active at the cut
-		if scale == 'alpha':
-			n_bg = [len(x) for x in self.bg_sets]
-			alphas = np.cumsum(n_bg) / (1.0 * self.n)
-			upper_levels = np.where(alphas > threshold)[0]
-			nodes = [k for k, v in self.nodes.iteritems()
-				if v.start_mass <= threshold and v.end_mass > threshold]
-
-		else:
-			upper_levels = np.where(np.array(self.levels) > threshold)[0]
-			nodes = [k for k, v in self.nodes.iteritems()
-				if v.start_level <= threshold and v.end_level > threshold]
-
-		upper_pts = np.array([y for x in upper_levels for y in self.bg_sets[x]])
-		
-
-		## find intersection between upper set points and each active component
-		points = []
-		cluster = []
-
-		for i, c in enumerate(nodes):
-			cluster_pts = upper_pts[np.in1d(upper_pts, self.nodes[c].members)]
-			points.extend(cluster_pts)
-			cluster += ([i] * len(cluster_pts))
-
-		labels = np.array([points, cluster], dtype=np.int).T		
-		return labels, nodes
-		
-	def _first_K_level_cluster(self, k):
-		"""
-		Use the first K clusters to appear in the level set tree as foreground
-		clusters. In general, K-1 clusters will appear at a lower level than the
-		K'th cluster; this function returns all members from all K clusters
-		(rather than only the members in the upper level set where the K'th
-		cluster appears). There are not always K clusters available in a level
-		set tree - see LevelSetTree.findKCut for details on default behavior in
-		this case.
-		
-		Parameters
-		----------
-		k : int
-			Desired number of clusters.
-		
-		Returns
-		-------
-		labels : 2-dimensional numpy array
-			Each row corresponds to an observation. The first column indicates
-			the index of the observation in the original data matrix, and the
-			second column is the integer cluster label (starting at 0). Note
-			that the set of observations in this "foreground" set is typically
-			smaller than the original dataset.
-			
-		nodes : list
-			Indices of tree nodes corresponding to foreground clusters.
-		"""
-		
-		cut = self.findKCut(k)
-		nodes = [e for e, v in self.nodes.iteritems() \
-			if v.start_level <= cut and v.end_level > cut]
-			
-		points = []
-		cluster = []
-		
-		for i, c in enumerate(nodes):
-		
-			cluster_pts = self.nodes[c].members
-			points.extend(cluster_pts)
-			cluster += ([i] * len(cluster_pts))
-
-		labels = np.array([points, cluster], dtype=np.int).T
-		return labels, nodes
-
-	def _collapse_eaves(self, active_nodes):
-		"""
-		Removes descendent nodes for the branches in 'active_nodes'.
-		
-		Parameters
-		----------
-		active_nodes : array-like
-			List of nodes to use as the leaves in the collapsed tree.
-		
-		Returns
-		-------
-		"""
-		
-		for ix in active_nodes:
-			subtree = self.makeSubtree(ix)
-			
-			max_end_level = max([v.end_level for v in subtree.nodes.values()])
-			max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
-			
-			self.nodes[ix].end_level = max_end_level
-			self.nodes[ix].end_mass = max_end_mass
-			self.nodes[ix].children = []
-			
-			for u in subtree.nodes.keys():
-				if u != ix:
-					del self.nodes[u]
-
-	def find_K_cut(self, k):
-		"""
-		Find the lowest level cut that has k connected components. If there are
-		no levels that have k components, then find the lowest level that has at
-		least k components. If no levels have > k components, find the lowest
-		level that has the maximum number of components.
-		
-		Parameters
-		----------
-		k : int
-			Desired number of clusters/nodes/components.
-			
-		Returns
-		-------
-		cut : float
-			Lowest density level where there are k nodes.
-		"""
-		
-		## Find the lowest level to cut at that has k or more clusters
-		starts = [v.start_level for v in self.nodes.itervalues()]
-		ends = [v.end_level for v in self.nodes.itervalues()]
-		crits = np.unique(starts + ends)
-		nclust = {}
-
-		for c in crits:
-			nclust[c] = len([e for e, v in self.nodes.iteritems() \
-				if v.start_level <= c and v.end_level > c])
-			
-		width = np.max(nclust.values())
-	
-		if k in nclust.values():
-			cut = np.min([e for e, v in nclust.iteritems() if v == k])
-		else:
-			if width < k:
-				cut = np.min([e for e, v in nclust.iteritems() if v == width])
-			else:
-				ktemp = np.min([v for v in nclust.itervalues() if v > k])
-				cut = np.min([e for e, v in nclust.iteritems() if v == ktemp])
-				
-		return cut
-		
-	def _construct_branch_map(self, ix, interval, scale, width, sort):
-		"""
-		Map level set tree nodes to locations in a plot canvas. Finds the plot
-		coordinates of vertical line segments corresponding to LST nodes and
-		horizontal line segments corresponding to node splits. Also provides
-		indices of vertical segments and splits for downstream use with
-		interactive plot picker tools. This function is not meant to be called
-		by the user; it is a helper function for the LevelSetTree.plot() method.
-		This function is recursive: it calls itself to map the coordinates of
-		children of the current node 'ix'.
-	
-		Parameters
-		----------
-		ix : int
-			The tree node to map.
-		
-		interval: length 2 tuple of floats
-			Horizontal space allocated to node 'ix'.
-	
-		scale : {'lambda', 'alpha'}, optional
-	
-		width : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is
-			given. See LevelSetTree.plot() for more information.
-	
-		sort : bool
-			If True, sort sibling nodes from most to least points and draw left
-			to right. Also sorts root nodes in the same way.
-	
-		Returns
-		-------
-		segments : dict
-			A dictionary with values that contain the coordinates of vertical
-			line segment endpoints. This is only useful to the interactive
-			analysis tools.
-	
-		segmap : list
-			Indicates the order of the vertical line segments as returned by the
-			recursive coordinate mapping function, so they can be picked by the
-			user in the interactive tools.
-	
-		splits : dict
-			Dictionary values contain the coordinates of horizontal line
-			segments (i.e. node splits).
-		
-		splitmap : list
-			Indicates the order of horizontal line segments returned by
-			recursive coordinate mapping function, for use with interactive
-			tools.
-		"""
-		
-		## get children
-		children = np.array(self.nodes[ix].children)
-		n_child = len(children)
-	
-	
-		## if there's no children, just one segment at the interval mean
-		if n_child == 0:
-			xpos = np.mean(interval)
-			segments = {}
-			segmap = [ix]
-			splits = {}
-			splitmap = []
-
-			if scale == 'lambda':
-				segments[ix] = (([xpos, self.nodes[ix].start_level],
-					[xpos, self.nodes[ix].end_level]))
-			else:
-				segments[ix] = (([xpos, self.nodes[ix].start_mass],
-					[xpos, self.nodes[ix].end_mass]))
-
-		
-		## else, construct child branches then figure out parent's
-		## position				
-		else:
-			parent_range = interval[1] - interval[0]
-			segments = {}
-			segmap = [ix]
-			splits = {}
-			splitmap = []
-		
-			census = np.array([len(self.nodes[x].members) for x in children],
-				dtype=np.float)
-			weights = census / sum(census)
-		
-			if sort is True:
-				seniority = np.argsort(weights)[::-1]
-				children = children[seniority]
-				weights = weights[seniority]
-
-			## get relative branch intervals
-			if width == 'mass':
-				child_intervals = np.cumsum(weights)
-				child_intervals = np.insert(child_intervals, 0, 0.0)
-			else:
-				child_intervals = np.linspace(0.0, 1.0, n_child+1)
-		
-			## loop over the children
-			for j, child in enumerate(children):
-		
-				## translate local interval to absolute interval
-				branch_interval = (interval[0] + \
-					child_intervals[j] * parent_range,
-					interval[0] + child_intervals[j+1] * parent_range)
-
-				## recurse on the child
-				branch = self.constructBranchMap(child, branch_interval,
-					scale, width, sort)
-				branch_segs, branch_splits, branch_segmap, \
-					branch_splitmap = branch
-				
-				segmap += branch_segmap
-				splitmap += branch_splitmap
-				splits = dict(splits.items() + branch_splits.items())
-				segments = dict(segments.items() + branch_segs.items())
-			
-			
-			## find the middle of the children's x-position and make vertical segment ix
-			children_xpos = np.array([segments[k][0][0] for k in children])
-			xpos = np.mean(children_xpos)
-		
-		
-			## add horizontal segments to the list
-			for child in children:
-				splitmap.append(child)
-				child_xpos = segments[child][0][0]
-		
-				if scale == 'lambda':
-					splits[child] = ([xpos, self.nodes[ix].end_level],
-						[child_xpos, self.nodes[ix].end_level])
-				else:
-					splits[child] = ([xpos, self.nodes[ix].end_mass],
-						[child_xpos, self.nodes[ix].end_mass])
-				
-	
-			## add vertical segment for current node
-			if scale == 'lambda':
-				segments[ix] = (([xpos, self.nodes[ix].start_level],
-					[xpos, self.nodes[ix].end_level]))
-			else:
-				segments[ix] = (([xpos, self.nodes[ix].start_mass],
-					[xpos, self.nodes[ix].end_mass]))
-	
-		return segments, splits, segmap, splitmap
-
-	def _construct_mass_map(self, ix, start_pile, interval, width_mode):
-		"""
-		Map level set tree nodes to locations in a plot canvas. Finds the plot
-		coordinates of vertical line segments corresponding to LST nodes and
-		horizontal line segments corresponding to node splits. Also provides
-		indices of vertical segments and splits for downstream use with
-		interactive plot picker tools. This function is not meant to be called
-		by the user; it is a helper function for the LevelSetTree.plot() method.
-		This function is recursive: it calls itself to map the coordinates of
-		children of the current node 'ix'. Differs from 'constructBranchMap' by
-		setting the height of each vertical segment to be proportional to the
-		number of points in the corresponding LST node.
-	
-		Parameters
-		----------
-		ix : int
-			The tree node to map.
-		
-		start_pile: float
-			The height of the branch on the plot at it's start (i.e. lower
-			terminus).
-			
-		interval: length 2 tuple of floats
-			Horizontal space allocated to node 'ix'.
-	
-		width_mode : {'uniform', 'mass'}, optional
-			Determines how much horzontal space each level set tree node is
-			given. See LevelSetTree.plot() for more information.
-	
-		Returns
-		-------
-		segments : dict
-			A dictionary with values that contain the coordinates of vertical
-			line segment endpoints. This is only useful to the interactive
-			analysis tools.
-	
-		segmap : list
-			Indicates the order of the vertical line segments as returned by the
-			recursive coordinate mapping function, so they can be picked by the
-			user in the interactive tools.
-	
-		splits : dict
-			Dictionary values contain the coordinates of horizontal line
-			segments (i.e. node splits).
-		
-		splitmap : list
-			Indicates the order of horizontal line segments returned by
-			recursive coordinate mapping function, for use with interactive
-			tools.
-		"""
-		
-		size = float(len(self.nodes[ix].members))
-	
-		## get children
-		children = np.array(self.nodes[ix].children)
-		n_child = len(children)
-	
-		
-		## if there's no children, just one segment at the interval mean
-		if n_child == 0:
-			xpos = np.mean(interval)
-			end_pile = start_pile + size/self.n
-			segments = {}
-			segmap = [ix]
-			splits = {}		
-			splitmap = []
-			segments[ix] = ([xpos, start_pile], [xpos, end_pile])
-			
-		else:
-			parent_range = interval[1] - interval[0]
-			segments = {}
-			segmap = [ix]
-			splits = {}
-			splitmap = []
-		
-			census = np.array([len(self.nodes[x].members) for x in children],
-				dtype=np.float)
-			weights = census / sum(census)
-		
-			seniority = np.argsort(weights)[::-1]
-			children = children[seniority]
-			weights = weights[seniority]
-			
-			## get relative branch intervals
-			if width_mode == 'mass':
-				child_intervals = np.cumsum(weights)
-				child_intervals = np.insert(child_intervals, 0, 0.0)
-			else:
-				child_intervals = np.linspace(0.0, 1.0, n_child+1)
-			
-			
-			## find height of the branch
-			end_pile = start_pile + (size - sum(census))/self.n
-		
-			## loop over the children
-			for j, child in enumerate(children):
-		
-				## translate local interval to absolute interval
-				branch_interval = (interval[0] + \
-					child_intervals[j] * parent_range, interval[0] + \
-					child_intervals[j+1] * parent_range)
-
-				## recurse on the child
-				branch = self.constructMassMap(child, end_pile, branch_interval,
-					width_mode)
-				branch_segs, branch_splits, branch_segmap, \
-					branch_splitmap = branch
-				
-				segmap += branch_segmap
-				splitmap += branch_splitmap
-				splits = dict(splits.items() + branch_splits.items())
-				segments = dict(segments.items() + branch_segs.items())
-				
-				
-			## find the middle of the children's x-position and make vertical
-			## segment ix
-			children_xpos = np.array([segments[k][0][0] for k in children])
-			xpos = np.mean(children_xpos)				
-
-
-			## add horizontal segments to the list
-			for child in children:
-				splitmap.append(child)
-				child_xpos = segments[child][0][0]
-				splits[child] = ([xpos, end_pile],[child_xpos, end_pile])
-
-	
-			## add vertical segment for current node
-			segments[ix] = ([xpos, start_pile], [xpos, end_pile])
-			
-			
-		return segments, splits, segmap, splitmap
-	
-	def _mass_to_level(self, alpha):
-		"""
-		Convert the specified mass value into a level location.
-		
-		Parameters 
-		----------
-		alpha : float
-			Float in the interval [0.0, 1.0], with the desired fraction of all
-			points.
-			
-		Returns
-		-------
-		cut_level: float
-			Density level corresponding to the 'alpha' fraction of background
-			points.
-		"""
-		
-		n_bg = [len(bg_set) for bg_set in self.bg_sets]
-		masses = np.cumsum(n_bg) / (1.0 * self.n)
-		cut_level = self.levels[np.where(masses > alpha)[0][0]]
-		
-		return cut_level
-
-
-
-#############################################
-### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
-#############################################
-
-def construct_density_grid(density, mode='mass', num_levels=None):
-	"""
-	Create the inputs to level set tree estimation by pruning observations from
-	a density estimate at successively higher levels. This function merely
-	records the density levels and which points will be removed at each level,
-	but it does not do the actual tree construction.
-
-	Parameters
-	----------
-	density : numpy array		
-		Values of a density estimate. The coordinates of the observation are not
-		needed for this function.
-			
-	mode : {'mass', 'levels'}, optional
-		If 'mass', the level set tree will be built by removing a constant
-		number of points (mass) at each iteration. If 'levels', the density
-		levels are evenly spaced between 0 and the maximum density estimate
-		value. If 'num_levels' is 'None', the 'mass' option removes 1 point at a
-		time and the 'levels' option iterates through unique values of the
-		'density' array.
-	
-	num_levels : int, optional
-		Number of density levels at which to construct the level set tree.
-		This is essentially the resolution of a level set tree built for the
-		'density' array.
-	
-	Returns
-	-------
-	background_sets : list of lists	
-		The points to remove in each iteration of level set tree construction.
-		For a given density level, these are the points that have lower density
-		than the level, but higher density than the immediately smaller density
-		level.
-	
-	levels : numpy array	
-		Grid of density levels that will define the iterations in level set tree
-		construction.
-	"""
-	
-	n = len(density)
-	
-	if mode == 'mass':  # remove blocks of points of uniform mass
-		pt_order = np.argsort(density)
-		bin_size = n / num_levels  # this should be only the integer part
-
-		if num_levels is None:
-			background_sets = [[pt_order[i]] for i in range(n)]
-			levels = density[pt_order]
-		else:
-			background_sets = [pt_order[i:(i + bin_size)]
-				for i in range(0, n, bin_size)]
-			levels = [max(density[x]) for x in background_sets]
-			
-	elif mode == 'levels':  # remove points at evenly spaced density levels
-		uniq_dens = np.unique(density)
-		uniq_dens.sort()
-
-		if num_levels is None:
-			background_sets = [list(np.where(density == uniq_dens[i])[0])
-				for i in range(len(uniq_dens))]
-			levels = uniq_dens
-		else:
-			grid = np.linspace(0., np.max(uniq_dens), num_levels)
-			levels = grid.copy()
-			grid = np.insert(grid, 0, -1)
-			background_sets = [list(np.where(np.logical_and(density > grid[i],
-				density <= grid[i + 1]))[0]) for i in range(num_levels)]
-	
-	else:
-		raise ValueError("Sorry, that's not a valid mode.")
-	
-	return background_sets, levels
-
-def igraph_tree(adjacency_list, density_levels, background_sets,
+def construct_tree(adjacency_list, density_levels, background_sets,
 	verbose=False):
 	"""
 	Construct a level set tree. A level set tree is constructed by identifying
@@ -1241,11 +57,11 @@ def igraph_tree(adjacency_list, density_levels, background_sets,
 	
 	Parameters
 	----------
-	adjacency_list : numpy array[int]		
-		Adjacency list of the k-nearest neighbors graph on the data. Each row
-		represents one of the 'n' observations, while the columns indicate the
-		indices of the k-nearest neighbors, in order of increasing distance.
-			
+	adjacency_list : dict [list [int]]
+		Adjacency list of the k-nearest neighbors graph on the data. Each key
+		represents represents one of the 'n' observations, while the values are
+		lists containing the indices of the k-nearest neighbors.
+
 	levels: numpy array[float]
 		Density levels at which connected components are computed. Typically
 		this includes all unique values of a probability density estimate, but
@@ -1254,12 +70,6 @@ def igraph_tree(adjacency_list, density_levels, background_sets,
 	bg_sets: list of lists
 		Specify which points to remove as background at each density level in
 		'levels'.
-	
-	mode: {'general', 'density'}, optional
-		Establish if the values in 'levels' come from a probability density or
-		pseudo-density estimate, in which case there is a natural floor at 0.
-		The default is to model an arbitrary function, which requires a run-time
-		choice of floor value.
 	
 	verbose: {False, True}, optional
 		If set to True, then prints to the screen a progress indicator every 100
@@ -1271,30 +81,27 @@ def igraph_tree(adjacency_list, density_levels, background_sets,
 		See the LevelSetTree class for attributes and method definitions.
 	"""
 	
-	n = np.alen(W)
-	levels = [float(x) for x in density_levels]
-	
-	## Initialize the graph and cluster tree
-	G = igr.Graph.Adjacency(W.tolist(), mode=igr.ADJ_MAX)
-	G.vs['index'] = range(n)
+	n = len(adjacency_list)
+	_density_levels = [float(x) for x in density_levels]
 
-	T = GeomTree(bg_sets, levels)
-	cc0 = G.components()
+	## Initialize the graph and cluster tree
+	edge_list = utl.adjacency_to_edge_list(adjacency_list, self_edge=False)
 	
-	if mode == 'density':
-		start_level = 0.0
-	else:
-		start_level = float(np.min(levels) - 0.000001)
+	G = igr.Graph(n=n, edges=edge_list, directed=False,
+		vertex_attrs={'index':range(n)})
+
+	T = lst.LevelSetTree(background_sets, _density_levels)
+	cc0 = G.components()
 		
 	for i, c in enumerate(cc0):
 		T.subgraphs[i] = G.subgraph(c)
-		T.nodes[i] = ConnectedComponent(i, parent=None, children=[],
-			start_level=start_level, end_level=None, start_mass=0.0,
+		T.nodes[i] = lst.ConnectedComponent(i, parent=None, children=[],
+			start_level=0., end_level=None, start_mass=0.0,
 			end_mass=None, members=G.vs[c]['index'])
 	
 	
 	# Loop through the removal grid
-	for i, (level, bg) in enumerate(zip(levels, bg_sets)):
+	for i, (level, bg) in enumerate(zip(_density_levels, background_sets)):
 	
 		if verbose and i % 100 == 0:
 			print "iteration", i
@@ -1339,7 +146,7 @@ def igraph_tree(adjacency_list, density_levels, background_sets,
 							T.nodes[k].children.append(new_key)
 							activate_subgraphs[new_key] = H.subgraph(c)
 						
-							T.nodes[new_key] = ConnectedComponent(new_key,
+							T.nodes[new_key] = lst.ConnectedComponent(new_key,
 								parent=k, children=[], start_level=level,
 								end_level=None, start_mass=mass, end_mass=None,
 								members=H.vs[c]['index'])
@@ -1352,364 +159,109 @@ def igraph_tree(adjacency_list, density_levels, background_sets,
 		
 	return T
 
-def load_tree(fname):
+
+def construct_tree_from_matrix(W, levels, bg_sets, verbose=False):
 	"""
-	Load a saved tree from file.
+	Construct a level set tree. A level set tree is constructed by identifying
+	connected components of in a k-nearest neighbors graph at successively
+	higher levels of a probability density estimate.
 	
 	Parameters
 	----------
-	fname : string
-		Filename to load. The .mat extension is not necessary.
+	W : numpy array
+		Adjacency matrix
+
+	levels: numpy array[float]
+		Density levels at which connected components are computed. Typically
+		this includes all unique values of a probability density estimate, but
+		it can be a coarser grid for fast approximate tree estimates.
+	
+	bg_sets: list of lists
+		Specify which points to remove as background at each density level in
+		'levels'.
+	
+	verbose: {False, True}, optional
+		If set to True, then prints to the screen a progress indicator every 100
+		levels.
 	
 	Returns
 	-------
-	T : LevelSetTree
-		The loaded and reconstituted level set tree object.
+	T : levelSetTree
+		See the LevelSetTree class for attributes and method definitions.
 	"""
 	
-	indata = spio.loadmat(fname)
+	n = len(W)
+	_levels = [float(x) for x in levels]
 	
-	## format inputs
-	idnums = indata['idnums'].flatten()
-	levels = list(indata['levels'].flatten())
-	bg_sets = [np.array(x[0].flatten()) for x in indata['bg_sets']]
-	start_levels = indata['start_levels'].flatten()
-	end_levels = indata['end_levels'].flatten()
-	start_mass = indata['start_mass'].flatten()
-	end_mass = indata['end_mass'].flatten()
-	parents = [(None if x == -1 else x) for x in indata['parents'].flatten()]
-	children = [list(x[0].flatten()) for x in indata['children']]
-	members = [list(x[0].flatten()) for x in indata['members']]
-	
-	if len(children) == 0:	
-		children = [[]]*len(idnums)
-	
-	## create tree
-	T = GeomTree(bg_sets, levels)
-	
-	## add nodes to the tree
-	nodes = {}
-	for i, k in enumerate(idnums):
-		nodes[k] = ConnectedComponent(k, parents[i], children[i],
-			start_levels[i], end_levels[i], start_mass[i], end_mass[i],
-			members[i])
-		
-	T.nodes = nodes
-	return T
+	## Initialize the graph and cluster tree
+	G = igr.Graph.Adjacency(W.tolist(), mode=igr.ADJ_MAX)
+	G.vs['index'] = range(n)
 
-
-
-##################################################
-### INTERACTIVE LEVEL SET TREE ANALYLSIS TOOLS ###
-##################################################
-
-class ComponentGUI(object):
-	"""
-	Allow the user to interactively select level set tree nodes for tree
-	coloring, subsetting, and scatter plots.
+	T = lst.LevelSetTree(bg_sets, _levels)
+	cc0 = G.components()
+		
+	for i, c in enumerate(cc0):
+		T.subgraphs[i] = G.subgraph(c)
+		T.nodes[i] = lst.ConnectedComponent(i, parent=None, children=[],
+			start_level=0., end_level=None, start_mass=0.0,
+			end_mass=None, members=G.vs[c]['index'])
 	
-	Parameters
-	----------
-	tree : GeomTree
 	
-	X : 2D numpy array
-		Original data matrix. Rows are observations. Must have 3 or fewer
-		columns if the 'output' list includes 'scatter'.
+	# Loop through the removal grid
+	for i, (level, bg) in enumerate(zip(_levels, bg_sets)):
 	
-	output : list of strings, optional
-		If the list includes 'tree', selecting a LST node will plot the subtree
-		with the selected node as the root. If output includes 'scatter' and the
-		data has 3 or fewer dimensions, selecting a tree node produces a scatter
-		plot showing the members of the selected node.
+		if verbose and i % 100 == 0:
+			print "iteration", i
 		
-	form : string
-		Type of level set tree plot. Must be 'lambda' or 'alpha' for this GUI
-		tool. See GeomTree.plot for more detail.
-	
-	f : 2D numpy array, optional
-		Any function. Arguments in the first column and values in the second.
-		Plotted independently of the data as a blue curve, so does not need to
-		have the same number of rows as values in 'x'. Typically this is the
-		generating probability density function for a 1D simulation.
-	
-	fhat : list of floats, optional
-		Density estimate values for the data in 'pts'. Plotted as a black curve,
-		with points colored according to the selected component.
-		
-	keyword arguments are passed to the GeomTree.plot method.
-	"""
+		# compute mass and level
+		mass = 1.0 - (sum([x.vcount() for
+			x in T.subgraphs.itervalues()]) - len(bg)) / (1.0 * n)
 
-	def __init__(self, tree, X, form, f=None, fhat=None, output=['scatter'],
-		size=30, **kwargs):
-
-		self.T = tree
-		self.X = X
-		self.form = form
-		self.output = output
-		self.f = f
-		self.fhat = fhat
-		self.size = size
-		self.fig, self.segments, self.segmap, self.splits, \
-			self.splitmap = self.T.plot(self.form, gap=0.13, **kwargs)
+		# loop through active components, i.e. subgraphs
+		deactivate_keys = []
+		activate_subgraphs = {}
 		
-		self.ax = self.fig.axes[0]
-		segments = self.ax.collections[0]  # the line collection
-		
-		tooltip_string = "node:" + "\t" +\
-			r"$\lambda_1$:" + "\t" +\
-			r"$\lambda_2$:" + "\t" +\
-			"\n" + "mass:" + "\t" +\
-			r"$\alpha_1$:" + "\t" +\
-			r"$\alpha_2$:" + "\t"
-		self.tooltip = self.ax.text(0.5, 0.02, tooltip_string,
-			bbox=dict(fc='yellow', alpha=0.2, boxstyle='round,pad=0.3'), 		
-			transform=self.ax.transAxes, horizontalalignment='center',
-			verticalalignment='bottom', fontsize=16)
-		
-		segments.set_picker(15)
-		self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
-		self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
-		
-	def handle_pick(self, event):
-		"""
-		Return the members of the component that is picked out.
-		"""
-	
-		## get the component members and subtree
-		ix_seg = event.ind[0]
-		self.node_ix = self.segmap[ix_seg]
-		self.component = self.T.nodes[self.node_ix].members
-		self.subtree = self.T.makeSubtree(self.node_ix)
-							
-		## recolor the original tree
-		palette = utl.Palette(use='scatter')
-		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
-		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
-
-		# set new segment colors
-		ix_replace = np.in1d(self.segmap, self.subtree.nodes.keys())
-		segclr[ix_replace] = palette.colorset[0, :]
-		
-		ix_replace = np.in1d(self.splitmap, self.subtree.nodes.keys())
-		splitclr[ix_replace] = palette.colorset[0, :]
-
-		self.ax.collections[0].set_color(segclr)
-		self.ax.collections[1].set_color(splitclr)
-		
-		# rewrite text in the tooltip
-		names = ("node", r"$\lambda_1$", r"$\lambda_2$", "\nmass",
-			r"$\alpha_1$", r"$\alpha_2$")
-		values = (self.node_ix, round(self.T.nodes[self.node_ix].start_level, 2),
-			round(self.T.nodes[self.node_ix].end_level, 2),
-			round(len(self.component) * 1.0 / self.T.n, 2),
-			round(self.T.nodes[self.node_ix].start_mass, 2),
-			round(self.T.nodes[self.node_ix].end_mass, 2))
-		pad = [5] + [8] * 4 + [4]
-		tooltip_string = ""
+		for (k, H) in T.subgraphs.iteritems():
+			cutpoints = H.vs.select(index_in = bg)
 			
-		for name, val, p in zip(names, values, pad):
-			tooltip_string += '{}: {:<{fill}}'.format(name, val, fill=p)
-		self.tooltip.set_text(tooltip_string)
+			if len(cutpoints) > 0:
+			
+				# remove the cutpoints
+				maxdeg = cutpoints.maxdegree()
+				cutpoints.delete()
 		
-		self.fig.canvas.draw()
-
-			
-		# plot the component points in a new window
-		if 'scatter' in self.output:
-	
-			# determine the data dimension
-			if len(self.X.shape) == 1:
-				n = len(self.X)
-				p = 1
-			else:
-				n, p = self.X.shape
-			
-			if p == 1:
-				uc = np.vstack((self.component, np.zeros((len(self.component),),
-					dtype=np.int))).T
-				fig = utl.clusterHistogram(self.X, uc, self.fhat, self.f)
-				fig.show()
-			
-			elif p == 2 or p == 3:
-				uc = np.vstack((self.component, np.zeros((len(self.component),),
-					dtype=np.int))).T
+				# check if component has vanished
+				if H.vcount() == 0:
+					T.nodes[k].end_level = level
+					T.nodes[k].end_mass = mass
+					deactivate_keys.append(k)
 					
-				fig, ax = utl.plotForeground(self.X, uc, bg_alpha=0.72,
-					fg_alpha=0.68, edge_alpha=0.68, s=self.size)
-				fig.show()
-
-			else:
-				print "Sorry, your data has too many dimensions to plot."
-			
-		
-		# construct the new subtree and show it
-		if 'tree' in self.output:
-			subfig = self.subtree.plot(self.form)[0]
-			subfig.show()
-			
-	def show(self):
-		"""
-		Show the instantiated GUI window (i.e. the interactive
-		LevelSetTree plot).
-		"""
-		self.fig.show()
-		
-	def get_component(self):
-		"""
-		Return the members of the currently selected level set tree node.
-		"""
-		return self.component
-
-	def get_subtree(self):
-		"""
-		Return the subtree with the currently selected node as root.
-		"""
-		return self.subtree
-	
-	def get_index(self):
-		"""
-		Return the index of the currently selected tree node.
-		"""
-		return self.node_ix
-		
-
-class ClusterGUI(object):
-	"""
-	Allow the user to interactively select level or mass values in a level set
-	tree and to see the clusters at that level.
-	
-	Parameters
-	----------
-	tree : LevelSetTree
-	
-	X : 2D numpy array
-		Original data matrix. Rows are observations.
-	
-	form : string
-		Type of level set tree plot. Must be 'lambda' or 'alpha' for this GUI
-		tool. See GeomTree.plot for more detail.
-
-	output : list of strings, optional
-		If output includes 'scatter' and the data has 3 or fewer dimensions,
-		selecting a tree node produces a scatter plot showing the members of the
-		selected node.
-	
-	size : int, optional
-		If 'output' includes 'scatter', the size of the points in the
-		scatterplot.
-		
-	f : 2D numpy array, optional
-		Any function. Arguments in the first column and values in the second.
-		Plotted independently of the data as a blue curve, so does not need to
-		have the same number of rows as values in 'x'. Typically this is the
-		generating probability density function for a 1D simulation.
-	
-	fhat : list of floats, optional
-		Density estimate values for the data in 'pts'. Plotted as a black curve,
-		with points colored according to the selected component.
-		
-	keyword arguments are passed to the GeomTree.plot method.
-	"""
-
-	def __init__(self, tree, X, form, output=['scatter'], size=30, f=None,
-		fhat=None, **kwargs):
-		
-		self.T = tree
-		self.X = X
-		self.output = output
-		self.size = size		
-		self.f = f
-		self.fhat = fhat
-		self.clusters = None
-		
-		if form == 'kappa':
-			print "Sorry, the upper level set selection process doesn't "+\
-				"work with the kappa tree. Showing the alpha tree instead."
-			form = 'alpha'
-			
-		self.form = form
-		
-		self.fig, self.segments, self.segmap, self.splits, \
-			self.splitmap = self.T.plot(self.form, **kwargs)
-		self.ax = self.fig.axes[0]
-		self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
-		self.line = self.ax.axhline(y=0, color='blue', linewidth=1.0)
-		self.fig.canvas.mpl_connect('button_press_event', self.handle_click)
-		
-	def handle_click(self, event):
-		"""
-		Deals with a user click on the interactive plot.
-		"""
-
-		## redraw line at the new click point
-		self.line.set_ydata([event.ydata, event.ydata])
-
-		## reset color of all line segments	to be black
-		self.ax.collections[0].set_color('black')
-		self.ax.collections[1].set_color('black')
-		
-		## get the clusters and the clusters attribute
-		cut = self.line.get_ydata()[0]
-		self.clusters, active_nodes = self.T.upperSetCluster(cut,
-			scale=self.form)
-			
-		# reset vertical segment colors
-		palette = utl.Palette(use='scatter')
-		segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
-		splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
-
-		for i, node_ix in enumerate(active_nodes):
-			subtree = self.T.makeSubtree(node_ix)
-
-			# set new segment colors
-			seg_replace = np.in1d(self.segmap, subtree.nodes.keys())
-			segclr[seg_replace] = palette.colorset[i, :]
-
-			split_replace = np.in1d(self.splitmap, subtree.nodes.keys())
-			splitclr[split_replace] = palette.colorset[i, :]
-	
-		self.ax.collections[0].set_color(segclr)
-		self.ax.collections[1].set_color(splitclr)
-		self.fig.canvas.draw()
-
-
-		## plot the clustered points in a new window
-		if 'scatter' in self.output:
-	
-			# determine the data dimension
-			if len(self.X.shape) == 1:
-				n = len(self.X)
-				p = 1
-			else:
-				n, p = self.X.shape
-				
-			if p == 1:
-				if self.form == 'alpha':
-					cut_level = self.T.massToLevel(cut)
 				else:
-					cut_level = cut
+					cc = H.components()
 					
-				fig = utl.clusterHistogram(self.X, self.clusters,
-					self.fhat, self.f, levels=[cut_level])
-				fig.show()
-
-			elif p == 2 or p == 3:
-				fig, ax = utl.plotForeground(self.X, self.clusters,
-					bg_alpha=0.72, fg_alpha=0.68, edge_alpha=0.68, s=self.size)
-				fig.show()
+					# check if component splits
+					if len(cc) > 1:
+						
+						# retire the parent component			
+						deactivate_keys.append(k)
+						T.nodes[k].end_level = level
+						T.nodes[k].end_mass = mass
+						
+						# start a new component for each child
+						for c in cc:
+							new_key = max(T.nodes.keys()) + 1
+							T.nodes[k].children.append(new_key)
+							activate_subgraphs[new_key] = H.subgraph(c)
+						
+							T.nodes[new_key] = lst.ConnectedComponent(new_key,
+								parent=k, children=[], start_level=level,
+								end_level=None, start_mass=mass, end_mass=None,
+								members=H.vs[c]['index'])
+											
+		# update active components
+		for k in deactivate_keys:
+			del T.subgraphs[k]
 			
-	def show(self):
-		"""
-		Show the interactive plot canvas.
-		"""
-		self.fig.show()
+		T.subgraphs.update(activate_subgraphs)
 		
-	def get_clusters(self):
-		"""
-		Return the cluster memberships for the currently selected level or mass
-		value.
-		"""
-		return self.clusters
-		
-
-
+	return T

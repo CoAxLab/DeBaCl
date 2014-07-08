@@ -140,6 +140,35 @@ def remove_self_edges(edges):
 	return clean_edges
 
 
+def adjacency_to_edge_list(adj_list, self_edge=False):
+	"""
+	Converts an adjacency list to a list of edges.
+
+	Parameters
+	----------
+	adj_list : dict of lists.
+
+	self_edge : boolean, optional
+
+	Returns 
+	-------
+	edge_list : list of 2-tuples
+	"""
+
+	edge_list = []
+	for k, v in adj_list.items():
+		if self_edge:
+			v_incident = [tuple(sorted(x)) for x in zip((k,)*len(v), v)]
+		else:
+			v_incident = [tuple(sorted(x)) for x in zip((k,)*len(v), v) 
+				if not x[0] == x[1]]
+		edge_list.append(v_incident[:])
+
+	edge_list = [e for v in edge_list for e in v]
+	edge_list = list(set(edge_list))
+
+	return edge_list 
+
 
 ##########################
 ### DENSITY ESTIMATION ###

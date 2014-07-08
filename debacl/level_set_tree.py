@@ -15,12 +15,13 @@ geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
 """
 
+import utils as utl  # DeBaCl utils
+	
 try:
 	import numpy as np
 	import scipy.spatial.distance as spd
 	import scipy.io as spio
 	import networkx as nx
-	import utils as utl  # DeBaCl utils
 except:
 	raise ImportError("DeBaCl requires the numpy, scipy, and networkx " + \
 		"packages for basic level set tree construction.")
@@ -1250,20 +1251,14 @@ def construct_tree(adjacency_list, density_levels, background_sets,
 		represents represents one of the 'n' observations, while the values are
 		lists containing the indices of the k-nearest neighbors.
 			
-	levels: numpy array[float]
+	density_levels: numpy array[float]
 		Density levels at which connected components are computed. Typically
 		this includes all unique values of a probability density estimate, but
 		it can be a coarser grid for fast approximate tree estimates.
 	
-	bg_sets: list of lists
+	background_sets: list of lists
 		Specify which points to remove as background at each density level in
 		'levels'.
-	
-	mode: {'general', 'density'}, optional
-		Establish if the values in 'levels' come from a probability density or
-		pseudo-density estimate, in which case there is a natural floor at 0.
-		The default is to model an arbitrary function, which requires a run-time
-		choice of floor value.
 	
 	verbose: {False, True}, optional
 		If set to True, then prints to the screen a progress indicator every 100
@@ -1295,16 +1290,13 @@ def construct_tree(adjacency_list, density_levels, background_sets,
 	# Loop through the removal grid
 	for i, level in enumerate(density_levels):
 		if verbose and i % 100 == 0:
-			print "iteration", 
+			print "iteration", i
 
 		bg = background_sets[i]
-
 
 		## compute the mass after the current bg set is removed
 		old_vcount = sum([x.number_of_nodes() for x in T.subgraphs.itervalues()])
 		current_mass = 1. - ((old_vcount - len(bg)) / float(n))
-		print "current mass: ", current_mass
-		
 
 		# loop through active components, i.e. subgraphs
 		deactivate_keys = []     # subgraphs to deactivate at the end of the iter
