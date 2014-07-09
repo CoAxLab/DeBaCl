@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## debacl_utils.py
 ## Created: 20120718
-## Updated: 20140623
+## Updated: 20140708
 ## A library of helper functions for the DEnsity-BAsed CLustering (DeBaCl)
 ## package.
 ###########################################
@@ -27,38 +27,61 @@ except:
 	raise ImportError("Matplotlib could not be loaded. " +\
 		"DeBaCl plot functions will not work.")
 
+try:
+	import sklearn.neighbors as sknbr
+	_HAS_SKLEARN = True
+except:
+	_HAS_SKLEARN = False
+
 
 
 #####################################
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-def knn_graph(X, k, output_type='adjacency-list'):
+
+def knn_graph(X, k, method='brute-force', leaf_size=30):
 	"""
 	Compute the symmetric k-nearest neighbor graph for a set of points. Assume
 	Euclidean distance metric.
 	
 	Parameters
 	----------
-	X : numpy array
+	X : numpy array | list [numpy arrays]
 		Data points, with each row as an observation.
 	
 	k : int
 		The number of points to consider as neighbors of any given observation.
 
-	output_type : {'adjacency-list', 'edge-list'}
-		Form of the graph representation.
+	method : {'brute-force', 'kd-tree', 'ball-tree'}, optional
+		Computing method.
+
+		- 'brute-force': computes the (Euclidean) distance between all O(n^2)
+          pairs of rows in 'X', then for every point finds the k-nearest. It is
+          limited to tens of thousands of observations (depending on available
+          RAM).
+
+		- 'kd-tree': partitions the data into axis-aligned rectangles to avoid
+          computing all O(n^2) pairwise distances. Much faster than
+          'brute-force', but only works for data in fewer than about 20
+          dimensions. Requires the scikit-learn library.
+
+		- 'ball-tree': partitions the data into balls and uses the metric
+          property of euclidean distance to avoid computing all O(n^2)
+          distances. Typically much faster than 'brute-force', and works with up
+          to a few hundred dimensions. Requires the scikit-learn library.
+
+    leaf_size : int, optional        
+    	For the 'kd-tree' and 'ball-tree' methods, the number of observations in
+    	the leaf nodes. Leaves are not split further, so distance computations
+    	within leaf nodes are done by brute force. 'leaf_size' is ignored for
+    	the 'brute-force' method.
 	
 	Returns
 	-------
-	neighbors : numpy array [int]
-		A 2-dimensional numpy array representing the k-nearest neighbor graph.
-		If output_type is 'adjacency-list', this is a 'n x k' matrix, where 'n'
-		is the number of rows in 'X'. The entry at position (i, j) is the index
-		of the j'th nearest neighbor to the point at row index i. If output_type
-		is 'edge-list', this is a two-column numpy array where each row
-		corresponds to an edge in the graph. The edges are undirected and
-		duplicates are removed.
+	neighbors : dict [list]	
+		The keys correspond to rows of X and the values are the k-nearest
+		neighbors to the key's row.
 		
 	k_radius : list [float]
 		For each row of 'X' the distance to its k'th nearest neighbor (including
@@ -67,59 +90,76 @@ def knn_graph(X, k, output_type='adjacency-list'):
 
 	n, p = X.shape
 
-	## Find the index of the nearest neighbors for each point
-	d = spd.pdist(X, metric='euclidean')
-	D = spd.squareform(d)
-			
-	rank = np.argsort(D, axis=1)
-	idx_neighbor = rank[:, 0:k]
+	if method == 'kd-tree':
+		if _HAS_SKLEARN:
+			kdtree = sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
+			distances, idx_neighbors = kdtree.query(X, k=k,
+				return_distance=True, sort_results=True)
+			k_radius = distances[:, -1]
+		else:
+			raise ImportError("The scikit-learn library could not be loaded." + \
+				" It is required for the 'kd-tree' method.")
+ 
+	if method == 'ball-tree':
+		if _HAS_SKLEARN:
+			btree = sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
+			distances, idx_neighbors = btree.query(X, k=k,
+				return_distance=True, sort_results=True)
+			k_radius = distances[:, -1]
+		else:
+			raise ImportError("The scikit-learn library could not be loaded." +\
+				" It is required for the 'ball-tree' method.")
 
-	## Retrieve the k-neighbor radius
-	k_nbr = idx_neighbor[:, -1]
-	k_radius = D[np.arange(n), k_nbr]
+	else:  # assume brute-force
+		d = spd.pdist(X, metric='euclidean')
+		D = spd.squareform(d)
+		rank = np.argsort(D, axis=1)
+		idx_neighbors = rank[:, 0:k]
 
-	## Convert to an edge list, if desired
-	if output_type == 'edge_list':
-		neighbors = []
-		for i, row in enumerate(idx_neighbor):
-			v_incident = [tuple(sorted((i, v))) for v in row]
-			neighbors += v_incident[:]
+		k_nbr = idx_neighbors[:, -1]
+		k_radius = D[np.arange(n), k_nbr]
 
-		neighbors = list(set(neighbors))
-
-	else:  # output_type == 'adjacency_list'
-		neighbors = idx_neighbor
-		
+	neighbors = {i: row for i, row in enumerate(idx_neighbors)}
 	return neighbors, k_radius
 	
 	
-def epsilon_graph(x, eps):
+def epsilon_graph(X, epsilon=None, percentile=0.05):
 	"""
-	Construct an epsilon-neighborhood graph, represented by an edge list. The
-	rows of 'x' are vertices and pairs of vertices are connected by edges if
-	they are within euclidean distance epsilon of each other.
+	Construct an epsilon-neighborhood graph, represented by an adjacency list.
+	Two vertices are connected by an edge if they are within 'epsilon' distance
+	of each other, according to the Euclidean metric. The implementation is a
+	brute-force computation of all O(n^2) pairwise distances of the rows in X.
 	
 	Parameters
 	----------
-	x : 2D numpy array
+	X : 2D numpy array
 		The rows of x are the observations which become graph vertices.
 		
-	eps : float
-		The distance threshold for neighbors. If unspecified, defaults to the
-		proportion in 'q'.
-		
+	epsilon : float, optional
+		The distance threshold for neighbors.
+
+	percentile : float, optional
+		If 'epsilon' is unspecified, this determines the distance threshold.
+		'epsilon' is set to the desired percentile of all (n choose 2) pairwise
+		distances, where n is the number of rows in 'X'.
+
 	Returns
 	-------
-	neighbors : 2-dimensional numpy array [int]
+	neighbors : dict [list]	
+		The keys correspond to rows of X and the values are the k-nearest
+		neighbors to the key's row.
 	"""
 	
-	d = spd.pdist(x, metric='euclidean')
+	d = spd.pdist(X, metric='euclidean')
 	D = spd.squareform(d)
-	idx_neighbor = np.where(D <= eps)
-	edge_list = [tuple(sorted(x)) for x in zip(idx_neighbor[0], idx_neighbor[1])]
-	edge_list = list(set(edge_list))
 
-	return edge_list
+	if epsilon == None:
+		epsilon = np.percentile(d, round(percentile*100))
+
+	neighbor_flag = D <= epsilon
+	neighbors = {i: np.where(row)[0] for i, row in enumerate(neighbor_flag)}
+
+	return neighbors
 
 
 def remove_self_edges(edges):
