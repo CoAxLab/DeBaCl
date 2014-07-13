@@ -2,7 +2,7 @@
 ## Brian P. Kent
 ## test_utils.py
 ## created: 20140529
-## updated: 20140529
+## updated: 20140712
 ## Test the DeBaCl utility functions.
 #####################################
 
@@ -11,19 +11,7 @@ import numpy as np
 import scipy.special as spspec
 
 import sys
-sys.path.insert(0, '/home/brian/Projects/debacl/DeBaCl/')
 from debacl import utils as utl
-
-
-## Example from the unittest introduction
-# class TestSequenceFunctions(unittest.TestCase):
-
-# 	def setUp(self):
-# 		self.seq = range(10)
-
-# 	def test_choice(self):
-# 		element = random.choice(self.seq)
-		# self.assertTrue(element in self.seq)
 
 
 
@@ -46,7 +34,7 @@ class TestDensityEstimates(unittest.TestCase):
 		self.fhat = normalizer / (self.r_k**self.p)
 
 	def test_knn_density(self):
-		fhat = utl.knnDensity(self.r_k, self.n, self.p, self.k)
+		fhat = utl.knn_density(self.r_k, self.n, self.p, self.k)
 		self.assertEqual(self.fhat, fhat)
 
 
@@ -56,28 +44,58 @@ class TestNeighborGraphs(unittest.TestCase):
 	"""
 
 	def setUp(self):
-		pass
+		
+		## Make data
+		n = 5
+		self.X = np.arange(5).reshape((n, 1))
+
+		## Graph parameters
+		self.k = 3
+		self.epsilon = 1.01
+
+		## Answers
+		self.knn = {
+			0: set([0, 1, 2]),
+			1: set([1, 0, 2]),
+			2: set([2, 1, 3]),
+			3: set([3, 2, 4]),
+			4: set([4, 3, 2])}
+		self.r_k = np.array([2., 1., 1., 1., 2.])
+
+		self.eps_nn = {
+			0: set([0, 1]),
+			1: set([1, 0, 2]),
+			2: set([2, 1, 3]),
+			3: set([3, 2, 4]),
+			4: set([4, 3])}
+
+		self.edge_list = [(0, 1), (1, 2), (2, 3), (3, 4)]
 
 	def test_knn_graph(self):
-		pass
+		"""
+		Test construction of the k-nearest neighbor graph.
+		"""
+		knn, r_k = utl.knn_graph(self.X, k=self.k, method='brute-force')
+		np.testing.assert_array_equal(r_k, self.r_k)
+		
+		for idx, neighbors in knn.iteritems():
+			self.assertSetEqual(self.knn[idx], set(neighbors))
 
 	def test_epsilon_graph(self):
-		pass
+		"""
+		Test construction of the epsilon-nearest neighbor graph.
+		"""
+		eps_nn = utl.epsilon_graph(self.X, self.epsilon)
 
-	def test_gaussian_graph(self):
-		pass
+		for idx, neighbors in eps_nn.iteritems():
+			self.assertSetEqual(self.eps_nn[idx], set(neighbors))
 
+	def test_type_conversions(self):
+		"""
+		Test conversion between graph representations.
+		"""
+		edge_list = utl.adjacency_to_edge_list(self.eps_nn, self_edge=False)
+		edge_list = sorted([tuple(sorted(x)) for x in edge_list])
 
-class TestTreeConstructionUtils(unittest.TestCase):
-	"""
-	Unit test class for stages of level set tree construction.
-	"""
-
-	def setUp(self):
-		pass
-
-	def test_density_grid(self):
-		pass
-
-	def test_background_assignment(self):
-		pass
+		for e, ans in zip(edge_list, self.edge_list):
+			self.assertTupleEqual(e, ans)
