@@ -9,16 +9,15 @@ geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
 """
 
+import cPickle
 import utils as utl  # DeBaCl utils
 
 try:
     import numpy as np
-    import scipy.spatial.distance as spd
-    import scipy.io as spio
     import networkx as nx
     from prettytable import PrettyTable
 except:
-    raise ImportError("DeBaCl requires the numpy, scipy, networkx, and " +
+    raise ImportError("DeBaCl requires the numpy, networkx, and " +
         "prettytable packages for level set tree estimation and printing.")
 
 try:
@@ -141,37 +140,21 @@ class LevelSetTree(object):
             "pruning method currently implemented. No changes were made to " + \
             "the tree."
 
-    def save(self, fname):
+    def save(self, filename):
         """
         Save a level set tree object to file.
 
-        Saves a level set tree as a MATLAB struct using the scipy.io module.
-        Ignore the warning about using oned_as default value ('column').
+        Serialize all members of a level set tree with the cPickle module and
+        save to file.
 
         Parameters
         ----------
-        fname : string
-            File to save the tree to. The .mat extension is not necessary.
-
-        Returns
-        -------
+        filename : string
+            File to save the tree to. The filename extension does not matter for
+            this method (although operating system requirements still apply).
         """
-
-        tree_dict = {
-            'density': self.density,
-            'level_grid': self.level_grid,
-            'idnums': [x.idnum for x in self.nodes.values()],
-            'start_levels': [x.start_level for x in self.nodes.values()],
-            'end_levels': [x.end_level for x in self.nodes.values()],
-            'start_mass': [x.start_mass for x in self.nodes.values()],
-            'end_mass': [x.end_mass for x in self.nodes.values()],
-            'parents': [(-1 if x.parent is None else x.parent)
-                for x in self.nodes.values()],
-            'children': [x.children for x in self.nodes.values()],
-            'members': [x.members for x in self.nodes.values()]
-            }
-
-        spio.savemat(fname, tree_dict)
+        with open(filename, 'wb') as f:
+            cPickle.dump(self, f, cPickle.HIGHEST_PROTOCOL)
 
     def plot(self, form, width='uniform', sort=True, gap=0.05, color_nodes=None):
         """
@@ -1271,49 +1254,23 @@ def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
 
     return T
 
-def load_tree(fname):
+def load_tree(filename):
     """
     Load a saved tree from file.
 
     Parameters
     ----------
-    fname : string
-        Filename to load. The .mat extension is not necessary.
+    filename : string
+        Filename to load.
 
     Returns
     -------
     T : LevelSetTree
         The loaded and reconstituted level set tree object.
     """
+    with open(filename, 'rb') as f:
+        T = cPickle.load(f)
 
-    indata = spio.loadmat(fname)
-
-    ## format inputs
-    idnums = indata['idnums'].flatten()
-    level_grid = list(indata['levels'].flatten())
-    density = list(indata['density'].flatten())
-    start_levels = indata['start_levels'].flatten()
-    end_levels = indata['end_levels'].flatten()
-    start_mass = indata['start_mass'].flatten()
-    end_mass = indata['end_mass'].flatten()
-    parents = [(None if x == -1 else x) for x in indata['parents'].flatten()]
-    children = [list(x[0].flatten()) for x in indata['children']]
-    members = [list(x[0].flatten()) for x in indata['members']]
-
-    if len(children) == 0:
-        children = [[]]*len(idnums)
-
-    ## create tree
-    T = GeomTree(bg_sets, levels)
-
-    ## add nodes to the tree
-    nodes = {}
-    for i, k in enumerate(idnums):
-        nodes[k] = ConnectedComponent(k, parents[i], children[i],
-            start_levels[i], end_levels[i], start_mass[i], end_mass[i],
-            members[i])
-
-    T.nodes = nodes
     return T
 
 
