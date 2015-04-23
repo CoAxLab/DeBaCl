@@ -24,8 +24,7 @@ try:
 	import matplotlib as mpl
 	from matplotlib import ticker
 except:
-	raise ImportError("Matplotlib could not be loaded. " +\
-		"DeBaCl plot functions will not work.")
+	print "Matplotlib could not be loaded. DeBaCl plot functions will not work."
 
 try:
 	import sklearn.neighbors as sknbr
@@ -44,12 +43,12 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 	"""
 	Compute the symmetric k-nearest neighbor graph for a set of points. Assume
 	Euclidean distance metric.
-	
+
 	Parameters
 	----------
 	X : numpy array | list [numpy arrays]
 		Data points, with each row as an observation.
-	
+
 	k : int
 		The number of points to consider as neighbors of any given observation.
 
@@ -71,18 +70,18 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
           distances. Typically much faster than 'brute-force', and works with up
           to a few hundred dimensions. Requires the scikit-learn library.
 
-    leaf_size : int, optional        
+    leaf_size : int, optional
     	For the 'kd-tree' and 'ball-tree' methods, the number of observations in
     	the leaf nodes. Leaves are not split further, so distance computations
     	within leaf nodes are done by brute force. 'leaf_size' is ignored for
     	the 'brute-force' method.
-	
+
 	Returns
 	-------
-	neighbors : dict [list]	
+	neighbors : dict [list]
 		The keys correspond to rows of X and the values are the k-nearest
 		neighbors to the key's row.
-		
+
 	k_radius : list [float]
 		For each row of 'X' the distance to its k'th nearest neighbor (including
 		itself).
@@ -99,7 +98,7 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 		else:
 			raise ImportError("The scikit-learn library could not be loaded." + \
 				" It is required for the 'kd-tree' method.")
- 
+
 	if method == 'ball-tree':
 		if _HAS_SKLEARN:
 			btree = sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
@@ -121,20 +120,20 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 
 	neighbors = {i: row for i, row in enumerate(idx_neighbors)}
 	return neighbors, k_radius
-	
-	
+
+
 def epsilon_graph(X, epsilon=None, percentile=0.05):
 	"""
 	Construct an epsilon-neighborhood graph, represented by an adjacency list.
 	Two vertices are connected by an edge if they are within 'epsilon' distance
 	of each other, according to the Euclidean metric. The implementation is a
 	brute-force computation of all O(n^2) pairwise distances of the rows in X.
-	
+
 	Parameters
 	----------
 	X : 2D numpy array
 		The rows of x are the observations which become graph vertices.
-		
+
 	epsilon : float, optional
 		The distance threshold for neighbors.
 
@@ -145,11 +144,11 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
 
 	Returns
 	-------
-	neighbors : dict [list]	
+	neighbors : dict [list]
 		The keys correspond to rows of X and the values are the k-nearest
 		neighbors to the key's row.
 	"""
-	
+
 	d = spd.pdist(X, metric='euclidean')
 	D = spd.squareform(d)
 
@@ -190,7 +189,7 @@ def adjacency_to_edge_list(adj_list, self_edge=False):
 
 	self_edge : boolean, optional
 
-	Returns 
+	Returns
 	-------
 	edge_list : list of 2-tuples
 	"""
@@ -200,14 +199,14 @@ def adjacency_to_edge_list(adj_list, self_edge=False):
 		if self_edge:
 			v_incident = [tuple(sorted(x)) for x in zip((k,)*len(v), v)]
 		else:
-			v_incident = [tuple(sorted(x)) for x in zip((k,)*len(v), v) 
+			v_incident = [tuple(sorted(x)) for x in zip((k,)*len(v), v)
 				if not x[0] == x[1]]
 		edge_list.append(v_incident[:])
 
 	edge_list = [e for v in edge_list for e in v]
 	edge_list = list(set(edge_list))
 
-	return edge_list 
+	return edge_list
 
 
 ##########################
@@ -216,33 +215,33 @@ def adjacency_to_edge_list(adj_list, self_edge=False):
 
 def knn_density(k_radius, n, p, k):
 	"""
-	Compute the kNN density estimate for a set of points.	
-	
+	Compute the kNN density estimate for a set of points.
+
 	Parameters
 	----------
 	k_radius : 1-dimensional numpy array of floats
 		The distance to each points k'th nearest neighbor.
-		
+
 	n : int
 		The number of points.
-		
+
 	p : int
 		The dimension of the data.
-		
+
 	k : int
 		The number of observations considered neighbors of each point.
-		
+
 	Returns
 	-------
 	fhat : 1D numpy array of floats
 		Estimated density for the points corresponding to the entries of
 		'k_radius'.
 	"""
-	
+
 	unit_vol = np.pi**(p/2.0) / spspec.gamma(1 + p/2.0)
 	const = (1.0 * k) / (n * unit_vol)
 	fhat = const / k_radius**p
-	
+
 	return fhat
 
 
@@ -258,17 +257,17 @@ def assign_background_points(X, clusters, method=None, k=1):
 	This function packages a few very basic classification methods. Any
 	classification method could work for this step of the data segmentation
 	pipeline.
-	
+
 	Parameters
 	----------
 	X : 2-dimensional numpy array
 		The original data, with rows as observations.
-		
+
 	clusters : 2D numpy array
 		Foreground cluster assignments. Observation index is in the first entry
 		of each row, with cluster label in the second entry. This is exactly
 		what is returned by any of the LevelSetTree clustering methods.
-		
+
 	method : {None, 'centers', 'knn', 'zero'}, optional
 		Which classification technique to use. The default of None sets
 		background points to be a separate cluster. Option 'zero' does the same,
@@ -276,11 +275,11 @@ def assign_background_points(X, clusters, method=None, k=1):
 		'0'. The 'knn' method does a k-nearest neighbor classified, while option
 		'centers' assigns each background point to the cluster with the closet
 		center (mean) point.
-		
+
 	k : int, optional
 		If 'method' is 'knn', this is the number of neighbors to use for each
 		observation.
-	
+
 	Returns
 	-------
 	labels : 2-dimensional numpy array
@@ -298,10 +297,10 @@ def assign_background_points(X, clusters, method=None, k=1):
 	assignments = np.zeros((n, ), dtype=np.int) - 1
 	assignments[clusters[:,0]] = clusters[:,1]
 	ix_background = np.where(assignments == -1)[0]
-	
+
 	if len(ix_background) == 0:
 		return clusters
-		
+
 
 	if method == 'centers':
 		# get cluster centers
@@ -318,12 +317,12 @@ def assign_background_points(X, clusters, method=None, k=1):
 		# distance between each background point and all cluster centers
 		d = spd.cdist(X_background, ctrs)
 		ctr_min = np.argmin(d, axis=1)
-		assignments[ix_background] = labels[ctr_min]	
+		assignments[ix_background] = labels[ctr_min]
 
-		
+
 	elif method == 'knn':
 		# make sure k isn't too big
-		k = min(k, np.min(np.bincount(clusters[:,1])))		
+		k = min(k, np.min(np.bincount(clusters[:,1])))
 
 		# find distances between background and upper points
 		X_background = X[ix_background, :]
@@ -335,14 +334,14 @@ def assign_background_points(X, clusters, method=None, k=1):
 		ix_nbr = rank[:, 0:k]
 
 		# find the cluster membership of the k-nearest neighbors
-		knn_clusters = clusters[ix_nbr, 1]	
+		knn_clusters = clusters[ix_nbr, 1]
 		knn_cluster_counts = np.apply_along_axis(np.bincount, 1, knn_clusters,
 			None, n_label)
 		knn_vote = np.argmax(knn_cluster_counts, axis=1)
 
 		assignments[ix_background] = labels[knn_vote]
-		
-	
+
+
 	elif method == 'zero':
 		assignments += 1
 
@@ -363,7 +362,7 @@ class Palette(object):
 	"""
 	Define some good RGB sscolors manually to simplify plotting upper level sets
 	and foreground clusters.
-	
+
 	Parameters
 	----------
 	use : {'scatter', 'lines', 'neuroimg'}, optional
@@ -383,10 +382,10 @@ class Palette(object):
 				(166, 86, 40), #brown
 				(0, 206, 209), #turqoise
 				(82, 82, 82), #dark gray
-				(247, 129, 191), #pink	
-				(184, 134, 11), #goldenrod									
+				(247, 129, 191), #pink
+				(184, 134, 11), #goldenrod
 				]) / 255.0
-				
+
 		elif use == 'neuroimg':
 			self.colorset = np.array([
 				(170, 0, 0), # dark red
@@ -397,7 +396,7 @@ class Palette(object):
 				(255, 0, 255), # violet
 				(255, 255, 0), # yellow
 				]) / 255.0
-			
+
 		else:
 			self.colorset = np.array([
 					(228, 26, 28), #red
@@ -429,21 +428,21 @@ class Palette(object):
 					(150, 150, 150), #gray
 					(240, 240, 240) # super light gray
 					]) / 255.0
-	
-					
+
+
  	def apply_colorset(self, ix):
  		"""
  		Turn a numpy array of group labels (integers) into RGBA colors.
  		"""
  		n_clr = np.alen(self.colorset)
-		return self.colorset[ix % n_clr] 		
- 	 	
- 	
+		return self.colorset[ix % n_clr]
+
+
 def make_color_matrix(n, bg_color, bg_alpha, ix=None,
 	fg_color=[228/255.0, 26/255.0, 28/255.0], fg_alpha=1.0):
 	"""
 	Construct the RGBA color parameter for a matplotlib plot.
-	
+
 	This function is intended to allow for a set of "foreground" points to be
 	colored according to integer labels (e.g. according to clustering output),
 	while "background" points are all colored something else (e.g. light gray).
@@ -453,32 +452,32 @@ def make_color_matrix(n, bg_color, bg_alpha, ix=None,
 	color matrix for any aspect of a plot, including point face color, edge
 	color, and line color, despite use of the term "points" in the descriptions
 	below.
-	
+
 	Parameters
 	----------
 	n : int
 		Number of data points.
-		
+
 	bg_color : list of floats
 		A list with three entries, specifying a color in RGB format.
-	
+
 	bg_alpha : float
 		Specifies background point opacity.
-	
+
 	ix : list of ints, optional
 		Identifies foreground points by index. Default is None, which does not
 		distinguish between foreground and background points.
-	
+
 	fg_color : list of ints or list of floats, optional
 		Only relevant if 'ix' is specified. If 'fg_color' is a list of integers
 		then each entry in 'fg_color' indicates the color of the corresponding
 		foreground point. If 'fg_color' is a list of 3 floats, then all
 		foreground points will be that RGB color. The default is to color all
 		foreground points red.
-	
+
 	fg_alpha : float, optional
 		Opacity of the foreground points.
-	
+
 	Returns
 	-------
 	rgba : 2D numpy array
@@ -488,61 +487,61 @@ def make_color_matrix(n, bg_color, bg_alpha, ix=None,
 	rgba = np.zeros((n, 4), dtype=np.float)
 	rgba[:, 0:3] = bg_color
 	rgba[:, 3] = bg_alpha
-	
+
 	if ix is not None:
 		if np.array(fg_color).dtype.kind == 'i':
 			palette = Palette()
 			fg_color = palette.applyColorset(fg_color)
-		
+
 		rgba[ix, 0:3] = fg_color
 		rgba[ix, 3] = fg_alpha
-		
+
 	return rgba
-	
-	
+
+
 def cluster_histogram(x, cluster, fhat=None, f=None, levels=None):
 	"""
 	Plot a histogram and illustrate the location of selected cluster points.
-	
+
 	The primary plot axis is a histogram. Under this plot is a second axis that
 	shows the location of the points in 'cluster', colored according to cluster
 	label. If specified, also plot a density estimate, density function (or any
 	function), and horizontal guidelines. This is the workhorse of the DeBaCl
 	interactive tools for 1D data.
-	
+
 	Parameters
 	----------
 	x : 1D numpy array of floats
 		The data.
-	
+
 	cluster : 2D numpy array
 		A cluster matrix: rows represent points in 'x', with first entry as the
 		index and second entry as the cluster label. The output of all
 		LevelSetTree clustering methods are in this format.
-		
+
 	fhat : list of floats, optional
 		Density estimate values for the data in 'x'. Plotted as a black curve,
 		with points colored according to 'cluster'.
-	
+
 	f : 2D numpy array, optional
 		Any function. Arguments in the first column and values in the second.
 		Plotted independently of the data as a blue curve, so does not need to
 		have the same number of rows as values in 'x'. Typically this is the
 		generating probability density function for a 1D simulation.
-	
+
 	levels : list of floats, optional
 		Each entry in 'levels' causes a horizontal dashed red line to appear at
 		that value.
-	
+
 	Returns
 	-------
 	fig : matplotlib figure
 		Use fig.show() to show the plot, fig.savefig() to save it, etc.
 	"""
-	
+
 	n = len(x)
 	palette = Palette()
-	
+
 	## set up the figure and plot the data histogram
 	fig, (ax0, ax1) = plt.subplots(2, sharex=True)
 	ax0.set_position([0.125, 0.12, 0.8, 0.78])
@@ -551,14 +550,14 @@ def cluster_histogram(x, cluster, fhat=None, f=None, levels=None):
 	ax1.get_yaxis().set_ticks([])
 	ax0.hist(x, bins=n/20, normed=1, alpha=0.18)
 	ax0.set_ylabel('Density')
-	
-	
+
+
 	## plot the foreground points in the second axes
 	for i, c in enumerate(np.unique(cluster[:, 1])):
 		ix = cluster[np.where(cluster[:, 1] == c)[0], 0]
 		ax1.scatter(x[ix], np.zeros((len(ix),)), alpha=0.08, s=20,
 			color=palette.colorset[i])
-		
+
 		if fhat is not None:
 			ylim = ax0.get_ylim()
 			eps = 0.02 * (max(fhat) - min(fhat))
@@ -566,75 +565,75 @@ def cluster_histogram(x, cluster, fhat=None, f=None, levels=None):
 				ylim[1]))
 			ax0.scatter(x[ix], fhat[ix], s=12, alpha=0.5,
 				color=palette.colorset[i])
-	
+
 	if f is not None:	# plot the density
 		ax0.plot(f[:,0], f[:,1], color='blue', ls='-', lw=1)
-	
-	if fhat is not None:  # plot the estimated density 
+
+	if fhat is not None:  # plot the estimated density
 		ax0.plot(x, fhat, color='black', lw=1.5, alpha=0.6)
 
 	if levels is not None:  # plot horizontal guidelines
 		for lev in levels:
 			ax0.axhline(lev, color='red', lw=1, ls='--', alpha=0.7)
-			
+
 	return fig
-	
+
 
 def plot_foreground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 	fg_alpha=0.75, bg_alpha=0.3, edge_alpha=1.0, **kwargs):
 	"""
 	Draw a scatter plot of 2D or 3D data, colored according to foreground
 	cluster label.
-	
+
 	Parameters
 	----------
 	X : 2-dimensional numpy array
 		Data points represented by rows. Must have 2 or 3 columns.
-		
+
 	clusters : 2-dimensional numpy array
 		A cluster matrix: rows represent points in 'x', with first entry as the
 		index and second entry as the cluster label. The output of all
 		LevelSetTree clustering methods are in this format.
-		
+
 	title : string
 		Axes title
-		
+
 	xlab, ylab, zlab : string
 		Axes axis labels
-		
+
 	fg_alpha : float
 		Transparency of the foreground (clustered) points. A float between 0
 		(transparent) and 1 (opaque).
-		
+
 	bg_alpha : float
 		Transparency of the background (unclustered) points. A float between 0
 		(transparent) and 1 (opaque).
-		
+
 	kwargs : keyword parameters
 		Plot parameters passed through to Matplotlib Axes.scatter function.
-			
+
 	Returns
 	-------
 	fig : matplotlib figure
 		Use fig.show() to show the plot, fig.savefig() to save it, etc.
-		
+
 	ax : matplotlib axes object
 		Allows more direct plot customization in the client function.
 	"""
-	
+
 	## make the color matrix
 	n, p = X.shape
 	base_clr = [190.0 / 255.0] * 3  ## light gray
 	black = [0.0, 0.0, 0.0]
-	
+
 	rgba_edge = makeColorMatrix(n, bg_color=black, bg_alpha=edge_alpha, ix=None)
 	rgba_clr = makeColorMatrix(n, bg_color=base_clr, bg_alpha=bg_alpha,
 		ix=clusters[:, 0], fg_color=clusters[:, 1], fg_alpha=fg_alpha)
-		
+
 	if p == 2:
 		fig, ax = plt.subplots()
 		ax.scatter(X[:,0], X[:,1], c=rgba_clr, edgecolors=rgba_edge, **kwargs)
-		
+
 	elif p == 3:
 		fig = plt.figure()
 		ax = fig.add_subplot(111, projection='3d')
@@ -642,14 +641,14 @@ def plot_foreground(X, clusters, title='', xlab='x', ylab='y', zlab='z',
 		ax.set_zlabel(zlab)
 		ax.scatter(X[:,0], X[:,1], X[:,2], c=rgba_clr, edgecolors=rgba_edge,
 		 	**kwargs)
-		
+
 	else:
 		fig, ax = plt.subplots()
 		print "Plotting failed due to a dimension problem."
-		
+
 	ax.set_title(title)
 	ax.set_xlabel(xlab); ax.set_ylabel(ylab)
-			
+
 	return fig, ax
 
 
@@ -658,32 +657,32 @@ def set_plot_params(axes_titlesize=22, axes_labelsize=18, xtick_labelsize=14,
 	"""
 	A handy function for setting matplotlib parameters without adding trival
 	code to working scripts.
-	
+
 	Parameters
 	----------
 	axes_titlesize : integer
 		Size of the axes title.
-	
+
 	axes_labelsize : integer
 		Size of axes dimension labels.
-	
+
 	xtick_labelsize : integer
 		Size of the ticks on the x-axis.
-	
+
 	ytick_labelsize : integer
 		Size of the ticks on the y-axis.
-	
+
 	figure_size : tuple (length 2)
 		Size of the figure in inches.
-	
+
 	Returns
 	-------
 	"""
-	
+
 	mpl.rc('axes', labelsize=axes_labelsize)
-	mpl.rc('axes', titlesize=axes_titlesize) 
+	mpl.rc('axes', titlesize=axes_titlesize)
 	mpl.rc('xtick', labelsize=xtick_labelsize)
-	mpl.rc('ytick', labelsize=ytick_labelsize) 
+	mpl.rc('ytick', labelsize=ytick_labelsize)
 	mpl.rc('figure', figsize=figsize)
 
 	def autoloc(self):
