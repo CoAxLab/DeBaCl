@@ -82,10 +82,10 @@ class LevelSetTree(object):
         The probability density level associated with each element in 'bg_sets'.
     """
 
-    def __init__(self, bg_sets, levels):
-        self.bg_sets = bg_sets
-        self.levels = levels
-        self.n = sum([len(x) for x in bg_sets])
+    def __init__(self, density, level_grid):
+        self.density = density
+        self.level_grid = level_grid
+        self.num_levels = 0
         self.nodes = {}
         self.subgraphs = {}
 
@@ -158,8 +158,8 @@ class LevelSetTree(object):
         """
 
         tree_dict = {
-            'bg_sets': self.bg_sets,
-            'levels': self.levels,
+            'density': self.density,
+            'level_grid': self.level_grid,
             'idnums': [x.idnum for x in self.nodes.values()],
             'start_levels': [x.start_level for x in self.nodes.values()],
             'end_levels': [x.end_level for x in self.nodes.values()],
@@ -1151,81 +1151,7 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def density_grid(density, mode='mass', num_levels=None):
-    """
-    Create the inputs to level set tree estimation by pruning observations from
-    a density estimate at successively higher levels. This function merely
-    records the density levels and which points will be removed at each level,
-    but it does not do the actual tree construction.
-
-    Parameters
-    ----------
-    density : numpy array
-        Values of a density estimate. The coordinates of the observation are not
-        needed for this function.
-
-    mode : {'mass', 'levels'}, optional
-        If 'mass', the level set tree will be built by removing a constant
-        number of points (mass) at each iteration. If 'levels', the density
-        levels are evenly spaced between 0 and the maximum density estimate
-        value. If 'num_levels' is 'None', the 'mass' option removes 1 point at a
-        time and the 'levels' option iterates through unique values of the
-        'density' array.
-
-    num_levels : int, optional
-        Number of density levels at which to construct the level set tree.
-        This is essentially the resolution of a level set tree built for the
-        'density' array.
-
-    Returns
-    -------
-    background_sets : list of lists
-        The points to remove in each iteration of level set tree construction.
-        For a given density level, these are the points that have lower density
-        than the level, but higher density than the immediately smaller density
-        level.
-
-    levels : numpy array
-        Grid of density levels that will define the iterations in level set tree
-        construction.
-    """
-
-    n = len(density)
-
-    if mode == 'mass':  # remove blocks of points of uniform mass
-        pt_order = np.argsort(density)
-
-        if num_levels is None:
-            background_sets = [[pt_order[i]] for i in range(n)]
-            levels = density[pt_order]
-        else:
-            bin_size = n / num_levels  # this should be only the integer part
-            background_sets = [pt_order[i:(i + bin_size)]
-                for i in range(0, n, bin_size)]
-            levels = [max(density[x]) for x in background_sets]
-
-    elif mode == 'levels':  # remove points at evenly spaced density levels
-        uniq_dens = np.unique(density)
-        uniq_dens.sort()
-
-        if num_levels is None:
-            background_sets = [list(np.where(density == uniq_dens[i])[0])
-                for i in range(len(uniq_dens))]
-            levels = uniq_dens
-        else:
-            grid = np.linspace(0., np.max(uniq_dens), num_levels)
-            levels = grid.copy()
-            grid = np.insert(grid, 0, -1)
-            background_sets = [list(np.where(np.logical_and(density > grid[i],
-                density <= grid[i + 1]))[0]) for i in range(num_levels)]
-
-    else:
-        raise ValueError("Sorry, that's not a valid mode.")
-
-    return background_sets, levels
-
-def construct_tree(adjacency_list, density_levels, background_sets,
-    verbose=False):
+def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
     """
     Construct a level set tree. A level set tree is constructed by identifying
     connected components of in a k-nearest neighbors graph at successively
@@ -1238,16 +1164,18 @@ def construct_tree(adjacency_list, density_levels, background_sets,
         represents represents one of the 'n' observations, while the values are
         lists containing the indices of the k-nearest neighbors.
 
-    density_levels: numpy array[float]
-        Density levels at which connected components are computed. Typically
-        this includes all unique values of a probability density estimate, but
-        it can be a coarser grid for fast approximate tree estimates.
+    density : list [float]
+        Estimate of the density function, evaluated at the data points
+        represented by the keys in `adjacency_list`.
 
-    background_sets: list of lists
-        Specify which points to remove as background at each density level in
-        'levels'.
+    level_grid : list [float], optional
+        Density levels at which connected components are computed. If not
+        specified, this is all unique values of a probability density estimate,
+        but it can be a coarser grid for fast approximate tree estimates. The
+        utility function `define_density_grid` can be used to construct a custom
+        `level_grid`.
 
-    verbose: {False, True}, optional
+    verbose : bool, optional
         If set to True, then prints to the screen a progress indicator every 100
         levels.
 
@@ -1257,11 +1185,17 @@ def construct_tree(adjacency_list, density_levels, background_sets,
         See the LevelSetTree class for attributes and method definitions.
     """
 
+    ## Determine density levels (if not provided) and background sets.
+    if level_grid is None:
+        level_grid = utl.define_density_grid(density, mode='levels',
+                                             num_levels=None)
+
+
     ## Initialize the graph and cluster tree
-    n = len(density_levels)
-    levels = [float(x) for x in density_levels]
+    # num_levels = len(level_grid)
+    # levels = [float(x) for x in density_levels]
     G = nx.from_dict_of_lists(adjacency_list)
-    T = LevelSetTree(background_sets, density_levels)
+    T = LevelSetTree(density, level_grid)
 
 
     ## Figure out roots of the tree
@@ -1275,15 +1209,20 @@ def construct_tree(adjacency_list, density_levels, background_sets,
 
 
     # Loop through the removal grid
-    for i, level in enumerate(density_levels):
+    previous_level = 0.
+    n = float(len(adjacency_list))
+
+    for i, level in enumerate(level_grid):
         if verbose and i % 100 == 0:
             print "iteration", i
 
-        bg = background_sets[i]
+        ## figure out which points to remove, i.e. the background set.
+        bg = np.where((density > previous_level) & (density <= level))[0]
+        previous_level = level
 
         ## compute the mass after the current bg set is removed
         old_vcount = sum([x.number_of_nodes() for x in T.subgraphs.itervalues()])
-        current_mass = 1. - ((old_vcount - len(bg)) / float(n))
+        current_mass = 1. - ((old_vcount - len(bg)) / n)
 
         # loop through active components, i.e. subgraphs
         deactivate_keys = []     # subgraphs to deactivate at the end of the iter
@@ -1300,7 +1239,7 @@ def construct_tree(adjacency_list, density_levels, background_sets,
                 T.nodes[k].end_mass = current_mass
                 deactivate_keys.append(k)
 
-            else:  # subgraph hasn't vanishes
+            else:  # subgraph hasn't vanished
 
                 ## check if subgraph now has multiple connected components
                 # NOTE: this is *the* bottleneck
@@ -1351,8 +1290,8 @@ def load_tree(fname):
 
     ## format inputs
     idnums = indata['idnums'].flatten()
-    levels = list(indata['levels'].flatten())
-    bg_sets = [np.array(x[0].flatten()) for x in indata['bg_sets']]
+    level_grid = list(indata['levels'].flatten())
+    density = list(indata['density'].flatten())
     start_levels = indata['start_levels'].flatten()
     end_levels = indata['end_levels'].flatten()
     start_mass = indata['start_mass'].flatten()

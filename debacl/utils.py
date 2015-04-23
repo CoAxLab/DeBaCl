@@ -38,7 +38,6 @@ except:
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-
 def knn_graph(X, k, method='brute-force', leaf_size=30):
 	"""
 	Compute the symmetric k-nearest neighbor graph for a set of points. Assume
@@ -246,10 +245,70 @@ def knn_density(k_radius, n, p, k):
 
 
 
-
 ##########################################
 ### LEVEL SET TREE CLUSTERING PIPELINE ###
 ##########################################
+
+def define_density_grid(density, mode='mass', num_levels=None):
+    """
+    Create the inputs to level set tree estimation by pruning observations from
+    a density estimate at successively higher levels. This function merely
+    records the density levels and which points will be removed at each level,
+    but it does not do the actual tree construction.
+
+    Parameters
+    ----------
+    density : numpy array
+        Values of a density estimate. The coordinates of the observation are not
+        needed for this function.
+
+    mode : {'mass', 'levels'}, optional
+        If 'mass', the level set tree will be built by removing a constant
+        number of points (mass) at each iteration. If 'levels', the density
+        levels are evenly spaced between 0 and the maximum density estimate
+        value. If 'num_levels' is 'None', the 'mass' option removes 1 point at a
+        time and the 'levels' option iterates through unique values of the
+        'density' array.
+
+    num_levels : int, optional
+        Number of density levels at which to construct the level set tree.
+        This is essentially the resolution of a level set tree built for the
+        'density' array.
+
+    Returns
+    -------
+    levels : numpy array
+        Grid of density levels that will define the iterations in level set tree
+        construction.
+    """
+
+    n = len(density)
+
+    if mode == 'mass':  # remove blocks of points of uniform mass
+        pt_order = np.argsort(density)
+
+        if num_levels is None:
+            levels = density[pt_order]
+        else:
+            bin_size = n / num_levels  # this should be only the integer part
+            background_sets = [pt_order[i:(i + bin_size)]
+                for i in range(0, n, bin_size)]
+            levels = [max(density[x]) for x in background_sets]
+
+    elif mode == 'levels':  # remove points at evenly spaced density levels
+        uniq_dens = np.unique(density)
+        uniq_dens.sort()
+
+        if num_levels is None:
+            levels = uniq_dens
+        else:
+            grid = np.linspace(0., np.max(uniq_dens), num_levels)
+            levels = grid.copy()
+
+    else:
+        raise ValueError("Sorry, that's not a valid mode.")
+
+    return levels
 
 def assign_background_points(X, clusters, method=None, k=1):
 	"""

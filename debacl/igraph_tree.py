@@ -20,7 +20,7 @@ try:
 	import igraph as igr
 except:
 	print "igraph failed to load. The igraph-based tree " + \
-		"construction requires the igraph package.")
+		"construction requires the igraph package."
 
 
 def construct_tree(adjacency_list, density_levels, background_sets,
