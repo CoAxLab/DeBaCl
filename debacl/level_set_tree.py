@@ -81,7 +81,7 @@ class LevelSetTree(object):
         The probability density level associated with each element in 'bg_sets'.
     """
 
-    def __init__(self, density, level_grid):
+    def __init__(self, density=[], level_grid=[]):
         self.density = density
         self.level_grid = level_grid
         self.num_levels = 0
@@ -133,7 +133,7 @@ class LevelSetTree(object):
                 raise ValueError("Incorrect arguments for size-merge pruning.")
             else:
                 gamma = kwargs.get('gamma')
-                self.mergeBySize(gamma)
+                self._merge_by_size(gamma)
 
         else:
             print "Pruning method not understood. 'size-merge' is the only " +\
@@ -258,13 +258,13 @@ class LevelSetTree(object):
         ## Do a depth-first search on each root to get segments for each branch
         for i, ix in enumerate(ix_root):
             if form == 'kappa':
-                branch = self.constructMassMap(ix, 0.0, (intervals[i],
+                branch = self._construct_mass_map(ix, 0.0, (intervals[i],
                     intervals[i+1]), width)
             elif form == 'old':
-                branch = self.constructBranchMap(ix, (intervals[i],
+                branch = self._construct_branch_map(ix, (intervals[i],
                     intervals[i+1]), 'lambda', width, sort)
             else:
-                branch = self.constructBranchMap(ix, (intervals[i],
+                branch = self._construct_branch_map(ix, (intervals[i],
                     intervals[i+1]), form, width, sort)
 
             branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
@@ -367,7 +367,7 @@ class LevelSetTree(object):
             for i, ix in enumerate(color_nodes):
                 n_clr = np.alen(palette.colorset)
                 c = palette.colorset[i % n_clr, :]
-                subtree = self.makeSubtree(ix)
+                subtree = self.make_subtree(ix)
 
                 ## set verical colors
                 ix_replace = np.in1d(segmap, subtree.nodes.keys())
@@ -429,7 +429,7 @@ class LevelSetTree(object):
         """
 
         if method == 'all-mode':
-            labels, nodes = self.allModeCluster()
+            labels, nodes = self._all_mode_cluster()
 
         elif method == 'first-k':
             required = set(['k'])
@@ -438,7 +438,7 @@ class LevelSetTree(object):
                 "cluster labeling method.")
             else:
                 k = kwargs.get('k')
-                labels, nodes = self.firstKCluster(k)
+                labels, nodes = self._first_K_cluster(k)
 
         elif method == 'upper-set':
             required = set(['threshold', 'scale'])
@@ -448,7 +448,7 @@ class LevelSetTree(object):
             else:
                 threshold = kwargs.get('threshold')
                 scale = kwargs.get('scale')
-                labels, nodes = self.upperSetCluster(threshold, scale)
+                labels, nodes = self._upper_set_cluster(threshold, scale)
 
         elif method == 'k-level':
             required = set(['k'])
@@ -457,7 +457,7 @@ class LevelSetTree(object):
                 "cluster labeling method.")
             else:
                 k = kwargs.get('k')
-                labels, nodes = self.firstKLevelCluster(k)
+                labels, nodes = self._first_K_level_cluster(k)
 
         else:
             print 'method not understood'
@@ -481,7 +481,7 @@ class LevelSetTree(object):
             A completely indpendent level set tree, with 'ix' as the root node.
         """
 
-        T = GeomTree(bg_sets=[], levels=[])
+        T = LevelSetTree()
         T.nodes[ix] = self.nodes[ix].copy()
         T.nodes[ix].parent = None
         queue = self.nodes[ix].children[:]
@@ -933,7 +933,7 @@ class LevelSetTree(object):
                     interval[0] + child_intervals[j+1] * parent_range)
 
                 ## recurse on the child
-                branch = self.constructBranchMap(child, branch_interval,
+                branch = self._construct_branch_map(child, branch_interval,
                     scale, width, sort)
                 branch_segs, branch_splits, branch_segmap, \
                     branch_splitmap = branch
@@ -1070,13 +1070,13 @@ class LevelSetTree(object):
             for j, child in enumerate(children):
 
                 ## translate local interval to absolute interval
-                branch_interval = (interval[0] + \
-                    child_intervals[j] * parent_range, interval[0] + \
+                branch_interval = (interval[0] +
+                    child_intervals[j] * parent_range, interval[0] +
                     child_intervals[j+1] * parent_range)
 
                 ## recurse on the child
-                branch = self.constructMassMap(child, end_pile, branch_interval,
-                    width_mode)
+                branch = self._construct_mass_map(child, end_pile, 
+                                                  branch_interval, width_mode)
                 branch_segs, branch_splits, branch_segmap, \
                     branch_splitmap = branch
 
