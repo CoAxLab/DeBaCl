@@ -1142,10 +1142,10 @@ def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
 
     Parameters
     ----------
-    adjacency_list : dict [list [int]]
-        Adjacency list of the k-nearest neighbors graph on the data. Each key
-        represents represents one of the 'n' observations, while the values are
-        lists containing the indices of the k-nearest neighbors.
+    adjacency_list : list [list]
+        Adjacency list of the k-nearest neighbors graph on the data. Each entry
+        contains the indices of the `k` closest neighbors to the data point at
+        the same row index.
 
     density : list [float]
         Estimate of the density function, evaluated at the data points
@@ -1177,7 +1177,7 @@ def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
     ## Initialize the graph and cluster tree
     # num_levels = len(level_grid)
     # levels = [float(x) for x in density_levels]
-    G = nx.from_dict_of_lists(adjacency_list)
+    G = nx.from_dict_of_lists({i: neighbors for i, neighbors in enumerate(adjacency_list)})
     T = LevelSetTree(density, level_grid)
 
 
