@@ -1033,7 +1033,7 @@ class LevelSetTree(object):
         ## if there's no children, just one segment at the interval mean
         if n_child == 0:
             xpos = np.mean(interval)
-            end_pile = start_pile + size/self.n
+            end_pile = start_pile + size/len(self.density)
             segments = {}
             segmap = [ix]
             splits = {}
@@ -1064,7 +1064,7 @@ class LevelSetTree(object):
 
 
             ## find height of the branch
-            end_pile = start_pile + (size - sum(census))/self.n
+            end_pile = start_pile + (size - sum(census))/len(self.density)
 
             ## loop over the children
             for j, child in enumerate(children):
@@ -1123,7 +1123,7 @@ class LevelSetTree(object):
         """
 
         n_bg = [len(bg_set) for bg_set in self.bg_sets]
-        masses = np.cumsum(n_bg) / (1.0 * self.n)
+        masses = np.cumsum(n_bg) / (1.0 * len(self.density))
         cut_level = self.levels[np.where(masses > alpha)[0][0]]
 
         return cut_level
