@@ -1134,7 +1134,8 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
+def construct_tree(adjacency_list, density, level_grid=None, 
+                   prune_threshold=None, verbose=False):
     """
     Construct a level set tree. A level set tree is constructed by identifying
     connected components of in a k-nearest neighbors graph at successively
@@ -1157,6 +1158,11 @@ def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
         but it can be a coarser grid for fast approximate tree estimates. The
         utility function `define_density_grid` can be used to construct a custom
         `level_grid`.
+
+    prune_threshold : int, optional
+        Leaf nodes with fewer than this number of members are recursively merged
+        into larger siblings. If 'None' (the default), then no pruning is
+        performed.
 
     verbose : bool, optional
         If set to True, then prints to the screen a progress indicator every 100
@@ -1251,6 +1257,10 @@ def construct_tree(adjacency_list, density, level_grid=None, verbose=False):
             del T.subgraphs[k]
 
         T.subgraphs.update(activate_subgraphs)
+
+    ## Prune the tree
+    if prune_threshold is not None:
+        T.prune(gamma=prune_threshold)
 
     return T
 
