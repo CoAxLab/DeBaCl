@@ -493,6 +493,32 @@ class LevelSetTree(object):
 
         return T
 
+    def get_signature(self, form='kappa'):
+        """
+        Compute the point-mass signature of the tree, as a precursor to paint
+        mover distance.
+
+        Parameters
+        ----------
+        form : {'kappa', 'lambda', 'alpha', 'old'}
+            Form of level set tree plot. See `plot` for more information.
+        """
+        seglist = self.plot(form=form, width='mean')[1]
+
+        idx = []
+        mass = []
+
+        for key, seg in seglist.items():
+            idx.append((seg[0][0], (seg[0][1] + seg[1][1]) / 2.))
+
+            total_mass = len(self.nodes[key].members)
+            child_mass = [len(self.nodes[x].members) 
+                for x in self.nodes[key].children]
+            mass.append((float(total_mass) - np.sum(child_mass))/ len(self.density))
+
+        plt.close('all')
+        return idx, mass
+
     def _merge_by_size(self, threshold):
         """
         Prune splits from a tree based on size of child nodes. Merge members of
