@@ -11,6 +11,7 @@ analysis and clustering with level set trees.
 
 import cPickle
 import utils as utl  # DeBaCl utils
+import plot_utils as dbc_plot
 
 try:
     import numpy as np
@@ -362,7 +363,7 @@ class LevelSetTree(object):
         segclr = np.array([[0.0, 0.0, 0.0]] * len(segmap))
         splitclr = np.array([[0.0, 0.0, 0.0]] * len(splitmap))
 
-        palette = utl.Palette()
+        palette = dbc_plot.Palette()
         if color_nodes is not None:
             for i, ix in enumerate(color_nodes):
                 n_clr = np.alen(palette.colorset)
@@ -1394,7 +1395,7 @@ class ComponentGUI(object):
         self.subtree = self.T.makeSubtree(self.node_ix)
 
         ## recolor the original tree
-        palette = utl.Palette(use='scatter')
+        palette = dbc_plot.Palette(use='scatter')
         segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
         splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
@@ -1566,7 +1567,7 @@ class ClusterGUI(object):
             scale=self.form)
 
         # reset vertical segment colors
-        palette = utl.Palette(use='scatter')
+        palette = dbc_plot.Palette(use='scatter')
         segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
         splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
