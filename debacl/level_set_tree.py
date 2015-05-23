@@ -541,7 +541,7 @@ class LevelSetTree(object):
             if v.parent==None and len(v.members) <= threshold]
 
         for root in small_roots:
-            root_tree = self.makeSubtree(root)
+            root_tree = self.make_subtree(root)
             for ix in root_tree.nodes.iterkeys():
                 del self.nodes[ix]
 
@@ -800,7 +800,7 @@ class LevelSetTree(object):
         """
 
         for ix in active_nodes:
-            subtree = self.makeSubtree(ix)
+            subtree = self.make_subtree(ix)
 
             max_end_level = max([v.end_level for v in subtree.nodes.values()])
             max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
@@ -1392,7 +1392,7 @@ class ComponentGUI(object):
         ix_seg = event.ind[0]
         self.node_ix = self.segmap[ix_seg]
         self.component = self.T.nodes[self.node_ix].members
-        self.subtree = self.T.makeSubtree(self.node_ix)
+        self.subtree = self.T.make_subtree(self.node_ix)
 
         ## recolor the original tree
         palette = dbc_plot.Palette(use='scatter')
@@ -1572,7 +1572,7 @@ class ClusterGUI(object):
         splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
 
         for i, node_ix in enumerate(active_nodes):
-            subtree = self.T.makeSubtree(node_ix)
+            subtree = self.T.make_subtree(node_ix)
 
             # set new segment colors
             seg_replace = np.in1d(self.segmap, subtree.nodes.keys())
