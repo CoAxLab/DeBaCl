@@ -12,7 +12,8 @@ except:
 ### Orchard plots
 ### -------------
 
-def plot_orchard(orchard, color=(0.596, 0.306, 0.639), opacity=0.7):
+def plot_orchard(orchard, color=(0.596, 0.306, 0.639), opacity=0.7, 
+                 width='mass'):
     """
     Plot a collection of level set trees on the same canvas. For now, only draws
     the 'alpha' form of the trees.
@@ -27,6 +28,10 @@ def plot_orchard(orchard, color=(0.596, 0.306, 0.639), opacity=0.7):
 
     opacity : Opacity of the trees. Setting this to be less than 1 can alleviate
         some overplotting effects.
+
+    width : {'uniform', 'mass'}, optional
+        Procedure for assigning horizontal white space for each branch. `See
+        LevelSetTree.plot` for more detail.
 
     Returns
     -------
@@ -74,7 +79,7 @@ def plot_orchard(orchard, color=(0.596, 0.306, 0.639), opacity=0.7):
 
         for i, ix in enumerate(ix_root):
             branch = tree._construct_branch_map(ix, (silos[i],
-                silos[i+1]), scale='alpha', width='mean', sort=True)
+                silos[i+1]), scale='alpha', width=width, sort=True)
 
             branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
             segments = dict(segments.items() + branch_segs.items())

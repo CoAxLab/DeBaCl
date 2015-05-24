@@ -948,8 +948,13 @@ class LevelSetTree(object):
             if width == 'mass':
                 child_intervals = np.cumsum(weights)
                 child_intervals = np.insert(child_intervals, 0, 0.0)
-            else:
+
+            elif width == 'uniform':
                 child_intervals = np.linspace(0.0, 1.0, n_child+1)
+                
+            else:
+                raise ValueError("'width' argument not understood. 'width' " +
+                                 "must be either 'mass' or 'uniform'.")
 
             ## loop over the children
             for j, child in enumerate(children):
