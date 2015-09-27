@@ -30,7 +30,7 @@ class TestDensityEstimates(unittest.TestCase):
 		self.assertEqual(self.fhat, fhat)
 
 
-class TestNeighborGraphs(unittest.TestCase):
+class TestSimilarityGraphs(unittest.TestCase):
 	"""
 	Unit test class for neighbor graphs.
 	"""
@@ -91,3 +91,46 @@ class TestNeighborGraphs(unittest.TestCase):
 
 		for e, ans in zip(edge_list, self.edge_list):
 			self.assertTupleEqual(e, ans)
+
+
+class TestBackgroundAssignments(unittest.TestCase):
+	"""
+	"""
+
+	def setUp(self):
+		pass
+
+	def test_zero_method(self):
+		"""
+		"""
+		pass
+
+	def test_k_plus_one(self):
+		"""
+		"""
+		pass
+
+	def test_knn_classifier(self):
+		"""
+		"""
+		pass
+
+	def test_nearest_center(self):
+		"""
+		"""
+		pass
+
+
+class TestDensityGrid(unittest.TestCase):
+	"""
+	"""
+
+	def setUp(self):
+		"""
+		"""
+		pass
+
+	def test_density_grid(self):
+		"""
+		"""
+		pass
