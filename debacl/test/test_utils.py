@@ -1,10 +1,3 @@
-#####################################
-## Brian P. Kent
-## test_utils.py
-## created: 20140529
-## updated: 20140712
-## Test the DeBaCl utility functions.
-#####################################
 
 import unittest
 import numpy as np
@@ -14,7 +7,6 @@ import sys
 from debacl import utils as utl
 
 
-
 class TestDensityEstimates(unittest.TestCase):
 	"""
 	Unit test class for density estimate functions in DeBaCl utilities.
@@ -22,7 +14,7 @@ class TestDensityEstimates(unittest.TestCase):
 
 	def setUp(self):
 
-		# Input parameters 
+		# Input parameters
 		self.r_k = 1.
 		self.n = 100
 		self.p = 2
@@ -44,7 +36,7 @@ class TestNeighborGraphs(unittest.TestCase):
 	"""
 
 	def setUp(self):
-		
+
 		## Make data
 		n = 5
 		self.X = np.arange(5).reshape((n, 1))
@@ -77,7 +69,7 @@ class TestNeighborGraphs(unittest.TestCase):
 		"""
 		knn, r_k = utl.knn_graph(self.X, k=self.k, method='brute-force')
 		np.testing.assert_array_equal(r_k, self.r_k)
-		
+
 		for idx, neighbors in knn.iteritems():
 			self.assertSetEqual(self.knn[idx], set(neighbors))
 
