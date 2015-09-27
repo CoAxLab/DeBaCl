@@ -1,15 +1,3 @@
-############################################
-## Brian P. Kent
-## debacl_utils.py
-## Created: 20120718
-## Updated: 20140708
-## A library of helper functions for the DEnsity-BAsed CLustering (DeBaCl)
-## package.
-###########################################
-
-##############
-### SET UP ###
-##############
 """
 General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 """

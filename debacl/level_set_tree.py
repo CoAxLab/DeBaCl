@@ -1,7 +1,3 @@
-
-##############
-### SET UP ###
-##############
 """
 Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 Includes functions to construct and modify level set trees produced by standard
@@ -10,8 +6,7 @@ analysis and clustering with level set trees.
 """
 
 import cPickle
-import utils as utl  # DeBaCl utils
-import plot_utils as dbc_plot
+import utils as utl
 
 try:
     import numpy as np
@@ -25,14 +20,11 @@ try:
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
     from matplotlib.widgets import Button
+    _HAS_MPL = True
 except:
+    _HAS_MPL = False
     print "Matplotlib could not be loaded, so level set tree plots will fail."
 
-
-
-#####################
-### BASIC CLASSES ###
-#####################
 
 class ConnectedComponent(object):
     """
@@ -513,7 +505,7 @@ class LevelSetTree(object):
             idx.append((seg[0][0], (seg[0][1] + seg[1][1]) / 2.))
 
             total_mass = len(self.nodes[key].members)
-            child_mass = [len(self.nodes[x].members) 
+            child_mass = [len(self.nodes[x].members)
                 for x in self.nodes[key].children]
             mass.append((float(total_mass) - np.sum(child_mass))/ len(self.density))
 
@@ -786,7 +778,7 @@ class LevelSetTree(object):
         labels = np.array([points, cluster], dtype=np.int).T
         return labels, nodes
 
-    def _collapse_eaves(self, active_nodes):
+    def _collapse_leaves(self, active_nodes):
         """
         Removes descendent nodes for the branches in 'active_nodes'.
 
@@ -1102,7 +1094,7 @@ class LevelSetTree(object):
                     child_intervals[j+1] * parent_range)
 
                 ## recurse on the child
-                branch = self._construct_mass_map(child, end_pile, 
+                branch = self._construct_mass_map(child, end_pile,
                                                   branch_interval, width_mode)
                 branch_segs, branch_splits, branch_segmap, \
                     branch_splitmap = branch
@@ -1161,7 +1153,7 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def construct_tree(adjacency_list, density, level_grid=None, 
+def construct_tree(adjacency_list, density, level_grid=None,
                    prune_threshold=None, verbose=False):
     """
     Construct a level set tree. A level set tree is constructed by identifying
@@ -1309,320 +1301,3 @@ def load_tree(filename):
         T = cPickle.load(f)
 
     return T
-
-
-
-##################################################
-### INTERACTIVE LEVEL SET TREE ANALYLSIS TOOLS ###
-##################################################
-
-class ComponentGUI(object):
-    """
-    Allow the user to interactively select level set tree nodes for tree
-    coloring, subsetting, and scatter plots.
-
-    Parameters
-    ----------
-    tree : GeomTree
-
-    X : 2D numpy array
-        Original data matrix. Rows are observations. Must have 3 or fewer
-        columns if the 'output' list includes 'scatter'.
-
-    output : list of strings, optional
-        If the list includes 'tree', selecting a LST node will plot the subtree
-        with the selected node as the root. If output includes 'scatter' and the
-        data has 3 or fewer dimensions, selecting a tree node produces a scatter
-        plot showing the members of the selected node.
-
-    form : string
-        Type of level set tree plot. Must be 'lambda' or 'alpha' for this GUI
-        tool. See GeomTree.plot for more detail.
-
-    f : 2D numpy array, optional
-        Any function. Arguments in the first column and values in the second.
-        Plotted independently of the data as a blue curve, so does not need to
-        have the same number of rows as values in 'x'. Typically this is the
-        generating probability density function for a 1D simulation.
-
-    fhat : list of floats, optional
-        Density estimate values for the data in 'pts'. Plotted as a black curve,
-        with points colored according to the selected component.
-
-    keyword arguments are passed to the GeomTree.plot method.
-    """
-
-    def __init__(self, tree, X, form, f=None, fhat=None, output=['scatter'],
-        size=30, **kwargs):
-
-        self.T = tree
-        self.X = X
-        self.form = form
-        self.output = output
-        self.f = f
-        self.fhat = fhat
-        self.size = size
-        self.fig, self.segments, self.segmap, self.splits, \
-            self.splitmap = self.T.plot(self.form, gap=0.13, **kwargs)
-
-        self.ax = self.fig.axes[0]
-        segments = self.ax.collections[0]  # the line collection
-
-        tooltip_string = "node:" + "\t" +\
-            r"$\lambda_1$:" + "\t" +\
-            r"$\lambda_2$:" + "\t" +\
-            "\n" + "mass:" + "\t" +\
-            r"$\alpha_1$:" + "\t" +\
-            r"$\alpha_2$:" + "\t"
-        self.tooltip = self.ax.text(0.5, 0.02, tooltip_string,
-            bbox=dict(fc='yellow', alpha=0.2, boxstyle='round,pad=0.3'),
-            transform=self.ax.transAxes, horizontalalignment='center',
-            verticalalignment='bottom', fontsize=16)
-
-        segments.set_picker(15)
-        self.ax.set_zorder(0.1)  # sets the first axes to have picker priority
-        self.fig.canvas.mpl_connect('pick_event', self.handle_pick)
-
-    def handle_pick(self, event):
-        """
-        Return the members of the component that is picked out.
-        """
-
-        ## get the component members and subtree
-        ix_seg = event.ind[0]
-        self.node_ix = self.segmap[ix_seg]
-        self.component = self.T.nodes[self.node_ix].members
-        self.subtree = self.T.makeSubtree(self.node_ix)
-
-        ## recolor the original tree
-        palette = dbc_plot.Palette(use='scatter')
-        segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
-        splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
-
-        # set new segment colors
-        ix_replace = np.in1d(self.segmap, self.subtree.nodes.keys())
-        segclr[ix_replace] = palette.colorset[0, :]
-
-        ix_replace = np.in1d(self.splitmap, self.subtree.nodes.keys())
-        splitclr[ix_replace] = palette.colorset[0, :]
-
-        self.ax.collections[0].set_color(segclr)
-        self.ax.collections[1].set_color(splitclr)
-
-        # rewrite text in the tooltip
-        names = ("node", r"$\lambda_1$", r"$\lambda_2$", "\nmass",
-            r"$\alpha_1$", r"$\alpha_2$")
-        values = (self.node_ix, round(self.T.nodes[self.node_ix].start_level, 2),
-            round(self.T.nodes[self.node_ix].end_level, 2),
-            round(len(self.component) * 1.0 / self.T.n, 2),
-            round(self.T.nodes[self.node_ix].start_mass, 2),
-            round(self.T.nodes[self.node_ix].end_mass, 2))
-        pad = [5] + [8] * 4 + [4]
-        tooltip_string = ""
-
-        for name, val, p in zip(names, values, pad):
-            tooltip_string += '{}: {:<{fill}}'.format(name, val, fill=p)
-        self.tooltip.set_text(tooltip_string)
-
-        self.fig.canvas.draw()
-
-
-        # plot the component points in a new window
-        if 'scatter' in self.output:
-
-            # determine the data dimension
-            if len(self.X.shape) == 1:
-                n = len(self.X)
-                p = 1
-            else:
-                n, p = self.X.shape
-
-            if p == 1:
-                uc = np.vstack((self.component, np.zeros((len(self.component),),
-                    dtype=np.int))).T
-                fig = utl.clusterHistogram(self.X, uc, self.fhat, self.f)
-                fig.show()
-
-            elif p == 2 or p == 3:
-                uc = np.vstack((self.component, np.zeros((len(self.component),),
-                    dtype=np.int))).T
-
-                fig, ax = utl.plotForeground(self.X, uc, bg_alpha=0.72,
-                    fg_alpha=0.68, edge_alpha=0.68, s=self.size)
-                fig.show()
-
-            else:
-                print "Sorry, your data has too many dimensions to plot."
-
-
-        # construct the new subtree and show it
-        if 'tree' in self.output:
-            subfig = self.subtree.plot(self.form)[0]
-            subfig.show()
-
-    def show(self):
-        """
-        Show the instantiated GUI window (i.e. the interactive
-        LevelSetTree plot).
-        """
-        self.fig.show()
-
-    def get_component(self):
-        """
-        Return the members of the currently selected level set tree node.
-        """
-        return self.component
-
-    def get_subtree(self):
-        """
-        Return the subtree with the currently selected node as root.
-        """
-        return self.subtree
-
-    def get_index(self):
-        """
-        Return the index of the currently selected tree node.
-        """
-        return self.node_ix
-
-
-class ClusterGUI(object):
-    """
-    Allow the user to interactively select level or mass values in a level set
-    tree and to see the clusters at that level.
-
-    Parameters
-    ----------
-    tree : LevelSetTree
-
-    X : 2D numpy array
-        Original data matrix. Rows are observations.
-
-    form : string
-        Type of level set tree plot. Must be 'lambda' or 'alpha' for this GUI
-        tool. See GeomTree.plot for more detail.
-
-    output : list of strings, optional
-        If output includes 'scatter' and the data has 3 or fewer dimensions,
-        selecting a tree node produces a scatter plot showing the members of the
-        selected node.
-
-    size : int, optional
-        If 'output' includes 'scatter', the size of the points in the
-        scatterplot.
-
-    f : 2D numpy array, optional
-        Any function. Arguments in the first column and values in the second.
-        Plotted independently of the data as a blue curve, so does not need to
-        have the same number of rows as values in 'x'. Typically this is the
-        generating probability density function for a 1D simulation.
-
-    fhat : list of floats, optional
-        Density estimate values for the data in 'pts'. Plotted as a black curve,
-        with points colored according to the selected component.
-
-    keyword arguments are passed to the GeomTree.plot method.
-    """
-
-    def __init__(self, tree, X, form, output=['scatter'], size=30, f=None,
-        fhat=None, **kwargs):
-
-        self.T = tree
-        self.X = X
-        self.output = output
-        self.size = size
-        self.f = f
-        self.fhat = fhat
-        self.clusters = None
-
-        if form == 'kappa':
-            print "Sorry, the upper level set selection process doesn't "+\
-                "work with the kappa tree. Showing the alpha tree instead."
-            form = 'alpha'
-
-        self.form = form
-
-        self.fig, self.segments, self.segmap, self.splits, \
-            self.splitmap = self.T.plot(self.form, **kwargs)
-        self.ax = self.fig.axes[0]
-        self.ax.set_zorder(0.1)  # sets the first axes to have priority for picking
-        self.line = self.ax.axhline(y=0, color='blue', linewidth=1.0)
-        self.fig.canvas.mpl_connect('button_press_event', self.handle_click)
-
-    def handle_click(self, event):
-        """
-        Deals with a user click on the interactive plot.
-        """
-
-        ## redraw line at the new click point
-        self.line.set_ydata([event.ydata, event.ydata])
-
-        ## reset color of all line segments to be black
-        self.ax.collections[0].set_color('black')
-        self.ax.collections[1].set_color('black')
-
-        ## get the clusters and the clusters attribute
-        cut = self.line.get_ydata()[0]
-        self.clusters, active_nodes = self.T.upperSetCluster(cut,
-            scale=self.form)
-
-        # reset vertical segment colors
-        palette = dbc_plot.Palette(use='scatter')
-        segclr = np.array([[0.0, 0.0, 0.0]] * len(self.segmap))
-        splitclr = np.array([[0.0, 0.0, 0.0]] * len(self.splitmap))
-
-        for i, node_ix in enumerate(active_nodes):
-            subtree = self.T.makeSubtree(node_ix)
-
-            # set new segment colors
-            seg_replace = np.in1d(self.segmap, subtree.nodes.keys())
-            segclr[seg_replace] = palette.colorset[i, :]
-
-            split_replace = np.in1d(self.splitmap, subtree.nodes.keys())
-            splitclr[split_replace] = palette.colorset[i, :]
-
-        self.ax.collections[0].set_color(segclr)
-        self.ax.collections[1].set_color(splitclr)
-        self.fig.canvas.draw()
-
-
-        ## plot the clustered points in a new window
-        if 'scatter' in self.output:
-
-            # determine the data dimension
-            if len(self.X.shape) == 1:
-                n = len(self.X)
-                p = 1
-            else:
-                n, p = self.X.shape
-
-            if p == 1:
-                if self.form == 'alpha':
-                    cut_level = self.T.massToLevel(cut)
-                else:
-                    cut_level = cut
-
-                fig = utl.clusterHistogram(self.X, self.clusters,
-                    self.fhat, self.f, levels=[cut_level])
-                fig.show()
-
-            elif p == 2 or p == 3:
-                fig, ax = utl.plotForeground(self.X, self.clusters,
-                    bg_alpha=0.72, fg_alpha=0.68, edge_alpha=0.68, s=self.size)
-                fig.show()
-
-    def show(self):
-        """
-        Show the interactive plot canvas.
-        """
-        self.fig.show()
-
-    def get_clusters(self):
-        """
-        Return the cluster memberships for the currently selected level or mass
-        value.
-        """
-        return self.clusters
-
-
-
