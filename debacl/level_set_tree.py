@@ -507,7 +507,7 @@ class LevelSetTree(object):
             if v.parent==None and len(v.members) <= threshold]
 
         for root in small_roots:
-            root_tree = self.makeSubtree(root)
+            root_tree = self.make_subtree(root)
             for ix in root_tree.nodes.iterkeys():
                 del self.nodes[ix]
 
@@ -766,7 +766,7 @@ class LevelSetTree(object):
         """
 
         for ix in active_nodes:
-            subtree = self.makeSubtree(ix)
+            subtree = self.make_subtree(ix)
 
             max_end_level = max([v.end_level for v in subtree.nodes.values()])
             max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
@@ -914,8 +914,13 @@ class LevelSetTree(object):
             if width == 'mass':
                 child_intervals = np.cumsum(weights)
                 child_intervals = np.insert(child_intervals, 0, 0.0)
-            else:
+
+            elif width == 'uniform':
                 child_intervals = np.linspace(0.0, 1.0, n_child+1)
+
+            else:
+                raise ValueError("'width' argument not understood. 'width' " +
+                                 "must be either 'mass' or 'uniform'.")
 
             ## loop over the children
             for j, child in enumerate(children):
