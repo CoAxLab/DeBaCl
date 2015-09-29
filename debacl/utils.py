@@ -26,7 +26,7 @@ except:
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-def knn_graph(X, k, method='brute-force', leaf_size=30):
+def knn_graph(X, k, method='brute_force', leaf_size=30):
 	"""
 	Compute the symmetric k-nearest neighbor graph for a set of points. Assume
 	Euclidean distance metric.
@@ -76,7 +76,7 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 
 	n, p = X.shape
 
-	if method == 'kd-tree':
+	if method == 'kd_tree':
 		if _HAS_SKLEARN:
 			kdtree = sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
 			distances, idx_neighbors = kdtree.query(X, k=k,
@@ -86,7 +86,7 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 			raise ImportError("The scikit-learn library could not be loaded." + \
 				" It is required for the 'kd-tree' method.")
 
-	if method == 'ball-tree':
+	elif method == 'ball_tree':
 		if _HAS_SKLEARN:
 			btree = sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
 			distances, idx_neighbors = btree.query(X, k=k,
@@ -96,14 +96,19 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 			raise ImportError("The scikit-learn library could not be loaded." +\
 				" It is required for the 'ball-tree' method.")
 
-	else:  # assume brute-force
-		d = spd.pdist(X, metric='euclidean')
-		D = spd.squareform(d)
-		rank = np.argsort(D, axis=1)
-		idx_neighbors = rank[:, 0:k]
+    elif method == 'brute_force':
+        d = spd.pdist(X, metric='euclidean')
+        D = spd.squareform(d)
+        rank = np.argsort(D, axis=1)
+        idx_neighbors = rank[:, 0:k]
 
-		k_nbr = idx_neighbors[:, -1]
-		k_radius = D[np.arange(n), k_nbr]
+        k_nbr = idx_neighbors[:, -1]
+        k_radius = D[np.arange(n), k_nbr]
+
+	else:  # assume brute-force
+        raise ValueError("The knn graph construction method could not be " +
+                         "understood. Options are 'kd_tree', 'ball_tree', " +
+                         "and 'brute_force'.")
 
 	return idx_neighbors, k_radius
 

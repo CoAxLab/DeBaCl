@@ -5,6 +5,11 @@ geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
 """
 
+## TODO
+# - Examples, notes, and references in the constructor functions.
+# - Change level grid to 'num_levels' in the graph constructor.
+# - Spell check the docstrings.
+
 import cPickle
 import utils as utl
 
@@ -1132,12 +1137,65 @@ class LevelSetTree(object):
 ### LEVEL SET TREE CONSTRUCTION FUNCTIONS ###
 #############################################
 
-def construct_tree(adjacency_list, density, level_grid=None,
-                   prune_threshold=None, verbose=False):
+def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
     """
-    Construct a level set tree. A level set tree is constructed by identifying
-    connected components of in a k-nearest neighbors graph at successively
-    higher levels of a probability density estimate.
+    Construct a level set tree from tabular data.
+
+    Parameters
+    ----------
+    X : 2-dimensional numpy array
+        Numeric dataset, where each row represents one observation.
+
+    k : int
+        Number of observations to consider as neighbors to a given point.
+
+    prune_threshold : int, optional
+        Leaf nodes with fewer than this number of members are recursively
+        merged into larger nodes. If 'None' (the default), then no pruning
+        is performed.
+
+    num_levels : int, optional
+        Number of density levels in the constructed tree. If None (default),
+        `num_levels` is internally set to be the number of rows in `X`.
+
+    verbose : bool, optional
+        If True, a progress indicator is printed at every 100th level of tree
+        construction.
+
+    Returns
+    -------
+    T : LevelSetTree
+        A pruned level set tree.
+
+    Notes
+    -----
+
+    See Also
+    --------
+
+    Examples
+    --------
+    """
+
+    sim_graph, radii = utl.knn_graph(X, k, method='brute_force')
+
+    n, p = X.shape
+    density = utl.knn_density(radii, n, p, k)
+
+    tree = construct_tree_from_graph(adjacency_list=sim_graph, density=density,
+                                     prune_threshold=prune_threshold,
+                                     num_levels=num_levels, verbose=verbose)
+
+    tree.prune(method='size-merge', gamma=gamma)
+
+    return T
+
+
+def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
+                              num_levels=None, verbose=False):
+    """
+    Construct a level set tree from a similarity graph (in adjacency list form)
+    and a density estimate.
 
     Parameters
     ----------
@@ -1150,21 +1208,18 @@ def construct_tree(adjacency_list, density, level_grid=None,
         Estimate of the density function, evaluated at the data points
         represented by the keys in `adjacency_list`.
 
-    level_grid : list [float], optional
-        Density levels at which connected components are computed. If not
-        specified, this is all unique values of a probability density estimate,
-        but it can be a coarser grid for fast approximate tree estimates. The
-        utility function `define_density_grid` can be used to construct a custom
-        `level_grid`.
-
     prune_threshold : int, optional
-        Leaf nodes with fewer than this number of members are recursively merged
-        into larger siblings. If 'None' (the default), then no pruning is
-        performed.
+        Leaf nodes with fewer than this number of members are recursively
+        merged into larger nodes. If 'None' (the default), then no pruning
+        is performed.
+
+    num_levels : list int, optional
+        Number of density levels in the constructed tree. If None (default),
+        `num_levels` is internally set to be the number of rows in `X`.
 
     verbose : bool, optional
-        If set to True, then prints to the screen a progress indicator every 100
-        levels.
+        If True, a progress indicator is printed at every 100th level of tree
+        construction.
 
     Returns
     -------
@@ -1172,16 +1227,13 @@ def construct_tree(adjacency_list, density, level_grid=None,
         See the LevelSetTree class for attributes and method definitions.
     """
 
-    ## Determine density levels (if not provided) and background sets.
-    if level_grid is None:
-        level_grid = utl.define_density_grid(density, mode='levels',
-                                             num_levels=None)
-
-
     ## Initialize the graph and cluster tree
-    # num_levels = len(level_grid)
-    # levels = [float(x) for x in density_levels]
-    G = nx.from_dict_of_lists({i: neighbors for i, neighbors in enumerate(adjacency_list)})
+    levels = utl.define_density_grid(density, mode='mass',
+                                     num_levels=num_levels)
+
+    G = nx.from_dict_of_lists(
+      {i: neighbors for i, neighbors in enumerate(adjacency_list)})
+
     T = LevelSetTree(density, level_grid)
 
 
