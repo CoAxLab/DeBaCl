@@ -7,8 +7,12 @@ analysis and clustering with level set trees.
 
 ## TODO
 # - Examples, notes, and references in the constructor functions.
-# - Change level grid to 'num_levels' in the graph constructor.
 # - Spell check the docstrings.
+# - Make compatible with Python 3.
+# - Think about importing key functions into the top level debacl namespace.
+# - 'get_cluster_labels' documentation should indicate the keyword params
+#   separately.
+# - Error trapping for scipy import in the utils module.
 
 import cPickle
 import utils as utl
@@ -154,24 +158,22 @@ class LevelSetTree(object):
         with open(filename, 'wb') as f:
             cPickle.dump(self, f, cPickle.HIGHEST_PROTOCOL)
 
-    def plot(self, form, width='uniform', sort=True, gap=0.05, color_nodes=None):
+    def plot(self, form, width='uniform', sort=True, color_nodes=None):
         """
-        Create a level set tree plot in Matplotlib.
+        Plot the level set tree, or return plot objects that can be modified.
 
         Parameters
         ----------
-        form : {'lambda', 'alpha', 'kappa', 'old'}
+        form : {'lambda', 'alpha', 'kappa'}
             Determines main form of the plot. 'lambda' is the traditional plot
             where the vertical scale is density levels, but plot improvements
             such as mass sorting of the nodes and colored nodes are allowed and
             the secondary 'alpha' scale is visible (but not controlling). The
-            'old' form uses density levels for vertical scale but does not allow
-            plot tweaks and does not show the secondary 'alpha' scale. The
-            'alpha' setting makes the uppper level set mass the primary vertical
-            scale, leaving the 'lambda' scale in place for reference. 'kappa'
-            makes node mass the vertical scale, so that each node's vertical
-            height is proportional to its mass excluding the mass of the node's
-            children.
+            'alpha' setting makes the uppper level set mass the primary
+            vertical scale, leaving the 'lambda' scale in place for reference.
+            'kappa' makes node mass the vertical scale, so that each node's
+            vertical height is proportional to its mass excluding the mass of
+            the node's children.
 
         width : {'uniform', 'mass'}, optional
             Determines how much horzontal space each level set tree node is
@@ -183,11 +185,6 @@ class LevelSetTree(object):
         sort : bool, optional
             If True, sort sibling nodes from most to least points and draw left
             to right. Also sorts root nodes in the same way.
-
-        gap : float, optional
-            Fraction of vertical space to leave at the bottom. Default is 5%,
-            and 0% also works well. Higher values are used for interactive tools
-            to make room for buttons and messages.
 
         color_nodes : list, optional
             Each entry should be a valid index in the level set tree that will
@@ -218,12 +215,7 @@ class LevelSetTree(object):
             tools.
         """
 
-        ## Validate input
-        if form == 'old':
-            sort = False
-            color_nodes = None
-            width = 'uniform'
-
+        gap = 0.05
 
         ## Initialize the plot containers
         segments = {}
@@ -258,9 +250,6 @@ class LevelSetTree(object):
             if form == 'kappa':
                 branch = self._construct_mass_map(ix, 0.0, (intervals[i],
                     intervals[i+1]), width)
-            elif form == 'old':
-                branch = self._construct_branch_map(ix, (intervals[i],
-                    intervals[i+1]), 'lambda', width, sort)
             else:
                 branch = self._construct_branch_map(ix, (intervals[i],
                     intervals[i+1]), form, width, sort)
@@ -304,13 +293,6 @@ class LevelSetTree(object):
             kappa_max = max(primary_ticks)
             ax.set_ylim((-1.0 * gap * kappa_max, 1.04*kappa_max))
             ax.set_ylabel("mass")
-
-        elif form == 'old':
-            ax.set_ylabel("lambda")
-            ymin = min([v.start_level for v in self.nodes.itervalues()])
-            ymax = max([v.end_level for v in self.nodes.itervalues()])
-            rng = ymax - ymin
-            ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
 
         elif form == 'lambda':
             ax.set_ylabel("lambda")
@@ -1189,7 +1171,6 @@ def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
     tree.prune(method='size-merge', gamma=gamma)
 
     return T
-
 
 def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
                               num_levels=None, verbose=False):
