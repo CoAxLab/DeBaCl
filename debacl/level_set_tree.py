@@ -83,9 +83,9 @@ class LevelSetTree(object):
         The probability density level associated with each element in 'bg_sets'.
     """
 
-    def __init__(self, density=[], level_grid=[]):
+    def __init__(self, density=[], levels=[]):
         self.density = density
-        self.level_grid = level_grid
+        self.levels = levels
         self.num_levels = 0
         self.nodes = {}
         self.subgraphs = {}
@@ -1168,9 +1168,9 @@ def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
                                      prune_threshold=prune_threshold,
                                      num_levels=num_levels, verbose=verbose)
 
-    tree.prune(method='size-merge', gamma=gamma)
+    tree.prune(method='size-merge', gamma=prune_threshold)
 
-    return T
+    return tree
 
 def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
                               num_levels=None, verbose=False):
@@ -1215,7 +1215,7 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
     G = nx.from_dict_of_lists(
       {i: neighbors for i, neighbors in enumerate(adjacency_list)})
 
-    T = LevelSetTree(density, level_grid)
+    T = LevelSetTree(density, levels)
 
 
     ## Figure out roots of the tree
@@ -1232,7 +1232,7 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
     previous_level = 0.
     n = float(len(adjacency_list))
 
-    for i, level in enumerate(level_grid):
+    for i, level in enumerate(levels):
         if verbose and i % 100 == 0:
             print "iteration", i
 
