@@ -5,8 +5,12 @@ geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
 """
 
+import logging
 import cPickle
 import utils as utl
+
+logging.basicConfig(level=logging.INFO, datefmt='%Y-%m-%d %I:%M:%S',
+                    format='%(levelname)s (%(asctime)s): %(message)s')
 
 try:
     import numpy as np
@@ -23,7 +27,8 @@ try:
     _HAS_MPL = True
 except:
     _HAS_MPL = False
-    print "Matplotlib could not be loaded, so level set tree plots will fail."
+    logging.warning("Matplotlib could not be loaded, so DeBaCl plots will " +
+                    "fail.")
 
 
 class ConnectedComponent(object):
@@ -129,9 +134,9 @@ class LevelSetTree(object):
                 self._merge_by_size(gamma)
 
         else:
-            print "Pruning method not understood. 'size-merge' is the only " +\
-            "pruning method currently implemented. No changes were made to " + \
-            "the tree."
+            raise ValueError("Pruning method not understood. 'size-merge'" +
+                             " is the only pruning method currently " +
+                             "implemented. No changes were made to the tree.")
 
     def save(self, filename):
         """
@@ -143,8 +148,9 @@ class LevelSetTree(object):
         Parameters
         ----------
         filename : string
-            File to save the tree to. The filename extension does not matter for
-            this method (although operating system requirements still apply).
+            File to save the tree to. The filename extension does not matter
+            for this method (although operating system requirements still
+            apply).
         """
         with open(filename, 'wb') as f:
             cPickle.dump(self, f, cPickle.HIGHEST_PROTOCOL)
@@ -453,7 +459,7 @@ class LevelSetTree(object):
                 labels, nodes = self._first_K_level_cluster(k)
 
         else:
-            print 'method not understood'
+            raise ValueError("Cluster labeling method not understood.")
             labels = np.array([])
             nodes = []
 
@@ -1201,7 +1207,7 @@ def construct_tree(adjacency_list, density, level_grid=None,
 
     for i, level in enumerate(level_grid):
         if verbose and i % 100 == 0:
-            print "iteration", i
+            logging.info("iteration {}".format(i))
 
         ## figure out which points to remove, i.e. the background set.
         bg = np.where((density > previous_level) & (density <= level))[0]
