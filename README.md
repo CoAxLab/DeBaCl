@@ -1,4 +1,3 @@
-========================
 DEnsity-BAsed CLustering
 ========================
 
@@ -20,3 +19,8 @@ The PDF user manual contains documentation for each function. It can be found
 in the GitHub repository at docs/debacl_manual.pdf. A paper describing the
 statistical background of level set trees and level set tree clustering is
 located in the repository, in the docs/ folder as well.
+
+License
+-------
+DeBaCl is available under the 3-clause BSD license. Please see the
+[license](LICENSE.txt) for more detail.
