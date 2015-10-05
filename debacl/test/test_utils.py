@@ -47,8 +47,6 @@ class TestSimilarityGraphs(unittest.TestCase):
         n = 5
         self.X = np.arange(n).reshape((n, 1))
 
-        self.edge_list = [(0, 1), (1, 2), (2, 3), (3, 4)]
-
     def test_knn_graph(self):
         """
         Test construction of the k-nearest neighbor graph.
