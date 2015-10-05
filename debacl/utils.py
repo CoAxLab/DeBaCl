@@ -7,14 +7,6 @@ import scipy.spatial.distance as spd
 import scipy.special as spspec
 
 try:
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    import matplotlib as mpl
-    from matplotlib import ticker
-except:
-    print "Matplotlib could not be loaded. DeBaCl plot functions will not work."
-
-try:
     import sklearn.neighbors as sknbr
     _HAS_SKLEARN = True
 except:
@@ -54,10 +46,11 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
 
         - 'ball-tree': partitions the data into balls and uses the metric
           property of euclidean distance to avoid computing all O(n^2)
-          distances. Typically much faster than 'brute-force', and works with up
-          to a few hundred dimensions. Requires the scikit-learn library.
+          distances. Typically much faster than 'brute-force', and works with
+          up to a few hundred dimensions. Requires the scikit-learn library.
 
     leaf_size : int, optional
+<<<<<<< HEAD
         For the 'kd-tree' and 'ball-tree' methods, the number of observations in
         the leaf nodes. Leaves are not split further, so distance computations
         within leaf nodes are done by brute force. 'leaf_size' is ignored for
@@ -72,6 +65,22 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
     k_radius : list [float]
         For each row of 'X' the distance to its k'th nearest neighbor (including
         itself).
+=======
+        For the 'kd-tree' and 'ball-tree' methods, the number of observations
+        in the leaf nodes. Leaves are not split further, so distance
+        computations within leaf nodes are done by brute force. 'leaf_size' is
+        ignored for the 'brute-force' method.
+
+    Returns
+    -------
+    neighbors : numpy array
+        Each row contains the nearest neighbors of the corresponding row in
+        'X', indicated by row indices.
+
+    radii : list [float]
+        For each row of 'X' the distance to its k'th nearest neighbor
+        (including itself).
+>>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
     """
 
     n, p = X.shape
@@ -79,38 +88,33 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
     if method == 'kd_tree':
         if _HAS_SKLEARN:
             kdtree = sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
-            distances, idx_neighbors = kdtree.query(X, k=k,
+            distances, neighbors = kdtree.query(X, k=k,
                 return_distance=True, sort_results=True)
-            k_radius = distances[:, -1]
+            radii = distances[:, -1]
         else:
-            raise ImportError("The scikit-learn library could not be loaded." + \
+            raise ImportError("The scikit-learn library could not be loaded." +
                 " It is required for the 'kd-tree' method.")
 
-    elif method == 'ball_tree':
+    if method == 'ball_tree':
         if _HAS_SKLEARN:
             btree = sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
-            distances, idx_neighbors = btree.query(X, k=k,
+            distances, neighbors = btree.query(X, k=k,
                 return_distance=True, sort_results=True)
-            k_radius = distances[:, -1]
+            radii = distances[:, -1]
         else:
-            raise ImportError("The scikit-learn library could not be loaded." +\
+            raise ImportError("The scikit-learn library could not be loaded." +
                 " It is required for the 'ball-tree' method.")
 
-    elif method == 'brute_force':
+    else:  # assume brute-force
         d = spd.pdist(X, metric='euclidean')
         D = spd.squareform(d)
         rank = np.argsort(D, axis=1)
-        idx_neighbors = rank[:, 0:k]
+        neighbors = rank[:, 0:k]
 
-        k_nbr = idx_neighbors[:, -1]
-        k_radius = D[np.arange(n), k_nbr]
+        k_nbr = neighbors[:, -1]
+        radii = D[np.arange(n), k_nbr]
 
-    else:  # assume brute-force
-        raise ValueError("The knn graph construction method could not be " +
-                         "understood. Options are 'kd_tree', 'ball_tree', " +
-                         "and 'brute_force'.")
-
-    return idx_neighbors, k_radius
+    return neighbors, radii
 
 
 def epsilon_graph(X, epsilon=None, percentile=0.05):
@@ -118,12 +122,21 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     Construct an epsilon-neighborhood graph, represented by an adjacency list.
     Two vertices are connected by an edge if they are within 'epsilon' distance
     of each other, according to the Euclidean metric. The implementation is a
+<<<<<<< HEAD
     brute-force computation of all O(n^2) pairwise distances of the rows in X.
+=======
+    brute-force computation of all O(n^2) pairwise distances of the rows in
+    'X'.
+>>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
 
     Parameters
     ----------
     X : 2D numpy array
+<<<<<<< HEAD
         The rows of x are the observations which become graph vertices.
+=======
+        The rows of 'X' are the observations which become graph vertices.
+>>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
 
     epsilon : float, optional
         The distance threshold for neighbors.
@@ -135,9 +148,15 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
 
     Returns
     -------
+<<<<<<< HEAD
     neighbors : dict [list]
         The keys correspond to rows of X and the values are the k-nearest
         neighbors to the key's row.
+=======
+    neighbors : numpy array
+        Each row contains the nearest neighbors of the corresponding row in
+        'X', indicated by row indices.
+>>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
     """
 
     d = spd.pdist(X, metric='euclidean')
@@ -146,8 +165,8 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     if epsilon == None:
         epsilon = np.percentile(d, round(percentile*100))
 
-    neighbor_flag = D <= epsilon
-    neighbors = {i: np.where(row)[0] for i, row in enumerate(neighbor_flag)}
+    adjacency_matrix = D <= epsilon
+    neighbors = [np.where(row)[0] for row in adjacency_matrix]
 
     return neighbors
 
