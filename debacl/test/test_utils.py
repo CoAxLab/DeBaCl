@@ -1,7 +1,8 @@
 
 import unittest
-import numpy as np
 import scipy.special as spspec
+import numpy as np
+from numpy.testing import assert_array_equal
 
 from debacl import utils as utl
 
@@ -36,34 +37,15 @@ class TestDensityEstimates(unittest.TestCase):
 
 class TestSimilarityGraphs(unittest.TestCase):
     """
-    Unit test class for neighbor graphs.
+    Unit test class for neighbor graphs. Use very simple stylized data so the
+    correct similarity graph is known.
     """
 
     def setUp(self):
 
-        ## Make data
+        ## Make data, evenly spaced in a single dimensionself.
         n = 5
-        self.X = np.arange(5).reshape((n, 1))
-
-        ## Graph parameters
-        self.k = 3
-        self.epsilon = 1.01
-
-        ## Answers
-        self.knn = {
-            0: set([0, 1, 2]),
-            1: set([1, 0, 2]),
-            2: set([2, 1, 3]),
-            3: set([3, 2, 4]),
-            4: set([4, 3, 2])}
-        self.r_k = np.array([2., 1., 1., 1., 2.])
-
-        self.eps_nn = {
-            0: set([0, 1]),
-            1: set([1, 0, 2]),
-            2: set([2, 1, 3]),
-            3: set([3, 2, 4]),
-            4: set([4, 3])}
+        self.X = np.arange(n).reshape((n, 1))
 
         self.edge_list = [(0, 1), (1, 2), (2, 3), (3, 4)]
 
@@ -71,24 +53,45 @@ class TestSimilarityGraphs(unittest.TestCase):
         """
         Test construction of the k-nearest neighbor graph.
         """
+        k = 3
 
-        import ipdb
-        ipdb.set_trace()
+        ## Correct knn similarity graph
+        ans_radii = np.array([2., 1., 1., 1., 2.])
+        ans_graph = np.array([[0, 1, 2], 
+                              [1, 0, 2], 
+                              [2, 1, 3], 
+                              [3, 2, 4], 
+                              [4, 3, 2]])
 
-        knn, r_k = utl.knn_graph(self.X, k=self.k, method='brute-force')
-        np.testing.assert_array_equal(r_k, self.r_k)
+        ## DeBaCl knn similarity graph
+        knn, radii = utl.knn_graph(self.X, k=k, method='brute-force')
 
-        for idx, neighbors in knn.iteritems():
-            self.assertSetEqual(self.knn[idx], set(neighbors))
+        ## Test
+        assert_array_equal(radii, ans_radii)
+
+        for neighbors, ans_neighbors in zip(knn, ans_graph):
+            self.assertItemsEqual(neighbors, ans_neighbors)
 
     def test_epsilon_graph(self):
         """
         Test construction of the epsilon-nearest neighbor graph.
         """
-        eps_nn = utl.epsilon_graph(self.X, self.epsilon)
+        epsilon = 1.01
 
-        for idx, neighbors in eps_nn.iteritems():
-            self.assertSetEqual(self.eps_nn[idx], set(neighbors))
+        ## Correct similarity graph
+        ans_graph = np.array([[0, 1],
+                              [1, 0, 2],
+                              [2, 1, 3],
+                              [3, 2, 4],
+                              [4, 3]])
+
+        enn = utl.epsilon_graph(self.X, epsilon)
+
+        import ipdb
+        ipdb.set_trace()
+
+        for neighbors, ans_neighbors in zip(enn, ans_graph):
+            self.assertItemsEqual(neighbors, ans_neighbors)
 
 
 class TestBackgroundAssignments(unittest.TestCase):
