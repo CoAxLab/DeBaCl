@@ -64,13 +64,15 @@ class TestSimilarityGraphs(unittest.TestCase):
                               [4, 3, 2]])
 
         ## DeBaCl knn similarity graph
-        knn, radii = utl.knn_graph(self.X, k=k, method='brute-force')
+        for method in ['brute_force', 'kd_tree', 'ball_tree']:
+    
+            knn, radii = utl.knn_graph(self.X, k=k, method=method)
 
-        ## Test
-        assert_array_equal(radii, ans_radii)
+            ## Test
+            assert_array_equal(radii, ans_radii)
 
-        for neighbors, ans_neighbors in zip(knn, ans_graph):
-            self.assertItemsEqual(neighbors, ans_neighbors)
+            for neighbors, ans_neighbors in zip(knn, ans_graph):
+                self.assertItemsEqual(neighbors, ans_neighbors)
 
     def test_epsilon_graph(self):
         """
@@ -79,19 +81,31 @@ class TestSimilarityGraphs(unittest.TestCase):
         epsilon = 1.01
 
         ## Correct similarity graph
-        ans_graph = np.array([[0, 1],
-                              [1, 0, 2],
-                              [2, 1, 3],
-                              [3, 2, 4],
-                              [4, 3]])
+        ans_graph = [np.array([0, 1]),
+                     np.array([1, 0, 2]),
+                     np.array([2, 1, 3]),
+                     np.array([3, 2, 4]),
+                     np.array([4, 3])]
 
         enn = utl.epsilon_graph(self.X, epsilon)
 
-        import ipdb
-        ipdb.set_trace()
-
         for neighbors, ans_neighbors in zip(enn, ans_graph):
             self.assertItemsEqual(neighbors, ans_neighbors)
+
+
+class TestDensityGrid(unittest.TestCase):
+    """
+    """
+
+    def setUp(self):
+        """
+        """
+        pass
+
+    def test_density_grid(self):
+        """
+        """
+        pass
 
 
 class TestBackgroundAssignments(unittest.TestCase):
@@ -117,21 +131,6 @@ class TestBackgroundAssignments(unittest.TestCase):
         pass
 
     def test_nearest_center(self):
-        """
-        """
-        pass
-
-
-class TestDensityGrid(unittest.TestCase):
-    """
-    """
-
-    def setUp(self):
-        """
-        """
-        pass
-
-    def test_density_grid(self):
         """
         """
         pass

@@ -18,7 +18,7 @@ except:
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
 
-def knn_graph(X, k, method='brute-force', leaf_size=30):
+def knn_graph(X, k, method='brute_force', leaf_size=30):
     """
     Compute the symmetric k-nearest neighbor graph for a set of points. Assume
     Euclidean distance metric.
@@ -57,33 +57,33 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 
     Returns
     -------
-    neighbors : dict [list]
-        The keys correspond to rows of X and the values are the k-nearest
-        neighbors to the key's row.
+    neighbors : numpy array
+        Each row contains the nearest neighbors of the corresponding row in
+        'X', indicated by row indices.
 
-    k_radius : list [float]
+    radii : list [float]
         For each row of 'X' the distance to its k'th nearest neighbor
         (including itself).
     """
 
     n, p = X.shape
 
-    if method == 'kd-tree':
+    if method == 'kd_tree':
         if _HAS_SKLEARN:
             kdtree = sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
-            distances, idx_neighbors = kdtree.query(X, k=k,
+            distances, neighbors = kdtree.query(X, k=k,
                 return_distance=True, sort_results=True)
-            k_radius = distances[:, -1]
+            radii = distances[:, -1]
         else:
             raise ImportError("The scikit-learn library could not be loaded." +
                 " It is required for the 'kd-tree' method.")
 
-    if method == 'ball-tree':
+    if method == 'ball_tree':
         if _HAS_SKLEARN:
             btree = sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
-            distances, idx_neighbors = btree.query(X, k=k,
+            distances, neighbors = btree.query(X, k=k,
                 return_distance=True, sort_results=True)
-            k_radius = distances[:, -1]
+            radii = distances[:, -1]
         else:
             raise ImportError("The scikit-learn library could not be loaded." +
                 " It is required for the 'ball-tree' method.")
@@ -92,12 +92,12 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
         d = spd.pdist(X, metric='euclidean')
         D = spd.squareform(d)
         rank = np.argsort(D, axis=1)
-        idx_neighbors = rank[:, 0:k]
+        neighbors = rank[:, 0:k]
 
-        k_nbr = idx_neighbors[:, -1]
-        k_radius = D[np.arange(n), k_nbr]
+        k_nbr = neighbors[:, -1]
+        radii = D[np.arange(n), k_nbr]
 
-    return idx_neighbors, k_radius
+    return neighbors, radii
 
 
 def epsilon_graph(X, epsilon=None, percentile=0.05):
@@ -105,12 +105,13 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     Construct an epsilon-neighborhood graph, represented by an adjacency list.
     Two vertices are connected by an edge if they are within 'epsilon' distance
     of each other, according to the Euclidean metric. The implementation is a
-    brute-force computation of all O(n^2) pairwise distances of the rows in X.
+    brute-force computation of all O(n^2) pairwise distances of the rows in
+    'X'.
 
     Parameters
     ----------
     X : 2D numpy array
-        The rows of x are the observations which become graph vertices.
+        The rows of 'X' are the observations which become graph vertices.
 
     epsilon : float, optional
         The distance threshold for neighbors.
@@ -122,9 +123,9 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
 
     Returns
     -------
-    neighbors : dict [list]
-        The keys correspond to rows of X and the values are the k-nearest
-        neighbors to the key's row.
+    neighbors : numpy array
+        Each row contains the nearest neighbors of the corresponding row in
+        'X', indicated by row indices.
     """
 
     d = spd.pdist(X, metric='euclidean')
@@ -133,8 +134,8 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     if epsilon == None:
         epsilon = np.percentile(d, round(percentile*100))
 
-    neighbor_flag = D <= epsilon
-    neighbors = {i: np.where(row)[0] for i, row in enumerate(neighbor_flag)}
+    adjacency_matrix = D <= epsilon
+    neighbors = [np.where(row)[0] for row in adjacency_matrix]
 
     return neighbors
 
