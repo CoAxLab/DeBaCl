@@ -11,23 +11,27 @@ class TestDensityEstimates(unittest.TestCase):
     Unit test class for density estimate functions in DeBaCl utilities.
     """
 
-    def setUp(self):
+    def test_knn_density(self):
+        """
+        Test correctness of the knn density estimator in the DeBaCl utilities.
+        Tests the estimated value at a single arbitrary point.
+        """
 
         # Input parameters
-        self.r_k = 1.
-        self.n = 100
-        self.p = 2
-        self.k = 5.
+        r_k = 1.
+        n = 100
+        p = 2
+        k = 5.
 
-
-    def test_knn_density(self):
         # Correct density estimate
-        unit_ball_volume = np.pi**(self.p/2.) / spspec.gamma(1 + self.p/2.0)
-        normalizer = self.k / (self.n * unit_ball_volume)
-        self.fhat = normalizer / (self.r_k**self.p)
+        unit_ball_volume = np.pi**(p/2.) / spspec.gamma(1 + p/2.0)
+        normalizer = k / (n * unit_ball_volume)
+        answer = normalizer / (r_k**p)
         
-        fhat = utl.knn_density(self.r_k, self.n, self.p, self.k)
-        self.assertEqual(self.fhat, fhat)
+        # DeBaCl knn density utility
+        fhat = utl.knn_density(r_k, n, p, k)
+
+        self.assertEqual(fhat, answer)
 
 
 class TestSimilarityGraphs(unittest.TestCase):
@@ -67,6 +71,10 @@ class TestSimilarityGraphs(unittest.TestCase):
         """
         Test construction of the k-nearest neighbor graph.
         """
+
+        import ipdb
+        ipdb.set_trace()
+
         knn, r_k = utl.knn_graph(self.X, k=self.k, method='brute-force')
         np.testing.assert_array_equal(r_k, self.r_k)
 
@@ -81,16 +89,6 @@ class TestSimilarityGraphs(unittest.TestCase):
 
         for idx, neighbors in eps_nn.iteritems():
             self.assertSetEqual(self.eps_nn[idx], set(neighbors))
-
-    def test_type_conversions(self):
-        """
-        Test conversion between graph representations.
-        """
-        edge_list = utl.adjacency_to_edge_list(self.eps_nn, self_edge=False)
-        edge_list = sorted([tuple(sorted(x)) for x in edge_list])
-
-        for e, ans in zip(edge_list, self.edge_list):
-            self.assertTupleEqual(e, ans)
 
 
 class TestBackgroundAssignments(unittest.TestCase):

@@ -46,14 +46,14 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
 
         - 'ball-tree': partitions the data into balls and uses the metric
           property of euclidean distance to avoid computing all O(n^2)
-          distances. Typically much faster than 'brute-force', and works with up
-          to a few hundred dimensions. Requires the scikit-learn library.
+          distances. Typically much faster than 'brute-force', and works with
+          up to a few hundred dimensions. Requires the scikit-learn library.
 
     leaf_size : int, optional
-        For the 'kd-tree' and 'ball-tree' methods, the number of observations in
-        the leaf nodes. Leaves are not split further, so distance computations
-        within leaf nodes are done by brute force. 'leaf_size' is ignored for
-        the 'brute-force' method.
+        For the 'kd-tree' and 'ball-tree' methods, the number of observations
+        in the leaf nodes. Leaves are not split further, so distance
+        computations within leaf nodes are done by brute force. 'leaf_size' is
+        ignored for the 'brute-force' method.
 
     Returns
     -------
@@ -62,8 +62,8 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
         neighbors to the key's row.
 
     k_radius : list [float]
-        For each row of 'X' the distance to its k'th nearest neighbor (including
-        itself).
+        For each row of 'X' the distance to its k'th nearest neighbor
+        (including itself).
     """
 
     n, p = X.shape
@@ -75,7 +75,7 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
                 return_distance=True, sort_results=True)
             k_radius = distances[:, -1]
         else:
-            raise ImportError("The scikit-learn library could not be loaded." + \
+            raise ImportError("The scikit-learn library could not be loaded." +
                 " It is required for the 'kd-tree' method.")
 
     if method == 'ball-tree':
@@ -85,7 +85,7 @@ def knn_graph(X, k, method='brute-force', leaf_size=30):
                 return_distance=True, sort_results=True)
             k_radius = distances[:, -1]
         else:
-            raise ImportError("The scikit-learn library could not be loaded." +\
+            raise ImportError("The scikit-learn library could not be loaded." +
                 " It is required for the 'ball-tree' method.")
 
     else:  # assume brute-force
