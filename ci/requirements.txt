@@ -1,0 +1,5 @@
+prettytable
+numpy
+scipy
+scikit-learn
+networkx

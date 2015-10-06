@@ -1,4 +1,0 @@
-networkx
-numpy
-prettytable
-scikit-learn
