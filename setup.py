@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='debacl',
-    version='0.2.0',
+    version='0.3.0',
     author='Brian P. Kent',
     author_email='bpkent@gmail.com',
     packages=['debacl', 'debacl.test'],
@@ -10,11 +10,10 @@ setup(
     url='https://github.com/CoAxLab/DeBaCl',
     license='LICENSE.txt',
     description='Density-Based Clustering',
-    long_description=open('README.txt').read(),
+    long_description=open('README.md').read(),
     install_requires=[
-        "python-igraph == 0.6.5",
-        "numpy >= 1.7.0",
-        "scipy >= 0.11.0",
-	"matplotlib >= 1.2.0"
+        "networkx",
+        "numpy",
+        "prettytable"
     ],
 )
