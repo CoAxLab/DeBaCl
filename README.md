@@ -1,5 +1,6 @@
 DEnsity-BAsed CLustering
 ========================
+![License BSD](https://go-shields.herokuapp.com/license-BSD-blue.png)
 
 DeBaCl is a Python library for estimation of density level set trees and
 nonparametric density-based clustering. Level set trees are based on the
