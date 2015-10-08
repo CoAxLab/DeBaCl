@@ -24,7 +24,6 @@ except:
 try:
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
-    from matplotlib.widgets import Button
     _HAS_MPL = True
 except:
     _HAS_MPL = False
