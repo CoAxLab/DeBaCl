@@ -6,6 +6,7 @@ analysis and clustering with level set trees.
 """
 
 import logging
+import copy
 import cPickle
 import utils as utl
 
@@ -48,19 +49,6 @@ class ConnectedComponent(object):
         self.start_mass = start_mass
         self.end_mass = end_mass
         self.members = members
-
-    def copy(self):
-        """
-        Create and return a copy of a ConnetedComponent object.
-
-        Returns
-        -------
-        component : ConnectedComponent
-        """
-
-        return ConnectedComponent(self.idnum, self.parent, self.children,
-            self.start_level, self.end_level, self.start_mass, self.end_mass,
-            self.members)
 
 
 class LevelSetTree(object):
@@ -465,7 +453,7 @@ class LevelSetTree(object):
         """
 
         T = LevelSetTree()
-        T.nodes[ix] = self.nodes[ix].copy()
+        T.nodes[ix] = copy.deepcopy(self.nodes[ix])
         T.nodes[ix].parent = None
         queue = self.nodes[ix].children[:]
 
