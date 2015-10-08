@@ -6,6 +6,7 @@ analysis and clustering with level set trees.
 """
 
 import logging
+import copy
 import cPickle
 import utils as utl
 
@@ -48,19 +49,6 @@ class ConnectedComponent(object):
         self.start_mass = start_mass
         self.end_mass = end_mass
         self.members = members
-
-    def copy(self):
-        """
-        Create and return a copy of a ConnetedComponent object.
-
-        Returns
-        -------
-        component : ConnectedComponent
-        """
-
-        return ConnectedComponent(self.idnum, self.parent, self.children,
-            self.start_level, self.end_level, self.start_mass, self.end_mass,
-            self.members)
 
 
 class LevelSetTree(object):
@@ -107,36 +95,36 @@ class LevelSetTree(object):
 
         return summary.get_string()
 
-    def prune(self, method='size-merge', **kwargs):
+    def prune(self, method='size_merge', **kwargs):
         """
         Prune the tree. A dispatch function to other methods.
 
         Parameters
         ----------
-        method : {'size-merge'}
+        method : {'size_merge'}
+            Method for pruning the tree.
 
-        gamma : integer
-            Nodes smaller than this will be merged (for 'size-merge') or cut
-            (for 'size-cut')
+        threshold : int
+            Nodes smaller than this will be merged for the 'size_merge' method.
 
-        Notes
-        -----
-        Modifies the tree in-place.
-
+        Returns
+        -------
+        out : LevelSetTree
+            A pruned level set tree. The original tree is unchanged.
         """
 
-        if method == 'size-merge':
-            required = set(['gamma'])
+        if method == 'size_merge':
+            required = set(['threshold'])
             if not set(kwargs.keys()).issuperset(required):
-                raise ValueError("Incorrect arguments for size-merge pruning.")
+                raise ValueError("Incorrect arguments for 'size_merge' pruning.")
             else:
-                gamma = kwargs.get('gamma')
-                self._merge_by_size(gamma)
+                threshold = kwargs.get('threshold')
+                return self._merge_by_size(threshold)
 
         else:
-            raise ValueError("Pruning method not understood. 'size-merge'" +
+            raise ValueError("Pruning method not understood. 'size_merge'" +
                              " is the only pruning method currently " +
-                             "implemented. No changes were made to the tree.")
+                             "implemented.")
 
     def save(self, filename):
         """
@@ -465,7 +453,7 @@ class LevelSetTree(object):
         """
 
         T = LevelSetTree()
-        T.nodes[ix] = self.nodes[ix].copy()
+        T.nodes[ix] = copy.deepcopy(self.nodes[ix])
         T.nodes[ix].parent = None
         queue = self.nodes[ix].children[:]
 
@@ -487,44 +475,47 @@ class LevelSetTree(object):
             Tree branches with fewer members than this will be merged into
             larger siblings or parents.
 
-        Notes
-        -----
-        Modifies a level set tree in-place.
+        Returns
+        -------
+        tree : LevelSetTree
+            A pruned level set tree. The original tree is unchanged.
         """
 
+        tree = copy.deepcopy(self)
+
         ## remove small root branches
-        small_roots = [k for k, v in self.nodes.iteritems()
+        small_roots = [k for k, v in tree.nodes.iteritems()
             if v.parent==None and len(v.members) <= threshold]
 
         for root in small_roots:
-            root_tree = self.make_subtree(root)
+            root_tree = tree.make_subtree(root)
             for ix in root_tree.nodes.iterkeys():
-                del self.nodes[ix]
+                del tree.nodes[ix]
 
 
         ## main pruning
-        parents = [k for k, v in self.nodes.iteritems() if len(v.children) >= 1]
+        parents = [k for k, v in tree.nodes.iteritems() if len(v.children) >= 1]
         parents = np.sort(parents)[::-1]
 
         for ix_parent in parents:
-            parent = self.nodes[ix_parent]
+            parent = tree.nodes[ix_parent]
 
             # get size of each child
-            kid_size = {k: len(self.nodes[k].members) for k in parent.children}
+            kid_size = {k: len(tree.nodes[k].members) for k in parent.children}
 
             # count children larger than 'threshold'
             n_bigkid = sum(np.array(kid_size.values()) >= threshold)
 
             if n_bigkid == 0:
                 # update parent's end level and end mass
-                parent.end_level = max([self.nodes[k].end_level
+                parent.end_level = max([tree.nodes[k].end_level
                     for k in parent.children])
-                parent.end_mass = max([self.nodes[k].end_mass
+                parent.end_mass = max([tree.nodes[k].end_mass
                     for k in parent.children])
 
                 # remove small kids from the tree
                 for k in parent.children:
-                    del self.nodes[k]
+                    del tree.nodes[k]
                 parent.children = []
 
             elif n_bigkid == 1:
@@ -532,7 +523,7 @@ class LevelSetTree(object):
                 # identify the big kid
                 ix_bigkid = [k for k, v in kid_size.iteritems()
                     if v >= threshold][0]
-                bigkid = self.nodes[ix_bigkid]
+                bigkid = tree.nodes[ix_bigkid]
 
                 # update k's end level and end mass
                 parent.end_level = bigkid.end_level
@@ -540,21 +531,23 @@ class LevelSetTree(object):
 
                 # set grandkids' parent to k
                 for c in bigkid.children:
-                    self.nodes[c].parent = ix_parent
+                    tree.nodes[c].parent = ix_parent
 
                 # delete small kids
                 for k in parent.children:
                     if k != ix_bigkid:
-                        del self.nodes[k]
+                        del tree.nodes[k]
 
                 # set k's children to grandkids
                 parent.children = bigkid.children
 
                 # delete the single bigkid
-                del self.nodes[ix_bigkid]
+                del tree.nodes[ix_bigkid]
 
             else:
                 pass  # do nothing here
+
+        return tree
 
     def _leaf_cluster(self):
         """
@@ -1168,8 +1161,6 @@ def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
                                      prune_threshold=prune_threshold,
                                      num_levels=num_levels, verbose=verbose)
 
-    tree.prune(method='size-merge', gamma=prune_threshold)
-
     return tree
 
 def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
@@ -1291,7 +1282,7 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
 
     ## Prune the tree
     if prune_threshold is not None:
-        T.prune(gamma=prune_threshold)
+        T = T.prune(threshold=prune_threshold)
 
     return T
 
