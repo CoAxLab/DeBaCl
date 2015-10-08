@@ -364,23 +364,29 @@ class LevelSetTree(object):
 
         return fig, segments, segmap, splits, splitmap
 
-    def get_cluster_labels(self, method='all-mode', **kwargs):
+    def get_cluster_labels(self, method='leaf', **kwargs):
         """
         Generic function for retrieving custer labels from the level set tree.
         Dispatches a specific cluster labeling function.
 
         Parameters
         ----------
-        method : {'all-mode', 'first-k', 'upper-set', 'k-level'}, optional
-            Method for obtaining cluster labels from the tree. 'all-mode' treats
-            each leaf of the tree as a separate cluter. 'first-k' finds the
-            first K non-overlapping clusters from the roots of the tree.
-            'upper-set' returns labels by cutting the tree at a specified
-            density (lambda) or mass (alpha) level. 'k-level' returns labels at
-            the lowest density level that has k nodes.
+        method : {'leaf', 'first_k', 'upper_set', 'k_level'}, optional
+            Method for obtaining cluster labels from the tree.
+
+            - 'leaf': treat each leaf of the tree as a separate cluster. 
+
+            - 'first_k': find the first K non-overlapping clusters from the
+              roots of the tree.
+
+            - 'upper_set': cluster by cutt the tree at a specified
+              density or mass level. 
+
+            - 'k_level': returns clusters at the lowest density level that has
+              k nodes.
 
         k : integer
-            If method is 'first-k' or 'k-level', this is the desired number of
+            If method is 'first_k' or 'k_level', this is the desired number of
             clusters.
 
         threshold : float
@@ -405,8 +411,8 @@ class LevelSetTree(object):
             Indices of tree nodes corresponding to foreground clusters.
         """
 
-        if method == 'all-mode':
-            labels, nodes = self._all_mode_cluster()
+        if method == 'leaf':
+            labels, nodes = self._leaf_cluster()
 
         elif method == 'first-k':
             required = set(['k'])
@@ -550,12 +556,9 @@ class LevelSetTree(object):
             else:
                 pass  # do nothing here
 
-    def _all_mode_cluster(self):
+    def _leaf_cluster(self):
         """
         Set every leaf node as a foreground cluster.
-
-        Parameters
-        ----------
 
         Returns
         -------
