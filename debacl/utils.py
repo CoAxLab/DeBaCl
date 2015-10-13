@@ -206,66 +206,127 @@ def knn_density(k_radius, n, p, k):
 ### LEVEL SET TREE CLUSTERING PIPELINE ###
 ##########################################
 
-def define_density_grid(density, mode='mass', num_levels=None):
+def define_density_mass_grid(density, num_levels=None):
     """
-    Create the inputs to level set tree estimation by pruning observations from
-    a density estimate at successively higher levels. This function merely
-    records the density levels and which points will be removed at each level,
-    but it does not do the actual tree construction.
+    Create a grid of density levels, such that a uniform number of points have
+    density values between each level in the grid.
 
     Parameters
     ----------
-    density : numpy array
-        Values of a density estimate. The coordinates of the observation are
-        not needed for this function.
-
-    mode : {'mass', 'levels'}, optional
-        If 'mass', the level set tree will be built by removing a constant
-        number of points (mass) at each iteration. If 'levels', the density
-        levels are evenly spaced between 0 and the maximum density estimate
-        value. If 'num_levels' is 'None', the 'mass' option removes 1 point at
-        a time and the 'levels' option iterates through unique values of the
-        'density' array.
+    density : numpy array[float] or list[float]
+        Values of a density estimate.
 
     num_levels : int, optional
-        Number of density levels at which to construct the level set tree.
-        This is essentially the resolution of a level set tree built for the
-        'density' array.
+        Number of density levels in the grid. This is essentially the vertical
+        resolution of a level set tree built from the 'density' input.
 
     Returns
     -------
     levels : numpy array
         Grid of density levels that will define the iterations in level set
         tree construction.
-    """
 
+    See Also
+    --------
+    define_density_level_grid
+
+    Notes
+    -----
+    - The level set tree is constructed by filtering a similarity graph
+      according to this grid. This function simply defines the density levels,
+      but it does not do the actual tree construction.
+    """
+    ## Validate inputs
+    if num_levels and not isinstance(num_levels, int):
+        raise TypeError("Input 'num_levels' must be an integer.")
+
+    if num_levels is not None and num_levels < 2:
+        raise ValueError("Input 'num_levels' must be greater than or " +
+                         "equal to 2.")
+
+    if not isinstance(density, (_np.ndarray, list)):
+        raise TypeError("Input 'density' must be a 1D numpy array or a " +
+                        "list.")
+
+    if isinstance(density, _np.ndarray) and len(density.shape) != 1:
+        raise ValueError("Input 'density' must be 1-dimensional.")
+
+    if len(density) < 1:
+        raise ValueError("Input 'density' must contain at least one value.")
+
+    ## Construct the grid
     n = len(density)
 
-    if mode == 'mass':  # remove blocks of points of uniform mass
-        pt_order = _np.argsort(density)
+    if num_levels is None or num_levels > n:
+        num_levels = n
 
-        if num_levels is None:
-            levels = density[pt_order]
-        else:
-            bin_size = n / num_levels  # this should be only the integer part
-            background_sets = [pt_order[i:(i + bin_size)]
-                for i in range(0, n, bin_size)]
-            levels = [max(density[x]) for x in background_sets]
-
-    elif mode == 'levels':  # remove points at evenly spaced density levels
-        uniq_dens = _np.unique(density)
-        uniq_dens.sort()
-
-        if num_levels is None:
-            levels = uniq_dens
-        else:
-            grid = _np.linspace(0., _np.max(uniq_dens), num_levels)
-            levels = grid.copy()
-
-    else:
-        raise ValueError("Sorry, that's not a valid mode.")
-
+    idx = _np.linspace(0, n-1, num_levels)
+    idx = idx.astype(int)
+    levels = _np.sort(density)[idx]
+    levels = _np.unique(levels)
     return levels
+
+
+def define_density_level_grid(density, num_levels=None):
+    """
+    Create a grid of density levels, evenly spaced between 0 and the maximum
+    value of the input 'density'.
+
+    Parameters
+    ----------
+    density : numpy array[float] or list[float]
+        Values of a density estimate. The coordinates of the observation are
+        not needed for this function.
+
+    num_levels : int, optional
+        Number of density levels in the grid. This is essentially the vertical
+        resolution of a level set tree built from the 'density' input.
+
+    Returns
+    -------
+    levels : numpy array
+        Grid of density levels that will define the iterations in level set
+        tree construction.
+
+    See Also
+    --------
+    define_density_mass_grid
+
+    Notes
+    -----
+    - The level set tree is constructed by filtering a similarity graph
+      according to this grid. This function simply defines the density levels,
+      but it does not do the actual tree construction.
+    """
+
+    ## Validate inputs
+    if num_levels and not isinstance(num_levels, int):
+        raise TypeError("Input 'num_levels' must be an integer.")
+
+    if num_levels is not None and num_levels < 2:
+        raise ValueError("Input 'num_levels' must be greater than or equal " +
+                         "to 2.")
+
+    if not isinstance(density, (_np.ndarray, list)):
+        raise TypeError("Input 'density' must be a 1D numpy array or a " +
+                        "list.")
+
+    if isinstance(density, _np.ndarray) and len(density.shape) != 1:
+        raise ValueError("Input 'density' must be 1-dimensional.")
+
+    if len(density) < 1:
+        raise ValueError("Input 'density' must contain at least one value.")
+
+    ## Construct the grid
+    n = len(density)
+
+    if num_levels is None or num_levels > n:
+        num_levels = n
+
+    levels = _np.linspace(_np.min(density), _np.max(density), num_levels)
+    levels = _np.unique(levels)
+    return levels
+
 
 def assign_background_points(X, clusters, method=None, k=1):
     """
