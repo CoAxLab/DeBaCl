@@ -1,26 +1,45 @@
-.. DeBaCl documentation master file, created by
-   sphinx-quickstart on Mon Jul 29 14:54:38 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to DeBaCl!
+Welcome to DeBaCl
 ==================
+.. automodule:: debacl
 
-.. toctree::
-  :maxdepth: 2
+Level Set Tree constructors
+---------------------------
 
+.. currentmodule:: level_set_tree
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
 
-Level Set Tree
-==============
+  construct_tree
+  construct_tree_from_graph
+  load_tree
 
-.. automodule:: level_set_tree
-  :members:
+Level Set Tree model
+--------------------
 
+.. currentmodule:: level_set_tree
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
+
+  LevelSetTree.prune
+  LevelSetTree.plot
+  LevelSetTree.save
+  LevelSetTree.get_cluster_labels
+  LevelSetTree.make_subtree
+  LevelSetTree.find_K_cut
 
 Utilities
-=========   
+---------
 
-.. automodule:: utils
-  :members:
+.. currentmodule:: utils
+.. autosummary::
+  :toctree: generated/
+  :nosignatures:
 
+  knn_graph
+  epsilon_graph
+  knn_density
+  define_density_grid
+  assign_background_points
 

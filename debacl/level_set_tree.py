@@ -1170,8 +1170,7 @@ def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
 def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
                               num_levels=None, verbose=False):
     """
-    Construct a level set tree from a similarity graph (in adjacency list form)
-    and a density estimate.
+    Construct a level set tree from a similarity graph and a density estimate.
 
     Parameters
     ----------
