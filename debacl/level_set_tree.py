@@ -58,12 +58,13 @@ class LevelSetTree(object):
 
     Parameters
     ----------
-    bg_sets : list of lists
+    density : list[float] or numpy array
         The observations removed as background points at each successively
         higher density level.
 
     levels : array_like
-        The probability density level associated with each element in 'bg_sets'.
+        Probability density levels at which to find clusters. Defines the
+        vertical resolution of the tree.
     """
 
     def __init__(self, density=[], levels=[]):
@@ -103,6 +104,8 @@ class LevelSetTree(object):
         method : {'size_merge'}
             Method for pruning the tree.
 
+        Other Parameters
+        ----------------
         threshold : int
             Nodes smaller than this will be merged for the 'size_merge' method.
 
@@ -134,7 +137,7 @@ class LevelSetTree(object):
 
         Parameters
         ----------
-        filename : string
+        filename : str
             File to save the tree to. The filename extension does not matter
             for this method (although operating system requirements still
             apply).
@@ -372,7 +375,9 @@ class LevelSetTree(object):
             - 'k_level': returns clusters at the lowest density level that has
               k nodes.
 
-        k : integer
+        Other Parameters
+        ----------------
+        k : int
             If method is 'first_k' or 'k_level', this is the desired number of
             clusters.
 
@@ -589,7 +594,7 @@ class LevelSetTree(object):
 
         Parameters
         ----------
-        k : integer
+        k : int
             The desired number of clusters.
 
         Returns
@@ -1291,7 +1296,7 @@ def load_tree(filename):
 
     Parameters
     ----------
-    filename : string
+    filename : str
         Filename to load.
 
     Returns

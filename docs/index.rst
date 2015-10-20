@@ -6,28 +6,19 @@
 Welcome to DeBaCl!
 ==================
 
-.. include:: ../README.rst
-
 .. toctree::
   :maxdepth: 2
 
 
-Geometric Tree
+Level Set Tree
 ==============
 
-.. automodule:: geom_tree
-  :members:
-
-
-Chaudhuri-Dasgupta Tree
-=======================
-
-.. automodule:: cd_tree
+.. automodule:: level_set_tree
   :members:
 
 
 Utilities
-=======================
+=========   
 
 .. automodule:: utils
   :members:
