@@ -50,22 +50,6 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
           up to a few hundred dimensions. Requires the scikit-learn library.
 
     leaf_size : int, optional
-<<<<<<< HEAD
-        For the 'kd-tree' and 'ball-tree' methods, the number of observations in
-        the leaf nodes. Leaves are not split further, so distance computations
-        within leaf nodes are done by brute force. 'leaf_size' is ignored for
-        the 'brute-force' method.
-
-    Returns
-    -------
-    neighbors : dict [list]
-        The keys correspond to rows of X and the values are the k-nearest
-        neighbors to the key's row.
-
-    k_radius : list [float]
-        For each row of 'X' the distance to its k'th nearest neighbor (including
-        itself).
-=======
         For the 'kd-tree' and 'ball-tree' methods, the number of observations
         in the leaf nodes. Leaves are not split further, so distance
         computations within leaf nodes are done by brute force. 'leaf_size' is
@@ -77,10 +61,9 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
         Each row contains the nearest neighbors of the corresponding row in
         'X', indicated by row indices.
 
-    radii : list [float]
+    radii : list[float]
         For each row of 'X' the distance to its k'th nearest neighbor
         (including itself).
->>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
     """
 
     n, p = X.shape
@@ -122,21 +105,12 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     Construct an epsilon-neighborhood graph, represented by an adjacency list.
     Two vertices are connected by an edge if they are within 'epsilon' distance
     of each other, according to the Euclidean metric. The implementation is a
-<<<<<<< HEAD
     brute-force computation of all O(n^2) pairwise distances of the rows in X.
-=======
-    brute-force computation of all O(n^2) pairwise distances of the rows in
-    'X'.
->>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
 
     Parameters
     ----------
     X : 2D numpy array
-<<<<<<< HEAD
-        The rows of x are the observations which become graph vertices.
-=======
         The rows of 'X' are the observations which become graph vertices.
->>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
 
     epsilon : float, optional
         The distance threshold for neighbors.
@@ -148,15 +122,9 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
 
     Returns
     -------
-<<<<<<< HEAD
-    neighbors : dict [list]
-        The keys correspond to rows of X and the values are the k-nearest
-        neighbors to the key's row.
-=======
     neighbors : numpy array
         Each row contains the nearest neighbors of the corresponding row in
         'X', indicated by row indices.
->>>>>>> a9d7bcb504fa7781f8a2eabf1573f9153cf3e1a5
     """
 
     d = spd.pdist(X, metric='euclidean')
