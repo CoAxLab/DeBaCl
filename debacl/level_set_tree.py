@@ -56,6 +56,13 @@ class LevelSetTree(object):
     components organized hierarchically, based on a k-nearest neighbors density
     estimate and connectivity graph.
 
+    .. warning::
+
+        LevelSetTree objects should not generally be instantiated directly,
+        because they will contain empty node hierarchies. Use the tree
+        constructors :func:`construct_tree` or
+        :func:`construct_tree_from_graph` to instantiate a LevelSetTree model.
+
     Parameters
     ----------
     density : list[float] or numpy array
