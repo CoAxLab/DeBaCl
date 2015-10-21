@@ -156,7 +156,7 @@ class LevelSetTree(object):
         with open(filename, 'wb') as f:
             _cPickle.dump(self, f, _cPickle.HIGHEST_PROTOCOL)
 
-    def plot(self, form, width='uniform', sort=True, color_nodes=None):
+    def plot(self, form, width='uniform'):
         """
         Plot the level set tree, or return plot objects that can be modified.
 
@@ -179,10 +179,6 @@ class LevelSetTree(object):
             fraction of the parent node's horizontal space. If set to 'mass',
             then horizontal space is allocated proportional to the mass of a
             node relative to its siblings.
-
-        color_nodes : list, optional
-            Each entry should be a valid index in the level set tree that will
-            be colored uniquely.
 
         Returns
         -------
@@ -260,7 +256,7 @@ class LevelSetTree(object):
         lats = [splits[k] for k in splitmap]
 
 
-        ## Find the fraction of nodes in each segment (to use as linewidths)
+        ## Find the fraction of nodes in each segment (to use as line widths)
         thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n)
             for x in segmap]
 
@@ -333,30 +329,11 @@ class LevelSetTree(object):
 
 
         ## Add the line segments
-        segclr = _np.array([[0.0, 0.0, 0.0]] * len(segmap))
-        splitclr = _np.array([[0.0, 0.0, 0.0]] * len(splitmap))
-
-        palette = dbc_plot.Palette()
-        if color_nodes is not None:
-            for i, ix in enumerate(color_nodes):
-                n_clr = _np.alen(palette.colorset)
-                c = palette.colorset[i % n_clr, :]
-                subtree = self.make_subtree(ix)
-
-                ## set vertical colors
-                ix_replace = _np.in1d(segmap, subtree.nodes.keys())
-                segclr[ix_replace] = c
-
-                ## set horizontal colors
-                if splitmap:
-                    ix_replace = _np.in1d(splitmap, subtree.nodes.keys())
-                    splitclr[ix_replace] = c
-
-        linecol = _LineCollection(verts, linewidths=thickness, colors=segclr)
+        linecol = _LineCollection(verts, linewidths=thickness)
         ax.add_collection(linecol)
         linecol.set_picker(20)
 
-        splitcol = _LineCollection(lats, colors=splitclr)
+        splitcol = _LineCollection(lats)
         ax.add_collection(splitcol)
 
         return fig, segments, segmap, splits, splitmap
