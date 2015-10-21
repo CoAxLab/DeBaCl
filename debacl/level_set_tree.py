@@ -156,29 +156,33 @@ class LevelSetTree(object):
         with open(filename, 'wb') as f:
             _cPickle.dump(self, f, _cPickle.HIGHEST_PROTOCOL)
 
-    def plot(self, form, width='uniform'):
+    def plot(self, form='mass', horizontal_spacing='uniform'):
         """
         Plot the level set tree, or return plot objects that can be modified.
 
         Parameters
         ----------
-        form : {'lambda', 'alpha', 'kappa'}
-            Determines main form of the plot. 'lambda' is the traditional plot
-            where the vertical scale is density levels, but plot improvements
-            such as mass sorting of the nodes and colored nodes are allowed and
-            the secondary 'alpha' scale is visible (but not controlling). The
-            'alpha' setting makes the uppper level set mass the primary
-            vertical scale, leaving the 'lambda' scale in place for reference.
-            'kappa' makes node mass the vertical scale, so that each node's
-            vertical height is proportional to its mass excluding the mass of
-            the node's children.
+        form : {'mass', 'density', 'branch-mass'}, optional
 
-        width : {'uniform', 'mass'}, optional
+            Main form of the plot.
+
+            - 'density': the traditional form of the LST dendrogram where the
+              vertical scale is density levels.
+
+            - 'mass' (default): very similar to the 'density' form, but draws
+              the dendrogram based on the mass of upper (density) level sets.
+
+            - 'branch-mass': each node is drawn in the dendrogram so that its
+              length is proportional to its mass, *excluding* the masses of the
+              node's children. In this form, the lengths of the segments
+              representing the tree nodes sum to 1.
+
+        horizontal_spacing : {'uniform', 'proportional'}, optional
             Determines how much horizontal space each level set tree node is
             given. The default of "uniform" gives each child node an equal
-            fraction of the parent node's horizontal space. If set to 'mass',
-            then horizontal space is allocated proportional to the mass of a
-            node relative to its siblings.
+            fraction of the parent node's horizontal space. If set to
+            'proportional', then horizontal space is allocated proportionally
+            to the mass of a node relative to its siblings.
 
         Returns
         -------
@@ -226,7 +230,7 @@ class LevelSetTree(object):
         ix_root = ix_root[seniority]
         census = census[seniority]
 
-        if width == 'mass':
+        if horizontal_spacing == 'proportional':
             weights = census / n
             intervals = _np.cumsum(weights)
             intervals = _np.insert(intervals, 0, 0.0)
@@ -236,12 +240,12 @@ class LevelSetTree(object):
 
         ## Do a depth-first search on each root to get segments for each branch
         for i, ix in enumerate(ix_root):
-            if form == 'kappa':
+            if form == 'branch-mass':
                 branch = self._construct_mass_map(ix, 0.0, (intervals[i],
-                    intervals[i+1]), width)
+                    intervals[i+1]), horizontal_spacing)
             else:
                 branch = self._construct_branch_map(ix, (intervals[i],
-                    intervals[i+1]), form, width, sort=True)
+                    intervals[i+1]), form, horizontal_spacing, sort=True)
 
             branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
             segments = dict(segments.items() + branch_segs.items())
@@ -279,13 +283,13 @@ class LevelSetTree(object):
 
 
         ## Form-specific details
-        if form == 'kappa':
+        if form == 'branch-mass':
             kappa_max = max(primary_ticks)
             ax.set_ylim((-1.0 * gap * kappa_max, 1.04*kappa_max))
-            ax.set_ylabel("mass")
+            ax.set_ylabel("branch mass")
 
-        elif form == 'lambda':
-            ax.set_ylabel("lambda")
+        elif form == 'density':
+            ax.set_ylabel("density level")
             ymin = min([v.start_level for v in self.nodes.itervalues()])
             ymax = max([v.end_level for v in self.nodes.itervalues()])
             rng = ymax - ymin
@@ -304,8 +308,8 @@ class LevelSetTree(object):
             ax2.set_yticklabels(alpha_labels)
             ax2.set_ylim(ax.get_ylim())
 
-        elif form == 'alpha':
-            ax.set_ylabel("alpha")
+        elif form == 'mass':
+            ax.set_ylabel("mass (density) level")
             ymin = min([v.start_mass for v in self.nodes.itervalues()])
             ymax = max([v.end_mass for v in self.nodes.itervalues()])
             rng = ymax - ymin
