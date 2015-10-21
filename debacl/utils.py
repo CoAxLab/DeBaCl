@@ -2,12 +2,12 @@
 General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 """
 
-import numpy as np
-import scipy.spatial.distance as spd
-import scipy.special as spspec
+import numpy as _np
+import scipy.spatial.distance as _spd
+import scipy.special as _spspec
 
 try:
-    import sklearn.neighbors as sknbr
+    import sklearn.neighbors as _sknbr
     _HAS_SKLEARN = True
 except:
     _HAS_SKLEARN = False
@@ -70,7 +70,7 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
 
     if method == 'kd_tree':
         if _HAS_SKLEARN:
-            kdtree = sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
+            kdtree = _sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
             distances, neighbors = kdtree.query(X, k=k,
                 return_distance=True, sort_results=True)
             radii = distances[:, -1]
@@ -80,7 +80,7 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
 
     if method == 'ball_tree':
         if _HAS_SKLEARN:
-            btree = sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
+            btree = _sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
             distances, neighbors = btree.query(X, k=k,
                 return_distance=True, sort_results=True)
             radii = distances[:, -1]
@@ -89,13 +89,13 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
                 " It is required for the 'ball-tree' method.")
 
     else:  # assume brute-force
-        d = spd.pdist(X, metric='euclidean')
-        D = spd.squareform(d)
-        rank = np.argsort(D, axis=1)
+        d = _spd.pdist(X, metric='euclidean')
+        D = _spd.squareform(d)
+        rank = _np.argsort(D, axis=1)
         neighbors = rank[:, 0:k]
 
         k_nbr = neighbors[:, -1]
-        radii = D[np.arange(n), k_nbr]
+        radii = D[_np.arange(n), k_nbr]
 
     return neighbors, radii
 
@@ -127,14 +127,14 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
         'X', indicated by row indices.
     """
 
-    d = spd.pdist(X, metric='euclidean')
-    D = spd.squareform(d)
+    d = _spd.pdist(X, metric='euclidean')
+    D = _spd.squareform(d)
 
     if epsilon == None:
-        epsilon = np.percentile(d, round(percentile*100))
+        epsilon = _np.percentile(d, round(percentile*100))
 
     adjacency_matrix = D <= epsilon
-    neighbors = [np.where(row)[0] for row in adjacency_matrix]
+    neighbors = [_np.where(row)[0] for row in adjacency_matrix]
 
     return neighbors
 
@@ -169,7 +169,7 @@ def knn_density(k_radius, n, p, k):
         'k_radius'.
     """
 
-    unit_vol = np.pi**(p/2.0) / spspec.gamma(1 + p/2.0)
+    unit_vol = _np.pi**(p/2.0) / _spspec.gamma(1 + p/2.0)
     const = (1.0 * k) / (n * unit_vol)
     fhat = const / k_radius**p
 
@@ -217,7 +217,7 @@ def define_density_grid(density, mode='mass', num_levels=None):
     n = len(density)
 
     if mode == 'mass':  # remove blocks of points of uniform mass
-        pt_order = np.argsort(density)
+        pt_order = _np.argsort(density)
 
         if num_levels is None:
             levels = density[pt_order]
@@ -228,13 +228,13 @@ def define_density_grid(density, mode='mass', num_levels=None):
             levels = [max(density[x]) for x in background_sets]
 
     elif mode == 'levels':  # remove points at evenly spaced density levels
-        uniq_dens = np.unique(density)
+        uniq_dens = _np.unique(density)
         uniq_dens.sort()
 
         if num_levels is None:
             levels = uniq_dens
         else:
-            grid = np.linspace(0., np.max(uniq_dens), num_levels)
+            grid = _np.linspace(0., _np.max(uniq_dens), num_levels)
             levels = grid.copy()
 
     else:
@@ -282,12 +282,12 @@ def assign_background_points(X, clusters, method=None, k=1):
     """
 
     n, p = X.shape
-    labels = np.unique(clusters[:,1])
+    labels = _np.unique(clusters[:,1])
     n_label = len(labels)
 
-    assignments = np.zeros((n, ), dtype=np.int) - 1
+    assignments = _np.zeros((n, ), dtype=_np.int) - 1
     assignments[clusters[:,0]] = clusters[:,1]
-    ix_background = np.where(assignments == -1)[0]
+    ix_background = _np.where(assignments == -1)[0]
 
     if len(ix_background) == 0:
         return clusters
@@ -295,40 +295,40 @@ def assign_background_points(X, clusters, method=None, k=1):
 
     if method == 'centers':
         # get cluster centers
-        ctrs = np.empty((n_label, p), dtype=np.float)
-        ctrs.fill(np.nan)
+        ctrs = _np.empty((n_label, p), dtype=_np.float)
+        ctrs.fill(_np.nan)
 
         for i, c in enumerate(labels):
-            ix_c = clusters[np.where(clusters[:,1] == c)[0], 0]
-            ctrs[i, :] = np.mean(X[ix_c,:], axis=0)
+            ix_c = clusters[_np.where(clusters[:,1] == c)[0], 0]
+            ctrs[i, :] = _np.mean(X[ix_c,:], axis=0)
 
         # get the background points
         X_background = X[ix_background, :]
 
         # distance between each background point and all cluster centers
-        d = spd.cdist(X_background, ctrs)
-        ctr_min = np.argmin(d, axis=1)
+        d = _spd.cdist(X_background, ctrs)
+        ctr_min = _np.argmin(d, axis=1)
         assignments[ix_background] = labels[ctr_min]
 
 
     elif method == 'knn':
         # make sure k isn't too big
-        k = min(k, np.min(np.bincount(clusters[:,1])))
+        k = min(k, _np.min(_np.bincount(clusters[:,1])))
 
         # find distances between background and upper points
         X_background = X[ix_background, :]
         X_upper = X[clusters[:,0]]
-        d = spd.cdist(X_background, X_upper)
+        d = _spd.cdist(X_background, X_upper)
 
         # find the k-nearest neighbors
-        rank = np.argsort(d, axis=1)
+        rank = _np.argsort(d, axis=1)
         ix_nbr = rank[:, 0:k]
 
         # find the cluster membership of the k-nearest neighbors
         knn_clusters = clusters[ix_nbr, 1]
-        knn_cluster_counts = np.apply_along_axis(np.bincount, 1, knn_clusters,
+        knn_cluster_counts = _np.apply_along_axis(_np.bincount, 1, knn_clusters,
             None, n_label)
-        knn_vote = np.argmax(knn_cluster_counts, axis=1)
+        knn_vote = _np.argmax(knn_cluster_counts, axis=1)
 
         assignments[ix_background] = labels[knn_vote]
 
@@ -341,7 +341,7 @@ def assign_background_points(X, clusters, method=None, k=1):
         assignments[ix_background] = max(labels) + 1
 
 
-    labels = np.array([range(n), assignments], dtype=np.int).T
+    labels = _np.array([range(n), assignments], dtype=_np.int).T
     return labels
 
 
