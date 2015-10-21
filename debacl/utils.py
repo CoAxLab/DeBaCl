@@ -191,15 +191,15 @@ def define_density_grid(density, mode='mass', num_levels=None):
     Parameters
     ----------
     density : numpy array
-        Values of a density estimate. The coordinates of the observation are not
-        needed for this function.
+        Values of a density estimate. The coordinates of the observation are
+        not needed for this function.
 
     mode : {'mass', 'levels'}, optional
         If 'mass', the level set tree will be built by removing a constant
         number of points (mass) at each iteration. If 'levels', the density
         levels are evenly spaced between 0 and the maximum density estimate
-        value. If 'num_levels' is 'None', the 'mass' option removes 1 point at a
-        time and the 'levels' option iterates through unique values of the
+        value. If 'num_levels' is 'None', the 'mass' option removes 1 point at
+        a time and the 'levels' option iterates through unique values of the
         'density' array.
 
     num_levels : int, optional
@@ -210,8 +210,8 @@ def define_density_grid(density, mode='mass', num_levels=None):
     Returns
     -------
     levels : numpy array
-        Grid of density levels that will define the iterations in level set tree
-        construction.
+        Grid of density levels that will define the iterations in level set
+        tree construction.
     """
 
     n = len(density)
@@ -261,11 +261,11 @@ def assign_background_points(X, clusters, method=None, k=1):
 
     method : {None, 'centers', 'knn', 'zero'}, optional
         Which classification technique to use. The default of None sets
-        background points to be a separate cluster. Option 'zero' does the same,
-        but resets the cluster labels to the background points are labeled as
-        '0'. The 'knn' method does a k-nearest neighbor classified, while option
-        'centers' assigns each background point to the cluster with the closet
-        center (mean) point.
+        background points to be a separate cluster. Option 'zero' does the
+        same, but resets the cluster labels to the background points are
+        labeled as '0'. The 'knn' method does a k-nearest neighbor classified,
+        while option 'centers' assigns each background point to the cluster
+        with the closet center (mean) point.
 
     k : int, optional
         If 'method' is 'knn', this is the number of neighbors to use for each
@@ -274,11 +274,11 @@ def assign_background_points(X, clusters, method=None, k=1):
     Returns
     -------
     labels : 2-dimensional numpy array
-        Follows the same pattern as the 'clusters' parameter: each row is a data
-        point, with the first entry as the observation index and the second
-        entry the integer cluster label. Here though all points should be
-        assigned, so the first column is just 1, ..., n, where n is the number
-        of points.
+        Follows the same pattern as the 'clusters' parameter: each row is a
+        data point, with the first entry as the observation index and the
+        second entry the integer cluster label. Here though all points should
+        be assigned, so the first column is just 1, ..., n, where n is the
+        number of points.
     """
 
     n, p = X.shape
@@ -326,8 +326,8 @@ def assign_background_points(X, clusters, method=None, k=1):
 
         # find the cluster membership of the k-nearest neighbors
         knn_clusters = clusters[ix_nbr, 1]
-        knn_cluster_counts = _np.apply_along_axis(_np.bincount, 1, knn_clusters,
-            None, n_label)
+        knn_cluster_counts = _np.apply_along_axis(_np.bincount, 1, 
+                                                  knn_clusters, None, n_label)
         knn_vote = _np.argmax(knn_cluster_counts, axis=1)
 
         assignments[ix_background] = labels[knn_vote]

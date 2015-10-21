@@ -118,7 +118,8 @@ class LevelSetTree(object):
         if method == 'size_merge':
             required = set(['threshold'])
             if not set(kwargs.keys()).issuperset(required):
-                raise ValueError("Incorrect arguments for 'size_merge' pruning.")
+                raise ValueError("Incorrect arguments for 'size_merge' " +
+                                 "pruning.")
             else:
                 threshold = kwargs.get('threshold')
                 return self._merge_by_size(threshold)
@@ -188,9 +189,9 @@ class LevelSetTree(object):
             analysis tools.
 
         segmap : list
-            Indicates the order of the vertical line segments as returned by the
-            recursive coordinate mapping function, so they can be picked by the
-            user in the interactive tools.
+            Indicates the order of the vertical line segments as returned by
+            the recursive coordinate mapping function, so they can be picked by
+            the user in the interactive tools.
 
         splits : dict
             Dictionary values contain the coordinates of horizontal line
@@ -248,7 +249,8 @@ class LevelSetTree(object):
             splitmap += branch_splitmap
 
 
-        ## get the the vertical line segments in order of the segment map (segmap)
+        ## get the the vertical line segments in order of the segment map
+        #  (segmap)
         verts = [segments[k] for k in segmap]
         lats = [splits[k] for k in splitmap]
 
@@ -443,7 +445,8 @@ class LevelSetTree(object):
 
     def make_subtree(self, ix):
         """
-        Return the subtree with node 'ix' as the root, and all ancestors of 'ix'.
+        Return the subtree with node 'ix' as the root, and all ancestors of
+        'ix'.
 
         Parameters
         ----------
@@ -588,9 +591,9 @@ class LevelSetTree(object):
     def _first_K_cluster(self, k):
         """
         Returns foreground cluster labels for the 'k' modes with the lowest
-        start levels. In principle, this is the 'k' leaf nodes with the smallest
-        indices, but this function double checks by finding and ordering all
-        leaf start values and ordering.
+        start levels. In principle, this is the 'k' leaf nodes with the
+        smallest indices, but this function double checks by finding and
+        ordering all leaf start values and ordering.
 
         Parameters
         ----------
@@ -648,8 +651,8 @@ class LevelSetTree(object):
             depending on 'scale'.
 
         scale : {'alpha', 'lambda'}
-            Determines if the 'cut' threshold is a density level value or a mass
-            value (i.e. fraction of data in the background set)
+            Determines if the 'cut' threshold is a density level value or a
+            mass value (i.e. fraction of data in the background set)
 
         Returns
         -------
@@ -695,8 +698,8 @@ class LevelSetTree(object):
     def _first_K_level_cluster(self, k):
         """
         Use the first K clusters to appear in the level set tree as foreground
-        clusters. In general, K-1 clusters will appear at a lower level than the
-        K'th cluster; this function returns all members from all K clusters
+        clusters. In general, K-1 clusters will appear at a lower level than
+        the K'th cluster; this function returns all members from all K clusters
         (rather than only the members in the upper level set where the K'th
         cluster appears). There are not always K clusters available in a level
         set tree - see LevelSetTree.findKCut for details on default behavior in
@@ -766,9 +769,9 @@ class LevelSetTree(object):
     def find_K_cut(self, k):
         """
         Find the lowest level cut that has k connected components. If there are
-        no levels that have k components, then find the lowest level that has at
-        least k components. If no levels have > k components, find the lowest
-        level that has the maximum number of components.
+        no levels that have k components, then find the lowest level that has
+        at least k components. If no levels have > k components, find the
+        lowest level that has the maximum number of components.
 
         Parameters
         ----------
@@ -811,9 +814,9 @@ class LevelSetTree(object):
         horizontal line segments corresponding to node splits. Also provides
         indices of vertical segments and splits for downstream use with
         interactive plot picker tools. This function is not meant to be called
-        by the user; it is a helper function for the LevelSetTree.plot() method.
-        This function is recursive: it calls itself to map the coordinates of
-        children of the current node 'ix'.
+        by the user; it is a helper function for the LevelSetTree.plot()
+        method. This function is recursive: it calls itself to map the
+        coordinates of children of the current node 'ix'.
 
         Parameters
         ----------
@@ -841,9 +844,9 @@ class LevelSetTree(object):
             analysis tools.
 
         segmap : list
-            Indicates the order of the vertical line segments as returned by the
-            recursive coordinate mapping function, so they can be picked by the
-            user in the interactive tools.
+            Indicates the order of the vertical line segments as returned by
+            the recursive coordinate mapping function, so they can be picked by
+            the user in the interactive tools.
 
         splits : dict
             Dictionary values contain the coordinates of horizontal line
@@ -926,7 +929,8 @@ class LevelSetTree(object):
                 segments = dict(segments.items() + branch_segs.items())
 
 
-            ## find the middle of the children's x-position and make vertical segment ix
+            ## find the middle of the children's x-position and make vertical
+            #  segment ix
             children_xpos = _np.array([segments[k][0][0] for k in children])
             xpos = _np.mean(children_xpos)
 
@@ -961,11 +965,11 @@ class LevelSetTree(object):
         horizontal line segments corresponding to node splits. Also provides
         indices of vertical segments and splits for downstream use with
         interactive plot picker tools. This function is not meant to be called
-        by the user; it is a helper function for the LevelSetTree.plot() method.
-        This function is recursive: it calls itself to map the coordinates of
-        children of the current node 'ix'. Differs from 'constructBranchMap' by
-        setting the height of each vertical segment to be proportional to the
-        number of points in the corresponding LST node.
+        by the user; it is a helper function for the LevelSetTree.plot()
+        method. This function is recursive: it calls itself to map the
+        coordinates of children of the current node 'ix'. Differs from
+        'constructBranchMap' by setting the height of each vertical segment to
+        be proportional to the number of points in the corresponding LST node.
 
         Parameters
         ----------
@@ -991,9 +995,9 @@ class LevelSetTree(object):
             analysis tools.
 
         segmap : list
-            Indicates the order of the vertical line segments as returned by the
-            recursive coordinate mapping function, so they can be picked by the
-            user in the interactive tools.
+            Indicates the order of the vertical line segments as returned by
+            the recursive coordinate mapping function, so they can be picked by
+            the user in the interactive tools.
 
         splits : dict
             Dictionary values contain the coordinates of horizontal line
