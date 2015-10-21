@@ -22,12 +22,7 @@ Level Set Tree model
   :toctree: generated/
   :nosignatures:
 
-  LevelSetTree.prune
-  LevelSetTree.plot
-  LevelSetTree.save
-  LevelSetTree.get_cluster_labels
-  LevelSetTree.make_subtree
-  LevelSetTree.find_K_cut
+  LevelSetTree
 
 Utilities
 ---------
