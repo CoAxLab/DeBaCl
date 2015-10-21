@@ -2,9 +2,20 @@
 General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 """
 
-import numpy as _np
-import scipy.spatial.distance as _spd
-import scipy.special as _spspec
+## Required packages
+try:
+    import numpy as _np
+except:
+    raise ImportError("DeBaCl requires the numpy, networkx, and " +  
+                      "prettytable packages.")
+
+## Soft dependencies
+try:
+    import scipy.spatial.distance as _spd
+    import scipy.special as _spspec
+    _HAS_SCIPY = True
+except:
+    _HAS_SCIPY = False
 
 try:
     import sklearn.neighbors as _sknbr
@@ -89,6 +100,11 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
                 " It is required for the 'ball-tree' method.")
 
     else:  # assume brute-force
+        if not _HAS_SCIPY:
+            raise ImportError("The 'scipy' module could not be loaded. " +
+                              "It is required for the 'brute_force' method " +
+                              "for building a knn similarity graph.")
+
         d = _spd.pdist(X, metric='euclidean')
         D = _spd.squareform(d)
         rank = _np.argsort(D, axis=1)
@@ -126,6 +142,11 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
         Each row contains the nearest neighbors of the corresponding row in
         'X', indicated by row indices.
     """
+
+    if not _HAS_SCIPY:
+        raise ImportError("The 'scipy' module could not be loaded. " +
+                          "It is required for constructing an epsilon " +
+                          "neighborhood similarity graph.")
 
     d = _spd.pdist(X, metric='euclidean')
     D = _spd.squareform(d)
@@ -168,6 +189,10 @@ def knn_density(k_radius, n, p, k):
         Estimated density for the points corresponding to the entries of
         'k_radius'.
     """
+
+    if not _HAS_SCIPY:
+        raise ImportError("The 'scipy' module could not be loaded." +
+                          "It is required for computing knn density.")
 
     unit_vol = _np.pi**(p/2.0) / _spspec.gamma(1 + p/2.0)
     const = (1.0 * k) / (n * unit_vol)

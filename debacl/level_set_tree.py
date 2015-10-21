@@ -5,6 +5,7 @@ geometric clustering on each level. Also defines tools for interactive data
 analysis and clustering with level set trees.
 """
 
+## Built-in packages
 import logging as _logging
 import copy as _copy
 import cPickle as _cPickle
@@ -13,14 +14,16 @@ import utils as _utl
 _logging.basicConfig(level=_logging.INFO, datefmt='%Y-%m-%d %I:%M:%S',
                     format='%(levelname)s (%(asctime)s): %(message)s')
 
+## Required packages
 try:
     import numpy as _np
     import networkx as _nx
     from prettytable import PrettyTable as _PrettyTable
 except:
-    raise ImportError("DeBaCl requires the numpy, networkx, and " +
-        "prettytable packages for level set tree estimation and printing.")
+    raise ImportError("DeBaCl requires the numpy, networkx, and " + 
+                      "prettytable packages.")
 
+## Soft dependencies
 try:
     import matplotlib.pyplot as _plt
     from matplotlib.collections import LineCollection as _LineCollection
