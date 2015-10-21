@@ -78,8 +78,8 @@ class LevelSetTree(object):
         """
         Print the tree summary table.
         """
-        summary = PrettyTable(["id", "lambda1", "lambda2", "alpha1",
-                              "alpha2", "size", "parent", "children"])
+        summary = PrettyTable(["id", "start_level", "end_level", "start_mass",
+                              "end_mass", "size", "parent", "children"])
         for node_id, v in self.nodes.items():
             summary.add_row([node_id,
                              v.start_level,
@@ -90,7 +90,7 @@ class LevelSetTree(object):
                              v.parent,
                              v.children])
 
-        for col in ['lambda1', 'lambda2', 'alpha1', 'alpha2']:
+        for col in ["start_level", "end_level", "start_mass", "end_mass"]:
             summary.float_format[col] = "5.3"
 
         return summary.get_string()
