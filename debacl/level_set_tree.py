@@ -174,15 +174,11 @@ class LevelSetTree(object):
             the node's children.
 
         width : {'uniform', 'mass'}, optional
-            Determines how much horzontal space each level set tree node is
+            Determines how much horizontal space each level set tree node is
             given. The default of "uniform" gives each child node an equal
             fraction of the parent node's horizontal space. If set to 'mass',
-            then horizontal space is allocated proportional to the mass (i.e.
-            fraction of points) of a node relative to its siblings.
-
-        sort : bool, optional
-            If True, sort sibling nodes from most to least points and draw left
-            to right. Also sorts root nodes in the same way.
+            then horizontal space is allocated proportional to the mass of a
+            node relative to its siblings.
 
         color_nodes : list, optional
             Each entry should be a valid index in the level set tree that will
@@ -230,10 +226,9 @@ class LevelSetTree(object):
             dtype=_np.float)
         n = sum(census)
 
-        if sort is True:
-            seniority = _np.argsort(census)[::-1]
-            ix_root = ix_root[seniority]
-            census = census[seniority]
+        seniority = _np.argsort(census)[::-1]
+        ix_root = ix_root[seniority]
+        census = census[seniority]
 
         if width == 'mass':
             weights = census / n
@@ -250,7 +245,7 @@ class LevelSetTree(object):
                     intervals[i+1]), width)
             else:
                 branch = self._construct_branch_map(ix, (intervals[i],
-                    intervals[i+1]), form, width, sort)
+                    intervals[i+1]), form, width, sort=True)
 
             branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
             segments = dict(segments.items() + branch_segs.items())
@@ -348,7 +343,7 @@ class LevelSetTree(object):
                 c = palette.colorset[i % n_clr, :]
                 subtree = self.make_subtree(ix)
 
-                ## set verical colors
+                ## set vertical colors
                 ix_replace = _np.in1d(segmap, subtree.nodes.keys())
                 segclr[ix_replace] = c
 
