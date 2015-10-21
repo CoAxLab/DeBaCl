@@ -295,38 +295,12 @@ class LevelSetTree(object):
             rng = ymax - ymin
             ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
 
-            ax2 = ax.twinx()
-            ax2.set_position([0.11, 0.05, 0.78, 0.93])
-            ax2.set_ylabel("alpha", rotation=270)
-
-            alpha_ticks = _np.sort(list(set(
-                [v.start_mass for v in self.nodes.itervalues()] + \
-                [v.end_mass for v in self.nodes.itervalues()])))
-            alpha_labels = [str(round(m, 2)) for m in alpha_ticks]
-
-            ax2.set_yticks(primary_ticks)
-            ax2.set_yticklabels(alpha_labels)
-            ax2.set_ylim(ax.get_ylim())
-
         elif form == 'mass':
             ax.set_ylabel("mass (density) level")
             ymin = min([v.start_mass for v in self.nodes.itervalues()])
             ymax = max([v.end_mass for v in self.nodes.itervalues()])
             rng = ymax - ymin
             ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
-
-            ax2 = ax.twinx()
-            ax2.set_position([0.11, 0.05, 0.78, 0.93])
-            ax2.set_ylabel("lambda", rotation=270)
-
-            lambda_ticks = _np.sort(list(set(
-                [v.start_level for v in self.nodes.itervalues()] + \
-                [v.end_level for v in self.nodes.itervalues()])))
-            lambda_labels = [str(round(lvl, 2)) for lvl in lambda_ticks]
-
-            ax2.set_ylim(ax.get_ylim())
-            ax2.set_yticks(primary_ticks)
-            ax2.set_yticklabels(lambda_labels)
 
         else:
             raise ValueError('Plot form not understood')
