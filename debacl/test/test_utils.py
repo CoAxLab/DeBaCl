@@ -91,19 +91,135 @@ class TestSimilarityGraphs(unittest.TestCase):
             self.assertItemsEqual(neighbors, ans_neighbors)
 
 
-class TestDensityGrid(unittest.TestCase):
+class TestDensityGrids(unittest.TestCase):
     """
+    Test class for the utility functions that define the 1D grid of density
+    levels, upon which a level set tree is estimated.
     """
 
     def setUp(self):
-        """
-        """
-        pass
+        self.n = 10
+        
+        self.unique_density = np.arange(self.n) + 1
+        np.random.shuffle(self.unique_density)
 
-    def test_density_grid(self):
+        self.generic_array = np.hstack((self.unique_density, [-1., -2.]))
+        self.uniform_density = np.array([1.] * self.n)
+
+    def _check_bogus_input(self, grid_func):
         """
+        Check that inputs are validated correctly for a given density grid
+        function.
+
+        Parameters
+        ----------
+        grid_func : function
+            Density grid function.
         """
-        pass
+
+        ## Check form of the density input.
+        with self.assertRaises(ValueError):
+            levels = grid_func([])            
+
+        with self.assertRaises(TypeError):
+            levels = grid_func(density='fossa')
+
+        ## Check the 'num_levels' parameter.
+        with self.assertRaises(ValueError):
+            levels = grid_func(self.unique_density, num_levels=-1)
+
+        with self.assertRaises(ValueError):
+            levels = grid_func(self.unique_density, num_levels=1)
+
+        with self.assertRaises(TypeError):
+            levels = grid_func(self.unique_density, num_levels=2.17)
+
+        with self.assertRaises(TypeError):
+            levels = grid_func(self.unique_density, num_levels='fossa')
+
+    def test_bogus_input(self):
+        """
+        Check that each of the density grid functions trap input errors.
+        """
+        self._check_bogus_input(utl.define_density_level_grid)
+        self._check_bogus_input(utl.define_density_mass_grid)
+
+    def test_mass_grid(self):
+        """
+        Check that the mass-based grid is constructed correctly.
+        """
+        ## Test typical input - should be sorted
+        levels = utl.define_density_mass_grid(self.unique_density)
+        answer = np.sort(self.unique_density)
+        assert_array_equal(answer, levels)
+
+        ## Test more levels than density values (answer is the same as typical
+        #  input).
+        levels = utl.define_density_mass_grid(self.unique_density, 
+                                              num_levels=self.n * 2)
+        assert_array_equal(answer, levels)
+
+        ## Test fewer levels than density values.
+        levels = utl.define_density_mass_grid(self.unique_density, 
+                                              num_levels=2)
+        answer = np.array([1, 10])
+        assert_array_equal(answer, levels)
+
+        ## Test negative values.
+        levels = utl.define_density_mass_grid(self.generic_array)
+        answer = np.sort(self.generic_array)
+        assert_array_equal(answer, levels)
+
+        ## Test uniform input.
+        levels = utl.define_density_mass_grid(self.uniform_density)
+        self.assertItemsEqual(levels, [1.])
+
+    def _check_level_grid_answer(self, density, levels):
+        """
+        Utility to check correctness of a num_levels=n density level grid.
+
+        Parameters
+        ----------
+        density : numpy array
+            Input density values.
+
+        levels : numpy array
+            Values to check.
+        """
+        self.assertTrue(np.min(density) in levels)
+        self.assertTrue(np.max(density) in levels)
+        self.assertEqual(len(levels), len(density))
+        assert_array_equal(levels, np.sort(levels))
+
+    def test_level_grid(self):
+        """
+        Check that the level-based grid is constructed correctly.
+        """
+        ## Typical input should include the right number of values, sorted,
+        #  between min and max.
+        levels = utl.define_density_level_grid(self.unique_density)
+        self._check_level_grid_answer(self.unique_density, levels)
+
+        ## More levels than density values should yield the same answer.
+        levels = utl.define_density_level_grid(self.unique_density,
+                                               num_levels = self.n * 2)
+        self._check_level_grid_answer(self.unique_density, levels)
+
+        ## 2 density levels should just be min and max
+        levels = utl.define_density_level_grid(self.unique_density, 
+                                              num_levels=2)
+        answer = np.array([1, 10])
+        assert_array_equal(answer, levels)
+
+        ## Negative values should still range from min and max, sorted, with
+        #  the right number of values.
+        levels = utl.define_density_level_grid(self.generic_array,
+                                               num_levels = self.n * 2)
+        self._check_level_grid_answer(self.generic_array, levels)
+
+        ## Uniform input should have a single value.
+        levels = utl.define_density_level_grid(self.uniform_density)
+        self.assertItemsEqual(levels, [1.])    
 
 
 class TestBackgroundAssignments(unittest.TestCase):
