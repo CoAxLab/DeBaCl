@@ -1167,8 +1167,7 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
     """
 
     ## Initialize the graph and cluster tree
-    levels = _utl.define_density_grid(density, mode='mass',
-                                     num_levels=num_levels)
+    levels = _utl.define_density_mass_grid(density, num_levels=num_levels)
 
     G = _nx.from_dict_of_lists(
       {i: neighbors for i, neighbors in enumerate(adjacency_list)})
