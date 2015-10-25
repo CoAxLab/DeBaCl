@@ -80,9 +80,10 @@ class LevelSetTree(object):
     def __init__(self, density=[], levels=[]):
         self.density = density
         self.levels = levels
-        self.num_levels = 0
+        self.num_levels = len(levels)
+        self.prune_threshold = None
         self.nodes = {}
-        self.subgraphs = {}
+        self._subgraphs = {}
 
     def __str__(self):
         """
@@ -316,7 +317,7 @@ class LevelSetTree(object):
 
         return fig, segments, segmap, splits, splitmap
 
-    def get_cluster_labels(self, method='leaf', **kwargs):
+    def get_clusters(self, method='leaf', **kwargs):
         """
         Generic function for retrieving custer labels from the level set tree.
         Dispatches a specific cluster labeling function.
@@ -449,6 +450,7 @@ class LevelSetTree(object):
         """
 
         tree = _copy.deepcopy(self)
+        tree.prune_threshold = threshold
 
         ## remove small root branches
         small_roots = [k for k, v in tree.nodes.iteritems()
@@ -1179,7 +1181,7 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
     cc0 = _nx.connected_components(G)
 
     for i, c in enumerate(cc0):  # c is only the vertex list, not the subgraph
-        T.subgraphs[i] = G.subgraph(c)
+        T._subgraphs[i] = G.subgraph(c)
         T.nodes[i] = ConnectedComponent(i, parent=None, children=[],
             start_level=0., end_level=None, start_mass=0., end_mass=None,
             members=c)
@@ -1198,14 +1200,14 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
         previous_level = level
 
         ## compute the mass after the current bg set is removed
-        old_vcount = sum([x.number_of_nodes() for x in T.subgraphs.itervalues()])
+        old_vcount = sum([x.number_of_nodes() for x in T._subgraphs.itervalues()])
         current_mass = 1. - ((old_vcount - len(bg)) / n)
 
         # loop through active components, i.e. subgraphs
         deactivate_keys = []     # subgraphs to deactivate at the end of the iter
         activate_subgraphs = {}  # new subgraphs to add at the end of the iter
 
-        for (k, H) in T.subgraphs.iteritems():
+        for (k, H) in T._subgraphs.iteritems():
 
             ## remove nodes at the current level
             H.remove_nodes_from(bg)
@@ -1242,9 +1244,9 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
 
         # update active components
         for k in deactivate_keys:
-            del T.subgraphs[k]
+            del T._subgraphs[k]
 
-        T.subgraphs.update(activate_subgraphs)
+        T._subgraphs.update(activate_subgraphs)
 
     ## Prune the tree
     if prune_threshold is not None:
