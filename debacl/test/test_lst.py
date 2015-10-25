@@ -116,26 +116,36 @@ class TestLSTConstructors(unittest.TestCase):
         Check correctness of the specific LST estimated according to the
         simulated dataset and LST parameters in the setup of this class.
         """
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.plot(self.dataset, self.density)
 
-        fig2 = tree.plot()[0]
+        ## Density levels
+        start_levels = [round(node.start_level, 3) for node in tree.nodes.values()]
+        end_levels = [round(node.end_level, 3) for node in tree.nodes.values()]
+        
+        ans_start_levels = [0.0, 0.104, 0.104, 0.189, 0.189, 0.345, 0.345, 0.741, 0.741, 0.862, 0.862]
+        ans_end_levels = [0.104, 0.189, 1.001, 0.345, 0.741, 0.508, 0.381, 0.862, 0.804, 1.349, 1.004]
+        
+        self.assertItemsEqual(start_levels, ans_start_levels)
+        self.assertItemsEqual(start_levels, ans_start_levels)
+        
+        ## Masses
+        start_masses = [round(node.start_mass, 3) for node in tree.nodes.values()]
+        end_masses = [round(node.end_mass, 3) for node in tree.nodes.values()]
 
+        ans_start_masses = [0.0, 0.018, 0.018, 0.079, 0.079, 0.293, 0.293, 0.667, 0.667, 0.816, 0.816]
+        ans_end_masses = [0.018, 0.079, 0.947, 0.293, 0.667, 0.473, 0.359, 0.816, 0.734, 1.0, 0.949]
 
-        ## Single root
-        roots = [idx for idx, node in tree.nodes.items() if node.parent is None]
-        self.assertEqual(len(roots), 1)
+        self.assertItemsEqual(start_masses, ans_start_masses)
+        self.assertItemsEqual(start_masses, ans_start_masses)
 
-        ## After pruning, three leaf nodes (for three Gaussian)
-        pruned_tree = tree.prune(threshold=50)
-        leaves = [idx for idx, node in pruned_tree.nodes.items() 
-                  if len(node.children) == 0]
-        self.assertEqual(len(leaves), 3)
+        ## Sizes and parents
+        sizes = [len(node.members) for node in tree.nodes.values()]
+        parents = [node.parent for node in tree.nodes.values()]
 
-        import ipdb
-        ipdb.set_trace()
+        ans_sizes = [1000, 767, 215, 238, 472, 76, 23, 231, 12, 103, 48]
+        ans_parents = [None, 0, 0, 1, 1, 3, 3, 4, 4, 7, 7]
 
+        self.assertItemsEqual(sizes, ans_sizes)
+        self.assertItemsEqual(parents, ans_parents)
 
     def test_construct_from_graph(self):
         """
@@ -157,6 +167,7 @@ class TestLSTConstructors(unittest.TestCase):
                                   prune_threshold=self.gamma)
 
         self._check_tree_viability(tree)
+        self._check_tree_correctness(tree)
 
     def test_load(self):
         """
@@ -170,6 +181,7 @@ class TestLSTConstructors(unittest.TestCase):
             tree2 = dcl.load_tree(f.name)
 
         self._check_tree_viability(tree2)
+        self._check_tree_correctness(tree)
 
 
 class TestLevelSetTree(unittest.TestCase):
