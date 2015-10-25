@@ -348,10 +348,9 @@ class LevelSetTree(object):
             If method is 'upper-set', this is the threshold at which to cut the
             tree.
 
-        scale : {'lambda', 'alpha'}
+        form : {'density', 'mass'}
             If method is 'upper-set', this is vertical scale which 'threshold'
-            refers to. 'lambda' corresponds to a density level, 'alpha'
-            corresponds to a mass level.
+            refers to.
 
         Returns
         -------
@@ -379,14 +378,14 @@ class LevelSetTree(object):
                 labels, nodes = self._first_K_cluster(k)
 
         elif method == 'upper-set':
-            required = set(['threshold', 'scale'])
+            required = set(['threshold', 'form'])
             if not set(kwargs.keys()).issuperset(required):
                 raise ValueError("Incorrect arguments for the upper-set " + \
                 "cluster labeling method.")
             else:
                 threshold = kwargs.get('threshold')
-                scale = kwargs.get('scale')
-                labels, nodes = self._upper_set_cluster(threshold, scale)
+                form = kwargs.get('form')
+                labels, nodes = self._upper_set_cluster(threshold, form)
 
         elif method == 'k-level':
             required = set(['k'])
@@ -601,7 +600,7 @@ class LevelSetTree(object):
         labels = _np.array([points, cluster], dtype=_np.int).T
         return labels, nodes
 
-    def _upper_set_cluster(self, threshold, scale='alpha'):
+    def _upper_set_cluster(self, threshold, form='mass'):
         """
         Set foreground clusters by finding connected components at an upper
         level set or upper mass set.
@@ -610,9 +609,9 @@ class LevelSetTree(object):
         ----------
         threshold : float
             The level or mass value that defines the foreground set of points,
-            depending on 'scale'.
+            depending on 'form'.
 
-        scale : {'alpha', 'lambda'}
+        form : {'mass', 'density'}
             Determines if the 'cut' threshold is a density level value or a
             mass value (i.e. fraction of data in the background set)
 
@@ -630,7 +629,7 @@ class LevelSetTree(object):
         """
 
         ## identify upper level points and the nodes active at the cut
-        if scale == 'alpha':
+        if form == 'mass':
             n_bg = [len(x) for x in self.bg_sets]
             alphas = _np.cumsum(n_bg) / (1.0 * self.n)
             upper_levels = _np.where(alphas > threshold)[0]
@@ -642,7 +641,8 @@ class LevelSetTree(object):
             nodes = [k for k, v in self.nodes.iteritems()
                 if v.start_level <= threshold and v.end_level > threshold]
 
-        upper_pts = _np.array([y for x in upper_levels for y in self.bg_sets[x]])
+        upper_pts = _np.array([y for x in upper_levels 
+                              for y in self.bg_sets[x]])
 
 
         ## find intersection between upper set points and each active component
@@ -685,7 +685,7 @@ class LevelSetTree(object):
             Indices of tree nodes corresponding to foreground clusters.
         """
 
-        cut = self.findKCut(k)
+        cut = self._find_K_cut(k)
         nodes = [e for e, v in self.nodes.iteritems() \
             if v.start_level <= cut and v.end_level > cut]
 
@@ -769,7 +769,8 @@ class LevelSetTree(object):
 
         return cut
 
-    def _construct_branch_map(self, ix, interval, scale, width, sort):
+    def _construct_branch_map(self, ix, interval, form, horizontal_spacing, 
+                              sort):
         """
         Map level set tree nodes to locations in a plot canvas. Finds the plot
         coordinates of vertical line segments corresponding to LST nodes and
@@ -788,9 +789,9 @@ class LevelSetTree(object):
         interval: length 2 tuple of floats
             Horizontal space allocated to node 'ix'.
 
-        scale : {'lambda', 'alpha'}, optional
+        form : {'density', 'mass'}, optional
 
-        width : {'uniform', 'mass'}, optional
+        horizontal_spacing : {'uniform', 'proportional'}, optional
             Determines how much horzontal space each level set tree node is
             given. See LevelSetTree.plot() for more information.
 
@@ -833,7 +834,7 @@ class LevelSetTree(object):
             splits = {}
             splitmap = []
 
-            if scale == 'lambda':
+            if form == 'density':
                 segments[ix] = (([xpos, self.nodes[ix].start_level],
                     [xpos, self.nodes[ix].end_level]))
             else:
@@ -860,16 +861,17 @@ class LevelSetTree(object):
                 weights = weights[seniority]
 
             ## get relative branch intervals
-            if width == 'mass':
+            if horizontal_spacing == 'uniform':
                 child_intervals = _np.cumsum(weights)
                 child_intervals = _np.insert(child_intervals, 0, 0.0)
 
-            elif width == 'uniform':
-                child_intervals = _np.linspace(0.0, 1.0, n_child+1)
+            elif horizontal_spacing == 'proportional':
+                child_intervals = _np.linspace(0.0, 1.0, n_child + 1)
 
             else:
-                raise ValueError("'width' argument not understood. 'width' " +
-                                 "must be either 'mass' or 'uniform'.")
+                raise ValueError("'horizontal_spacing' argument not " +
+                                 "understood. 'horizontal_spacing' " +
+                                 "must be either 'uniform' or 'proportional'.")
 
             ## loop over the children
             for j, child in enumerate(children):
@@ -881,7 +883,7 @@ class LevelSetTree(object):
 
                 ## recurse on the child
                 branch = self._construct_branch_map(child, branch_interval,
-                    scale, width, sort)
+                    form, horizontal_spacing, sort)
                 branch_segs, branch_splits, branch_segmap, \
                     branch_splitmap = branch
 
@@ -902,7 +904,7 @@ class LevelSetTree(object):
                 splitmap.append(child)
                 child_xpos = segments[child][0][0]
 
-                if scale == 'lambda':
+                if form == 'density':
                     splits[child] = ([xpos, self.nodes[ix].end_level],
                         [child_xpos, self.nodes[ix].end_level])
                 else:
@@ -911,7 +913,7 @@ class LevelSetTree(object):
 
 
             ## add vertical segment for current node
-            if scale == 'lambda':
+            if form == 'density':
                 segments[ix] = (([xpos, self.nodes[ix].start_level],
                     [xpos, self.nodes[ix].end_level]))
             else:
@@ -920,7 +922,8 @@ class LevelSetTree(object):
 
         return segments, splits, segmap, splitmap
 
-    def _construct_mass_map(self, ix, start_pile, interval, width_mode):
+    def _construct_mass_map(self, ix, start_pile, interval, 
+                            horizontal_spacing):
         """
         Map level set tree nodes to locations in a plot canvas. Finds the plot
         coordinates of vertical line segments corresponding to LST nodes and
@@ -945,7 +948,7 @@ class LevelSetTree(object):
         interval: length 2 tuple of floats
             Horizontal space allocated to node 'ix'.
 
-        width_mode : {'uniform', 'mass'}, optional
+        horizontal_spacing : {'uniform', 'proportional'}, optional
             Determines how much horzontal space each level set tree node is
             given. See LevelSetTree.plot() for more information.
 
@@ -1004,15 +1007,15 @@ class LevelSetTree(object):
             weights = weights[seniority]
 
             ## get relative branch intervals
-            if width_mode == 'mass':
+            if horizontal_spacing == 'proportional':
                 child_intervals = _np.cumsum(weights)
                 child_intervals = _np.insert(child_intervals, 0, 0.0)
             else:
-                child_intervals = _np.linspace(0.0, 1.0, n_child+1)
+                child_intervals = _np.linspace(0.0, 1.0, n_child + 1)
 
 
             ## find height of the branch
-            end_pile = start_pile + (size - sum(census))/len(self.density)
+            end_pile = start_pile + (size - sum(census)) / len(self.density)
 
             ## loop over the children
             for j, child in enumerate(children):
@@ -1024,7 +1027,8 @@ class LevelSetTree(object):
 
                 ## recurse on the child
                 branch = self._construct_mass_map(child, end_pile,
-                                                  branch_interval, width_mode)
+                                                  branch_interval, 
+                                                  horizontal_spacing)
                 branch_segs, branch_splits, branch_segmap, \
                     branch_splitmap = branch
 
