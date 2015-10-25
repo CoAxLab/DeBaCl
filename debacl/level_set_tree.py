@@ -404,7 +404,7 @@ class LevelSetTree(object):
 
         return labels, nodes
 
-    def make_subtree(self, ix):
+    def _make_subtree(self, ix):
         """
         Return the subtree with node 'ix' as the root, and all ancestors of
         'ix'.
@@ -457,7 +457,7 @@ class LevelSetTree(object):
             if v.parent==None and len(v.members) <= threshold]
 
         for root in small_roots:
-            root_tree = tree.make_subtree(root)
+            root_tree = tree._make_subtree(root)
             for ix in root_tree.nodes.iterkeys():
                 del tree.nodes[ix]
 
@@ -715,7 +715,7 @@ class LevelSetTree(object):
         """
 
         for ix in active_nodes:
-            subtree = self.make_subtree(ix)
+            subtree = self._make_subtree(ix)
 
             max_end_level = max([v.end_level for v in subtree.nodes.values()])
             max_end_mass = max([v.end_mass for v in subtree.nodes.values()])
@@ -728,7 +728,7 @@ class LevelSetTree(object):
                 if u != ix:
                     del self.nodes[u]
 
-    def find_K_cut(self, k):
+    def _find_K_cut(self, k):
         """
         Find the lowest level cut that has k connected components. If there are
         no levels that have k components, then find the lowest level that has
