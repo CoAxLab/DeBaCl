@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import numpy as np
 import debacl as dcl
+import matplotlib as mpl
 
 
 class TestLSTConstructors(unittest.TestCase):
@@ -187,62 +188,225 @@ class TestLSTConstructors(unittest.TestCase):
 class TestLevelSetTree(unittest.TestCase):
     """
     Test the functions of a level set tree, *after* it's been created.
+
+    Note that `LevelSetTree.save` is already tested by the `load_tree`
+    constructor test above.
     """
 
     def setUp(self):
-        pass
+        ## Data parameters
+        np.random.seed(451)
+        self.n = 1000
+        mix = (0.3, 0.5, 0.2)
+        mean = (-1, 0, 1)
+        stdev = (0.3, 0.2, 0.1)
+
+        ## Tree parameters
+        k = 50
+        self.gamma = 5
+
+        ## Simulate data
+        membership = np.random.multinomial(self.n, pvals=mix)
+        dataset = np.array([], dtype=np.float)
+
+        for (p, mu, sigma) in zip(membership, mean, stdev):
+            draw = np.random.normal(loc=mu, scale=sigma, size=p)
+            dataset = np.append(dataset, draw)
+
+        dataset = np.sort(dataset).reshape((self.n, 1))
+        self.tree = dcl.construct_tree(dataset, k, self.gamma)
+
+    def _check_tree_viability(self, tree):
+        """
+        Generic function for testing the viability of any tree. Does not check
+        correctness with respect to any particular dataset, similarity graph,
+        or density function.
+        """
+
+        ## Check that the type of the tree is LevelSetTree
+        self.assertTrue(isinstance(tree, dcl.level_set_tree.LevelSetTree))
+
+        ## Check min and max density levels
+        start_levels = [x.start_level for x in tree.nodes.values()]
+        self.assertAlmostEqual(min(start_levels), 0.)
+
+        ## Check min and max masses
+        start_masses = [x.start_mass for x in tree.nodes.values()]
+        self.assertAlmostEqual(min(start_masses), 0.)
+
+        end_masses = [x.end_mass for x in tree.nodes.values()]
+        self.assertAlmostEqual(max(end_masses), 1.)
+
+        ## Sum of root sizes should be the size of the input dataset.
+        root_sizes = [len(node.members) for node in tree.nodes.values() 
+                      if node.parent is None]
+        self.assertEqual(sum(root_sizes), self.n)
+
+        ## Check per-node plausibility
+        for idx, node in tree.nodes.items():
+            
+            if idx == 0:
+                self.assertTrue(node.parent is None)
+
+            else:
+                if node.parent is not None:  # there *can* be multiple roots
+                    self.assertTrue(isinstance(node.parent, int))
+                    self.assertTrue(node.parent >= 0)
+
+            ## any node with 1 member has no children
+            if len(node.members) == 1:
+                self.assertEqual(len(node.children), 0)
+
+            # start and end levels and masses should be in the right order,
+            # relative to each other
+            self.assertLess(node.start_level, node.end_level)
+            self.assertLess(node.start_mass, node.end_mass)
+
+            ## no node should have size no smaller than the pruning threshold.
+            self.assertLessEqual(self.gamma, len(node.members))
+
+            if len(node.children) > 0:
+
+                ## children sizes sum to less than parent size
+                kid_sizes = [len(tree.nodes[x].members) for x in node.children]
+                self.assertLess(sum(kid_sizes), len(node.members))
+
+                for child in node.children:
+
+                    ## child nodes have higher indices than parent
+                    self.assertGreater(child, idx)
+
+                    ## child nodes start where parent nodes end
+                    self.assertEqual(node.end_level, 
+                                     tree.nodes[child].start_level)
+
+                    self.assertEqual(node.end_mass, 
+                                     tree.nodes[child].start_mass)
 
     def test_summaries(self):
         """
+        Check that tree printing in table form is working properly.
         """
-        pass
 
-    def test_save(self):
-        """
-        """
-        pass
+        try:
+            print self.tree
+        except:
+            assert False, "LevelSetTree failed to print."
+
+        print_string = self.tree.__str__()
+
+        self.assertFalse('fossa' in print_string)
+
+        column_names = ['start_level', 'end_level', 'start_mass', 'end_mass', 
+                        'size', 'parent', 'children']
+        for col_name in column_names:
+            self.assertTrue(col_name in print_string)
 
     def test_prune(self):
         """
+        Test LevelSetTree pruning.
         """
-        pass
+        ## Double check prune threshold for the original tree.
+        self.assertEqual(self.tree.prune_threshold, self.gamma)
+
+        ## Check the prune threshold for a new tree, and make sure the
+        #  threshold didn't change for the original tree.
+        new_gamma = 50
+        pruned_tree = self.tree.prune(threshold=new_gamma)
+        self.assertEqual(pruned_tree.prune_threshold, new_gamma)
+        self.assertEqual(self.tree.prune_threshold, self.gamma)
+
+        ## Make sure the new tree is still a viable tree.
+        self._check_tree_viability(self.tree)
+        self._check_tree_viability(pruned_tree)
 
     def test_plot(self):
         """
+        Test LevelSetTree plotting.
         """
-        pass
+        ## Test vertical scales (aka 'form')
+        for vscale in ['mass', 'density', 'branch-mass']:
+            try:
+                plot_stuff = self.tree.plot(form=vscale)
+                fig = plot_stuff[0]
+            except:
+                assert False, \
+                    "Plot function failed for the '{}' form.".format(vscale)
 
-    def test_leaf_clusters(self):
-        """
-        """
-        pass
+            self.assertTrue(len(plot_stuff), 5)
+            self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
-    def test_first_k_clusters(self):
-        """
-        """
-        pass
 
-    def test_upper_set_clusters(self):
-        """
-        """
-        pass
+        ## Test horizontal scale (aka 'horizontal_spacing')
+        for hscale in ['uniform', 'proportional']:
+            try:
+                plot_stuff = self.tree.plot(horizontal_spacing=hscale)
+                fig = plot_stuff[0]
+            except:
+                assert False, \
+                    "Plot function failed for the '{}' form.".format(hscale)
 
-    def test_first_k_level_clusters(self):
-        """
-        """
-        pass
+            self.assertTrue(len(plot_stuff), 5)
+            self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
-    def test_cluster_dispatch(self):
+    def _check_cluster_label_plausibility(self, labels):
         """
+        Utility for checking whether cluster labels conform to minimal
+        standards of plausibility. Does *not* check correctness of cluster
+        labels relative to any particular dataset, similarity graph, or density
+        function.
         """
-        pass
+        # all values should be integers
+        self.assertTrue(labels.dtype is np.dtype('int64'))
 
-    def test_k_cut_search(self):
-        """
-        """
-        pass
+        # fewer labels than data instances
+        self.assertLessEqual(len(labels), self.n)
 
-    def test_subtree(self):
+        # all row indices are less than the number of indices
+        max_row_index = np.max(labels[:, 0])
+        self.assertLessEqual(max_row_index, self.n)
+
+        # no duplicate row indices
+        self.assertEqual(len(labels[:, 0]), len(np.unique(labels[:, 0])))
+
+        # row indices and cluster labels are integers greater than or equal to
+        # zero
+        self.assertGreaterEqual(np.min(labels), 0)
+
+    def test_clusters(self):
         """
+        Test the various ways of getting clusters from a LevelSetTree.
         """
-        pass
+
+        ## Leaf clustering
+        labels = self.tree.get_clusters(method='leaf')[0]
+        self._check_cluster_label_plausibility(labels)
+        
+        leaves = [idx for idx, node in self.tree.nodes.items() 
+                  if len(node.children) == 0]
+        self.assertTrue(len(np.unique(labels[:, 1])), len(leaves))
+
+        ## First-K clusters
+        k = 3
+        labels = self.tree.get_clusters(method='first-k', k=k)[0]
+        self._check_cluster_label_plausibility(labels)
+        self.assertTrue(len(np.unique(labels[:, 1])), k)
+
+        ## First level with K clusters
+        labels = self.tree.get_clusters(method='k-level', k=k)[0]
+        self._check_cluster_label_plausibility(labels)
+        self.assertTrue(len(np.unique(labels[:, 1])), k)
+        
+        ## Upper set clustering
+        # labels = self.tree.get_clusters(method='upper-set', threshold=0.4, 
+        #                                 form='density')[0]
+        # self._check_cluster_label_plausibility(labels)
+
+        # labels = self.tree.get_clusters(method='upper-set', threshold=0.6, 
+        #                                 form='mass')[0]
+        # self._check_cluster_label_plausibility(labels)
+
+
+
+
+
