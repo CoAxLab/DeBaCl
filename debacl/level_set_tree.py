@@ -357,16 +357,14 @@ class LevelSetTree(object):
         labels : 2-dimensional numpy array
             Each row corresponds to an observation. The first column indicates
             the index of the observation in the original data matrix, and the
-            second column is the integer cluster label (starting at 0). Note
-            that the set of observations in this "foreground" set is typically
-            smaller than the original dataset.
-
-        nodes : list
-            Indices of tree nodes corresponding to foreground clusters.
+            second column is the index of the LST node to which the observation
+            belongs, *with respect to the clustering*. Note that the set of
+            observations in this "foreground" set is typically smaller than the
+            original dataset.
         """
 
         if method == 'leaf':
-            labels, nodes = self._leaf_cluster()
+            labels = self._leaf_cluster()
 
         elif method == 'first-k':
             required = set(['k'])
@@ -375,7 +373,7 @@ class LevelSetTree(object):
                 "cluster labeling method.")
             else:
                 k = kwargs.get('k')
-                labels, nodes = self._first_K_cluster(k)
+                labels = self._first_K_cluster(k)
 
         elif method == 'upper-level-set':
             required = set(['threshold', 'form'])
@@ -385,7 +383,7 @@ class LevelSetTree(object):
             else:
                 threshold = kwargs.get('threshold')
                 form = kwargs.get('form')
-                labels, nodes = self._upper_set_cluster(threshold, form)
+                labels = self._upper_set_cluster(threshold, form)
 
         elif method == 'k-level':
             required = set(['k'])
@@ -394,14 +392,12 @@ class LevelSetTree(object):
                 "cluster labeling method.")
             else:
                 k = kwargs.get('k')
-                labels, nodes = self._first_K_level_cluster(k)
+                labels = self._first_K_level_cluster(k)
 
         else:
             raise ValueError("Cluster labeling method not understood.")
-            labels = _np.array([])
-            nodes = []
 
-        return labels, nodes
+        return labels
 
     def _make_subtree(self, ix):
         """
@@ -542,12 +538,12 @@ class LevelSetTree(object):
         points = []
         cluster = []
 
-        for i, k in enumerate(leaves):
-            points.extend(self.nodes[k].members)
-            cluster += ([i] * len(self.nodes[k].members))
+        for leaf in leaves:
+            points.extend(self.nodes[leaf].members)
+            cluster += ([leaf] * len(self.nodes[leaf].members))
 
         labels = _np.array([points, cluster], dtype=_np.int).T
-        return labels, leaves
+        return labels
 
     def _first_K_cluster(self, k):
         """
@@ -592,13 +588,13 @@ class LevelSetTree(object):
         points = []
         cluster = []
 
-        for i, c in enumerate(nodes):
+        for c in nodes:
             cluster_pts = self.nodes[c].members
             points.extend(cluster_pts)
-            cluster += ([i] * len(cluster_pts))
+            cluster += ([c] * len(cluster_pts))
 
         labels = _np.array([points, cluster], dtype=_np.int).T
-        return labels, nodes
+        return labels
 
     def _upper_set_cluster(self, threshold, form='mass'):
         """
@@ -644,15 +640,15 @@ class LevelSetTree(object):
             points = []
             cluster = []
 
-            for i, c in enumerate(active_nodes):
+            for c in active_nodes:
                 cluster_mask = _np.in1d(upper_level_set,
                                         list(self.nodes[c].members))
                 cluster_pts = upper_level_set[cluster_mask]
                 points.extend(cluster_pts)
-                cluster += ([i] * len(cluster_pts))
+                cluster += ([c] * len(cluster_pts))
 
             labels = _np.array([points, cluster], dtype=_np.int).T
-            return labels, active_nodes
+            return labels
 
     def _first_K_level_cluster(self, k):
         """
@@ -689,14 +685,14 @@ class LevelSetTree(object):
         points = []
         cluster = []
 
-        for i, c in enumerate(nodes):
+        for c in nodes:
 
             cluster_pts = self.nodes[c].members
             points.extend(cluster_pts)
-            cluster += ([i] * len(cluster_pts))
+            cluster += ([c] * len(cluster_pts))
 
         labels = _np.array([points, cluster], dtype=_np.int).T
-        return labels, nodes
+        return labels
 
     def _collapse_leaves(self, active_nodes):
         """

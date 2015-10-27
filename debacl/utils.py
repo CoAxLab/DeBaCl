@@ -431,3 +431,41 @@ def assign_background_points(X, clusters, method=None, k=1):
     return labels
 
 
+def reindex_cluster_labels(labels):
+    """
+    Reindex integer cluster labels to be consecutive non-negative integers.
+    This is useful because the `LevelSetTree.get_clusters` method returns
+    cluster labels that match level set tree node indices. These are generally
+    not consecutive whole numbers.
+
+    Parameters
+    ----------
+    labels : numpy.array
+        Cluster labels returned from the `LevelSetTree.get_clusters` method.
+        The first column should be row indices and the second column should be
+        integers corresponding to ID numbers of nodes in the level set tree.
+
+    Returns
+    -------
+    new_labels : numpy.array
+        Cluster labels in the same form of the input 'labels', but with cluster
+        labels reindexed to be consecutive non-negative integers.
+    """
+
+    if not isinstance(labels, _np.ndarray):
+        raise TypeError("Input 'labels' must be a numpy array.")
+
+    if labels.ndim != 2:
+        raise TypeError("Input 'labels' must be a 2-dimensional numpy array.")
+
+    if labels.shape[1] != 2:
+        raise TypeError("Input 'labels' must have two columns.")
+
+    if not issubclass(labels.dtype.type, _np.integer):
+        raise TypeError("Input 'labels' must contain integers.")
+
+    unique_labels = _np.unique(labels[:, 1])
+    label_map = {v: k for k, v in enumerate(unique_labels)}
+    new_labels = map(lambda x: label_map[x], labels[:, 1])
+    new_labels = _np.vstack((labels[:, 0], new_labels)).T
+    return new_labels

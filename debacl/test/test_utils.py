@@ -4,6 +4,7 @@ import scipy.special as spspec
 import numpy as np
 from numpy.testing import assert_array_equal
 
+import debacl as dcl
 from debacl import utils as utl
 
 
@@ -248,3 +249,21 @@ class TestBackgroundAssignments(unittest.TestCase):
         """
         """
         pass
+
+
+class TestClusterReindexing(unittest.TestCase):
+    """
+    Make sure the cluster label reindexing works properly.
+    """
+
+    def setUp(self):
+        self.cluster_labels = np.array([[7, 6, 8, 11, 62],
+                                               [3, 3, 7, 7, 4]]).T
+
+    def test_label_reindexing(self):
+        """
+        Test cluster label reindexing.
+        """
+        new_labels = utl.reindex_cluster_labels(self.cluster_labels)
+        assert_array_equal(self.cluster_labels[:, 0], new_labels[:, 0])
+        assert_array_equal(new_labels[:, 1], np.array([0, 0, 2, 2, 1]))

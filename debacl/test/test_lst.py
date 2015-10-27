@@ -383,7 +383,7 @@ class TestLevelSetTree(unittest.TestCase):
             labels = self.tree.get_clusters(method='fossa')
 
         ## Leaf clustering
-        labels = self.tree.get_clusters(method='leaf')[0]
+        labels = self.tree.get_clusters(method='leaf')
         self._check_cluster_label_plausibility(labels)
         
         leaves = [idx for idx, node in self.tree.nodes.items() 
@@ -392,24 +392,24 @@ class TestLevelSetTree(unittest.TestCase):
 
         ## First-K clusters
         k = 3
-        labels = self.tree.get_clusters(method='first-k', k=k)[0]
+        labels = self.tree.get_clusters(method='first-k', k=k)
         self._check_cluster_label_plausibility(labels)
         self.assertTrue(len(np.unique(labels[:, 1])), k)
 
         ## First level with K clusters
-        labels = self.tree.get_clusters(method='k-level', k=k)[0]
+        labels = self.tree.get_clusters(method='k-level', k=k)
         self._check_cluster_label_plausibility(labels)
         self.assertTrue(len(np.unique(labels[:, 1])), k)
         
         ## Upper set clustering
         labels = self.tree.get_clusters(method='upper-level-set', 
                                         threshold=0.4, 
-                                        form='density')[0]
+                                        form='density')
         self._check_cluster_label_plausibility(labels)
 
         labels = self.tree.get_clusters(method='upper-level-set',
                                         threshold=0.6, 
-                                        form='mass')[0]
+                                        form='mass')
         self._check_cluster_label_plausibility(labels)
 
 
