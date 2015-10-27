@@ -378,6 +378,10 @@ class TestLevelSetTree(unittest.TestCase):
         Test the various ways of getting clusters from a LevelSetTree.
         """
 
+        ## Bogus input
+        with self.assertRaises(ValueError):
+            labels = self.tree.get_clusters(method='fossa')
+
         ## Leaf clustering
         labels = self.tree.get_clusters(method='leaf')[0]
         self._check_cluster_label_plausibility(labels)
@@ -398,13 +402,15 @@ class TestLevelSetTree(unittest.TestCase):
         self.assertTrue(len(np.unique(labels[:, 1])), k)
         
         ## Upper set clustering
-        # labels = self.tree.get_clusters(method='upper-set', threshold=0.4, 
-        #                                 form='density')[0]
-        # self._check_cluster_label_plausibility(labels)
+        labels = self.tree.get_clusters(method='upper-level-set', 
+                                        threshold=0.4, 
+                                        form='density')[0]
+        self._check_cluster_label_plausibility(labels)
 
-        # labels = self.tree.get_clusters(method='upper-set', threshold=0.6, 
-        #                                 form='mass')[0]
-        # self._check_cluster_label_plausibility(labels)
+        labels = self.tree.get_clusters(method='upper-level-set',
+                                        threshold=0.6, 
+                                        form='mass')[0]
+        self._check_cluster_label_plausibility(labels)
 
 
 

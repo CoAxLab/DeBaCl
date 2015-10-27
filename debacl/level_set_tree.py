@@ -324,33 +324,33 @@ class LevelSetTree(object):
 
         Parameters
         ----------
-        method : {'leaf', 'first_k', 'upper_set', 'k_level'}, optional
+        method : {'leaf', 'first-k', 'upper-level-set', 'k-level'}, optional
             Method for obtaining cluster labels from the tree.
 
             - 'leaf': treat each leaf of the tree as a separate cluster. 
 
-            - 'first_k': find the first K non-overlapping clusters from the
+            - 'first-k': find the first K non-overlapping clusters from the
               roots of the tree.
 
-            - 'upper_set': cluster by cutt the tree at a specified
+            - 'upper-level-set': cluster by cutt the tree at a specified
               density or mass level. 
 
-            - 'k_level': returns clusters at the lowest density level that has
+            - 'k-level': returns clusters at the lowest density level that has
               k nodes.
 
         Other Parameters
         ----------------
         k : int
-            If method is 'first_k' or 'k_level', this is the desired number of
+            If method is 'first-k' or 'k-level', this is the desired number of
             clusters.
 
         threshold : float
-            If method is 'upper-set', this is the threshold at which to cut the
-            tree.
+            If method is 'upper-level-set', this is the threshold at which to
+            cut the tree.
 
         form : {'density', 'mass'}
-            If method is 'upper-set', this is vertical scale which 'threshold'
-            refers to.
+            If method is 'upper-level-set', this is vertical scale which
+            'threshold' refers to.
 
         Returns
         -------
@@ -377,7 +377,7 @@ class LevelSetTree(object):
                 k = kwargs.get('k')
                 labels, nodes = self._first_K_cluster(k)
 
-        elif method == 'upper-set':
+        elif method == 'upper-level-set':
             required = set(['threshold', 'form'])
             if not set(kwargs.keys()).issuperset(required):
                 raise ValueError("Incorrect arguments for the upper-set " + \
@@ -630,32 +630,29 @@ class LevelSetTree(object):
 
         ## identify upper level points and the nodes active at the cut
         if form == 'mass':
-            n_bg = [len(x) for x in self.bg_sets]
-            alphas = _np.cumsum(n_bg) / (1.0 * self.n)
-            upper_levels = _np.where(alphas > threshold)[0]
-            nodes = [k for k, v in self.nodes.iteritems()
-                if v.start_mass <= threshold and v.end_mass > threshold]
+            density_level = self._mass_to_density(mass=threshold)
+            return self._upper_set_cluster(threshold=density_level,
+                                           form='density')
 
         else:
-            upper_levels = _np.where(_np.array(self.levels) > threshold)[0]
-            nodes = [k for k, v in self.nodes.iteritems()
+            upper_level_set = _np.where(_np.array(self.density) > threshold)[0]
+            active_nodes = [k for k, v in self.nodes.iteritems()
                 if v.start_level <= threshold and v.end_level > threshold]
 
-        upper_pts = _np.array([y for x in upper_levels 
-                              for y in self.bg_sets[x]])
+       
+            ## find intersection between upper set points and each active component
+            points = []
+            cluster = []
 
+            for i, c in enumerate(active_nodes):
+                cluster_mask = _np.in1d(upper_level_set,
+                                        list(self.nodes[c].members))
+                cluster_pts = upper_level_set[cluster_mask]
+                points.extend(cluster_pts)
+                cluster += ([i] * len(cluster_pts))
 
-        ## find intersection between upper set points and each active component
-        points = []
-        cluster = []
-
-        for i, c in enumerate(nodes):
-            cluster_pts = upper_pts[_np.in1d(upper_pts, self.nodes[c].members)]
-            points.extend(cluster_pts)
-            cluster += ([i] * len(cluster_pts))
-
-        labels = _np.array([points, cluster], dtype=_np.int).T
-        return labels, nodes
+            labels = _np.array([points, cluster], dtype=_np.int).T
+            return labels, active_nodes
 
     def _first_K_level_cluster(self, k):
         """
@@ -1057,28 +1054,29 @@ class LevelSetTree(object):
 
         return segments, splits, segmap, splitmap
 
-    def _mass_to_level(self, alpha):
+    def _mass_to_density(self, mass):
         """
-        Convert the specified mass value into a level location.
+        Convert the specified mass level value into a density level value.
 
         Parameters
         ----------
-        alpha : float
+        mass : float
             Float in the interval [0.0, 1.0], with the desired fraction of all
             points.
 
         Returns
         -------
-        cut_level: float
-            Density level corresponding to the 'alpha' fraction of background
+        level: float
+            Density level corresponding to the 'mass' fraction of background
             points.
         """
+        density_order = _np.argsort(self.density)
+        n = len(self.density)
+        mass_fraction = max(0, int(round(mass * n)) - 1)
+        level_index = density_order[mass_fraction]
+        level = self.density[level_index]
 
-        n_bg = [len(bg_set) for bg_set in self.bg_sets]
-        masses = _np.cumsum(n_bg) / (1.0 * len(self.density))
-        cut_level = self.levels[_np.where(masses > alpha)[0][0]]
-
-        return cut_level
+        return level
 
 
 
