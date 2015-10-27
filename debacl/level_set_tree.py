@@ -317,7 +317,7 @@ class LevelSetTree(object):
 
         return fig, segments, segmap, splits, splitmap
 
-    def get_clusters(self, method='leaf', **kwargs):
+    def get_clusters(self, method='leaf', fill_background=False, **kwargs):
         """
         Generic function for retrieving custer labels from the level set tree.
         Dispatches a specific cluster labeling function.
@@ -337,6 +337,10 @@ class LevelSetTree(object):
 
             - 'k-level': returns clusters at the lowest density level that has
               k nodes.
+
+        fill_background : bool, optional
+            If True, a label of -1 is assigned to background points, i.e. those
+            instances not otherwise assigned to a high-density cluster.
 
         Other Parameters
         ----------------
@@ -363,6 +367,7 @@ class LevelSetTree(object):
             original dataset.
         """
 
+        ## Retrive foreground labels.
         if method == 'leaf':
             labels = self._leaf_cluster()
 
@@ -396,6 +401,13 @@ class LevelSetTree(object):
 
         else:
             raise ValueError("Cluster labeling method not understood.")
+
+        ## If requested, fill in the background labels with -1
+        if fill_background:
+            n = len(self.density)
+            full_labels = _np.vstack((_np.arange(n), [-1] * n)).T
+            full_labels[labels[:, 0], 1] = labels[:, 1]
+            labels = full_labels
 
         return labels
 

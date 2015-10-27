@@ -4,6 +4,7 @@ import tempfile
 import numpy as np
 import debacl as dcl
 import matplotlib as mpl
+from numpy.testing import assert_array_equal
 
 
 class TestLSTConstructors(unittest.TestCase):
@@ -349,7 +350,7 @@ class TestLevelSetTree(unittest.TestCase):
             self.assertTrue(len(plot_stuff), 5)
             self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
-    def _check_cluster_label_plausibility(self, labels):
+    def _check_cluster_label_plausibility(self, labels, background=False):
         """
         Utility for checking whether cluster labels conform to minimal
         standards of plausibility. Does *not* check correctness of cluster
@@ -370,8 +371,11 @@ class TestLevelSetTree(unittest.TestCase):
         self.assertEqual(len(labels[:, 0]), len(np.unique(labels[:, 0])))
 
         # row indices and cluster labels are integers greater than or equal to
-        # zero
-        self.assertGreaterEqual(np.min(labels), 0)
+        # zero, or -1 if background is True
+        if background:
+            self.assertGreaterEqual(np.min(labels), -1)
+        else:
+            self.assertGreaterEqual(np.min(labels), 0)
 
     def test_clusters(self):
         """
@@ -381,14 +385,6 @@ class TestLevelSetTree(unittest.TestCase):
         ## Bogus input
         with self.assertRaises(ValueError):
             labels = self.tree.get_clusters(method='fossa')
-
-        ## Leaf clustering
-        labels = self.tree.get_clusters(method='leaf')
-        self._check_cluster_label_plausibility(labels)
-        
-        leaves = [idx for idx, node in self.tree.nodes.items() 
-                  if len(node.children) == 0]
-        self.assertTrue(len(np.unique(labels[:, 1])), len(leaves))
 
         ## First-K clusters
         k = 3
@@ -412,7 +408,17 @@ class TestLevelSetTree(unittest.TestCase):
                                         form='mass')
         self._check_cluster_label_plausibility(labels)
 
+        ## Leaf clustering
+        leaf_labels = self.tree.get_clusters(method='leaf')
+        self._check_cluster_label_plausibility(leaf_labels)
+        
+        leaves = [idx for idx, node in self.tree.nodes.items() 
+                  if len(node.children) == 0]
 
+        self.assertItemsEqual(np.unique(leaf_labels[:, 1]), leaves)
 
-
-
+        ## Check that background filling works correctly.
+        full_labels = self.tree.get_clusters(method='leaf',
+                                             fill_background=True)
+        self._check_cluster_label_plausibility(full_labels, background=True)
+        assert_array_equal(leaf_labels[:, 1], full_labels[leaf_labels[:, 0], 1])
