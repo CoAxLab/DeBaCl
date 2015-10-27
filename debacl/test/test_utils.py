@@ -223,34 +223,6 @@ class TestDensityGrids(unittest.TestCase):
         self.assertItemsEqual(levels, [1.])    
 
 
-class TestBackgroundAssignments(unittest.TestCase):
-    """
-    """
-
-    def setUp(self):
-        pass
-
-    def test_zero_method(self):
-        """
-        """
-        pass
-
-    def test_k_plus_one(self):
-        """
-        """
-        pass
-
-    def test_knn_classifier(self):
-        """
-        """
-        pass
-
-    def test_nearest_center(self):
-        """
-        """
-        pass
-
-
 class TestClusterReindexing(unittest.TestCase):
     """
     Make sure the cluster label reindexing works properly.
