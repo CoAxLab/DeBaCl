@@ -436,3 +436,12 @@ class TestLevelSetTree(unittest.TestCase):
                                              fill_background=True)
         self._check_cluster_label_plausibility(full_labels, background=True)
         assert_array_equal(leaf_labels[:, 1], full_labels[leaf_labels[:, 0], 1])
+
+    def test_leaf_node_getter(self):
+        """
+        Test that the nodes returned by the leaf node getter are actually
+        leaves and that all leaves are returned correctly.
+        """
+        leaves = self.tree.get_leaf_nodes()
+        answer = [2, 5, 6, 8, 9, 10]
+        self.assertEqual(leaves, answer)

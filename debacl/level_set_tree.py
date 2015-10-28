@@ -417,6 +417,17 @@ class LevelSetTree(object):
 
         return labels
 
+    def get_leaf_nodes(self):
+        """
+        Return the indices of leaf nodes in the level set tree.
+
+        Returns
+        -------
+        leaves : list
+            List of LST leaf node indices.
+        """
+        return [k for k, v in self.nodes.items() if v.children == []]
+
     def _make_subtree(self, ix):
         """
         Return the subtree with node 'ix' as the root, and all ancestors of
@@ -550,7 +561,7 @@ class LevelSetTree(object):
             are also the leaves of the tree.
         """
 
-        leaves = [k for k, v in self.nodes.items() if v.children == []]
+        leaves = self.get_leaf_nodes()
 
         ## find components in the leaves
         points = []
