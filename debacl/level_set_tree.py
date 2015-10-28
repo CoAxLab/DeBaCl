@@ -157,7 +157,8 @@ class LevelSetTree(object):
         with open(filename, 'wb') as f:
             _cPickle.dump(self, f, _cPickle.HIGHEST_PROTOCOL)
 
-    def plot(self, form='mass', horizontal_spacing='uniform'):
+    def plot(self, form='mass', horizontal_spacing='uniform',
+             color_nodes=[], colormap='Dark2'):
         """
         Plot the level set tree, or return plot objects that can be modified.
 
@@ -185,39 +186,40 @@ class LevelSetTree(object):
             'proportional', then horizontal space is allocated proportionally
             to the mass of a node relative to its siblings.
 
+        color_nodes : list, optional
+            Nodes to color in the level set tree. For each node, the subtree
+            for which that node is the root is drawn with a single color.
+
+        colormap : str, optional
+            Matplotlib colormap, used only if 'color_nodes' contains at least
+            one node index. Default is the 'Dark2' colormap. "Qualitative"
+            colormaps are highly recommended.
+
         Returns
         -------
         fig : matplotlib figure
             Use fig.show() to view, fig.savefig() to save, etc.
 
-        segments : dict
-            A dictionary with values that contain the coordinates of vertical
-            line segment endpoints. This is only useful to the interactive
-            analysis tools.
+        node_colors : dict
+            RGBA 4-tuple
 
-        segmap : list
-            Indicates the order of the vertical line segments as returned by
-            the recursive coordinate mapping function, so they can be picked by
-            the user in the interactive tools.
+        node_coords : dict
+            Coordinates of vertical line segment endpoints representing LST
+            nodes.
 
-        splits : dict
-            Dictionary values contain the coordinates of horizontal line
-            segments (i.e. node splits).
-
-        splitmap : list
-            Indicates the order of horizontal line segments returned by
-            recursive coordinate mapping function, for use with interactive
-            tools.
+        split_coords : dict
+            Coordinates of horizontal line segment endpoints, representing
+            splits in the level set tree. There is a horizontal line segment
+            for *each* child in a split, and the keys in the 'split_coords'
+            dictionary indicate to which *child* the line segment belongs.
         """
 
         gap = 0.05
+        min_node_width = 1.2
 
         ## Initialize the plot containers
-        segments = {}
-        splits = {}
-        segmap = []
-        splitmap = []
-
+        node_coords = {}
+        split_coords = {}
 
         ## Find the root connected components and corresponding plot intervals
         ix_root = _np.array([k for k, v in self.nodes.iteritems()
@@ -238,7 +240,6 @@ class LevelSetTree(object):
         else:
             intervals = _np.linspace(0.0, 1.0, n_root+1)
 
-
         ## Do a depth-first search on each root to get segments for each branch
         for i, ix in enumerate(ix_root):
             if form == 'branch-mass':
@@ -248,26 +249,16 @@ class LevelSetTree(object):
                 branch = self._construct_branch_map(ix, (intervals[i],
                     intervals[i+1]), form, horizontal_spacing, sort=True)
 
-            branch_segs, branch_splits, branch_segmap, branch_splitmap = branch
-            segments = dict(segments.items() + branch_segs.items())
-            splits = dict(splits.items() + branch_splits.items())
-            segmap += branch_segmap
-            splitmap += branch_splitmap
-
-
-        ## get the the vertical line segments in order of the segment map
-        #  (segmap)
-        verts = [segments[k] for k in segmap]
-        lats = [splits[k] for k in splitmap]
-
+            branch_node_coords, branch_split_coords, _, _ = branch
+            node_coords.update(branch_node_coords)
+            split_coords.update(branch_split_coords)
 
         ## Find the fraction of nodes in each segment (to use as line widths)
-        thickness = [max(1.0, 12.0 * len(self.nodes[x].members)/n)
-            for x in segmap]
-
+        node_widths = {k: max(min_node_width, 12.0 * len(node.members) / n)
+            for k,  node in self.nodes.items()}
 
         ## Get the relevant vertical ticks
-        primary_ticks = [(x[0][1], x[1][1]) for x in segments.values()]
+        primary_ticks = [(x[0][1], x[1][1]) for x in node_coords.values()]
         primary_ticks = _np.unique(_np.array(primary_ticks).flatten())
         primary_labels = [str(round(tick, 2)) for tick in primary_ticks]
 
@@ -286,7 +277,7 @@ class LevelSetTree(object):
         ## Form-specific details
         if form == 'branch-mass':
             kappa_max = max(primary_ticks)
-            ax.set_ylim((-1.0 * gap * kappa_max, 1.04*kappa_max))
+            ax.set_ylim((-1.0 * gap * kappa_max, 1.04 * kappa_max))
             ax.set_ylabel("branch mass")
 
         elif form == 'density':
@@ -294,28 +285,43 @@ class LevelSetTree(object):
             ymin = min([v.start_level for v in self.nodes.itervalues()])
             ymax = max([v.end_level for v in self.nodes.itervalues()])
             rng = ymax - ymin
-            ax.set_ylim(ymin - gap*rng, ymax + 0.05*rng)
+            ax.set_ylim(ymin - gap * rng, ymax + 0.05 * rng)
 
         elif form == 'mass':
-            ax.set_ylabel("mass (density) level")
+            ax.set_ylabel("mass level")
             ymin = min([v.start_mass for v in self.nodes.itervalues()])
             ymax = max([v.end_mass for v in self.nodes.itervalues()])
             rng = ymax - ymin
-            ax.set_ylim(ymin - gap*rng, ymax + 0.05*ymax)
+            ax.set_ylim(ymin - gap * rng, ymax + 0.05 * ymax)
 
         else:
             raise ValueError('Plot form not understood')
 
 
-        ## Add the line segments
-        linecol = _LineCollection(verts, linewidths=thickness)
-        ax.add_collection(linecol)
-        linecol.set_picker(20)
+        ## Color the line segments.
+        node_colors = {k: [0.0, 0.0, 0.0, 1.0] for k, v in self.nodes.items()}
+        palette = _plt.get_cmap(colormap)
+        colorset = palette(_np.linspace(0, 1, len(color_nodes)))
 
-        splitcol = _LineCollection(lats)
-        ax.add_collection(splitcol)
+        for i, ix in enumerate(color_nodes):
+            subtree = self._make_subtree(ix)
 
-        return fig, segments, segmap, splits, splitmap
+            for ix_sub in subtree.nodes.keys():
+                node_colors[ix_sub] = list(colorset[i])
+
+                
+        ## Add the line segments to the figure.        
+        node_lines = _LineCollection(node_coords.values(),
+                                     linewidths=node_widths.values(),
+                                     colors=node_colors.values())
+        ax.add_collection(node_lines)
+
+        split_colors = {k: node_colors[k] for k in split_coords.keys()}
+        split_lines = _LineCollection(split_coords.values(),
+                                      colors=split_colors.values())
+        ax.add_collection(split_lines)
+
+        return fig, node_coords, split_coords, node_colors
 
     def get_clusters(self, method='leaf', fill_background=False, **kwargs):
         """
@@ -410,6 +416,17 @@ class LevelSetTree(object):
             labels = full_labels
 
         return labels
+
+    def get_leaf_nodes(self):
+        """
+        Return the indices of leaf nodes in the level set tree.
+
+        Returns
+        -------
+        leaves : list
+            List of LST leaf node indices.
+        """
+        return [k for k, v in self.nodes.items() if v.children == []]
 
     def _make_subtree(self, ix):
         """
@@ -544,7 +561,7 @@ class LevelSetTree(object):
             are also the leaves of the tree.
         """
 
-        leaves = [k for k, v in self.nodes.items() if v.children == []]
+        leaves = self.get_leaf_nodes()
 
         ## find components in the leaves
         points = []
