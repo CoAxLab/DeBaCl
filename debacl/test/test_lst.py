@@ -350,6 +350,20 @@ class TestLevelSetTree(unittest.TestCase):
             self.assertTrue(len(plot_stuff), 5)
             self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
+        ## Test that no color nodes yields all black node line segments.
+        fig, _, _, node_colors = self.tree.plot()
+        self.assertItemsEqual(node_colors.keys(), self.tree.nodes.keys())
+
+        for c in node_colors.values():
+            self.assertEqual(c, [0., 0., 0., 1.])
+
+        ## Test that passing in some color nodes makes those nodes have colors
+        #  that aren't black.
+        fig, _, _, node_colors = self.tree.plot(color_nodes=[4, 8])
+
+        for i in [4, 8]:
+            self.assertNotEqual(node_colors[i], [0., 0., 0., 1.])
+
     def _check_cluster_label_plausibility(self, labels, background=False):
         """
         Utility for checking whether cluster labels conform to minimal
