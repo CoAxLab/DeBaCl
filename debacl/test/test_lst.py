@@ -328,26 +328,26 @@ class TestLevelSetTree(unittest.TestCase):
         ## Test vertical scales (aka 'form')
         for vscale in ['mass', 'density', 'branch-mass']:
             try:
-                plot_stuff = self.tree.plot(form=vscale)
-                fig = plot_stuff[0]
+                plot = self.tree.plot(form=vscale)
+                fig = plot[0]
             except:
                 assert False, \
                     "Plot function failed for the '{}' form.".format(vscale)
 
-            self.assertTrue(len(plot_stuff), 5)
+            self.assertEqual(len(plot), 4)
             self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
 
         ## Test horizontal scale (aka 'horizontal_spacing')
         for hscale in ['uniform', 'proportional']:
             try:
-                plot_stuff = self.tree.plot(horizontal_spacing=hscale)
-                fig = plot_stuff[0]
+                plot = self.tree.plot(horizontal_spacing=hscale)
+                fig = plot[0]
             except:
                 assert False, \
                     "Plot function failed for the '{}' form.".format(hscale)
 
-            self.assertTrue(len(plot_stuff), 5)
+            self.assertEqual(len(plot), 4)
             self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
         ## Test that no color nodes yields all black node line segments.
