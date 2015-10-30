@@ -5,17 +5,17 @@ DeBaCl: DEnsity-BAsed CLustering with level set trees
 [![Github Issues](http://githubbadges.herokuapp.com/CoAxLab/DeBaCl/issues)](https://github.com/CoAxLab/DeBaCl/issues)
 [![License](http://img.shields.io/:license-bsd-blue.svg)](http://opensource.org/licenses/BSD-3-Clause)
 
-DeBaCl is a Python library for density-based clustering with level set trees.
+DeBaCl is a Python library for **density-based clustering** with **level set trees**.
 
-Introduction
-------------
 Level set trees are a statistically-principled way to represent the topology of
 a probability density function. This representation is particularly useful for
 several core tasks in statistics:
 
-    - **clustering**, especially for data with multi-scale clustering behavior
-    - **exploratory data analysis** and **data visualization**
-    - **anomaly detection**
+  - *clustering,* especially for data with multi-scale clustering behavior
+  - *describing data topology*
+  - *exploratory data analysis*
+  - *data visualization*
+  - *anomaly detection*
 
 DeBaCl is an Python implementation of the Level Set Tree method, with an
 emphasis on computational speed, algorithmic simplicity, and extensibility.
@@ -26,35 +26,37 @@ DeBaCl is available under the 3-clause BSD license.
 
 Installation
 ------------
-From the Python package installer:
+DeBaCl can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/0.2.0). From a terminal:
 
-    pip install debacl
+```bash
+pip install debacl
+```
 
-From source:
+It can also be installed by cloning this GitHub repo. This requires updating the Python path to include the cloned repo. One linux, this looks something like:
 
-    git clone https://github.com/CoAxLab/DeBaCl/
-    export PYTHONPATH='...'
+```bash
+git clone https://github.com/CoAxLab/DeBaCl/
+export PYTHONPATH='/home/brian/projects/DeBaCl'
+```
 
 Dependencies
 ------------
-All of the following dependencies can be installed with either conda or pip, except prettytable, which must be installed with pip.
+All of the dependencies are Python packages that can be installed with either conda or pip. DeBaCl 0.3 no longer includes the dependency on igraph, which required tricky manual installation.
 
-<h3>Required</h3>
-- numpy
-- networkx
-- prettytable
+**Required packages:**
+  - numpy
+  - networkx
+  - prettytable
 
-<h3>Strongly recommended</h3>
+**Strongly recommended packages**
 - matplotlib
 - scipy
 
-<h3>Optional</h3>
+**Optional packages**
 - scikit-learn
 
 Quickstart
 ----------
-From a Python console (e.g. IPython):
-
 <h4>Construct the level set tree</h4>
 ```python
 import debacl as dcl
@@ -94,9 +96,13 @@ ax.scatter(X[:, 0], X[:, 1], c='black', alpha=0.4)
 fig.show()
 ```
 
-
 Running unit tests
 ------------------
+From the top level of the repo:
+
+```bash
+$ nosetests -s -v debacl/test
+```
 
 Documentation
 -------------
@@ -111,8 +117,8 @@ the statistical background of level set trees and density-based clustering.
 
 References
 ----------
-- Chaudhuri, K., & Dasgupta, S. (2010). [Rates of Convergence for the Cluster T
-  ree](http://www.cse.ucsd.edu/sites/cse/files/cse/assets/research/theory/Chaud
+- Chaudhuri, K., & Dasgupta, S. (2010). [Rates of Convergence for the Cluster        
+  Tree](http://www.cse.ucsd.edu/sites/cse/files/cse/assets/research/theory/Chaud
   huriDasgupta_2010.pdf). In Advances in Neural Information Processing Systems
   23 (pp. 343–351). Vancouver, BC.
 
