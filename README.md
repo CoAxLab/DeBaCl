@@ -12,6 +12,7 @@ Introduction
 Level set trees are a statistically-principled way to represent the topology of
 a probability density function. This representation is particularly useful for
 several core tasks in statistics:
+
     - **clustering**, especially for data with multi-scale clustering behavior
     - **exploratory data analysis** and **data visualization**
     - **anomaly detection**
@@ -54,18 +55,45 @@ Quickstart
 ----------
 From a Python console (e.g. IPython):
 
-    ```python
-    >>> import debacl as dcl
-    >>> import sklearn
-    >>> X = sklearn.datasets.make_moons()
-    >>> tree = dcl.construct_tree(X, k=10, prune_threshold=5)
-    >>> print tree
-    ```
-    ```no-highlight
-    ...
-    ```
+<h4>Construct the level set tree</h4>
+```python
+import debacl as dcl
+from sklearn.datasets import make_moons
 
-    >>> fig = tree.plot()[0]
+X = make_moons(n_samples=100, noise=0.1)[0]
+
+tree = dcl.construct_tree(X, k=10, prune_threshold=10)
+print tree
+```
+```no-highlight
++----+-------------+-----------+------------+----------+------+--------+----------+
+| id | start_level | end_level | start_mass | end_mass | size | parent | children |
++----+-------------+-----------+------------+----------+------+--------+----------+
+| 0  |    0.000    |   0.162   |   0.000    |  0.140   | 100  |  None  |  [1, 2]  |
+| 1  |    0.162    |   0.218   |   0.140    |  0.350   |  44  |   0    |  [3, 4]  |
+| 2  |    0.162    |   0.468   |   0.140    |  1.000   |  42  |   0    |    []    |
+| 3  |    0.218    |   0.423   |   0.350    |  0.980   |  16  |   1    |    []    |
+| 4  |    0.218    |   0.373   |   0.350    |  0.940   |  18  |   1    |    []    |
++----+-------------+-----------+------------+----------+------+--------+----------+
+```
+
+<h4>Plot the level set tree</h4>
+```python
+fig = tree.plot()[0]
+fig.show()
+```
+
+<h4>Query the level set tree for cluster labels</h4>
+```python
+import matplotlib.pyplot as plt
+
+clusters = tree.get_clusters(method='leaf')  # each leaf node is a cluster
+
+fig, ax = plt.subplots()
+ax.scatter(X[:, 0], X[:, 1], c='black', alpha=0.4)
+fig.show()
+```
+
 
 Running unit tests
 ------------------
