@@ -62,7 +62,7 @@ Quickstart
 import debacl as dcl
 from sklearn.datasets import make_moons
 
-X = make_moons(n_samples=100, noise=0.1)[0]
+X = make_moons(n_samples=100, noise=0.1, random_state=19)[0]
 
 tree = dcl.construct_tree(X, k=10, prune_threshold=10)
 print tree
@@ -71,30 +71,35 @@ print tree
 +----+-------------+-----------+------------+----------+------+--------+----------+
 | id | start_level | end_level | start_mass | end_mass | size | parent | children |
 +----+-------------+-----------+------------+----------+------+--------+----------+
-| 0  |    0.000    |   0.162   |   0.000    |  0.140   | 100  |  None  |  [1, 2]  |
-| 1  |    0.162    |   0.218   |   0.140    |  0.350   |  44  |   0    |  [3, 4]  |
-| 2  |    0.162    |   0.468   |   0.140    |  1.000   |  42  |   0    |    []    |
-| 3  |    0.218    |   0.423   |   0.350    |  0.980   |  16  |   1    |    []    |
-| 4  |    0.218    |   0.373   |   0.350    |  0.940   |  18  |   1    |    []    |
+| 0  |    0.000    |   0.196   |   0.000    |  0.220   | 100  |  None  |  [1, 2]  |
+| 1  |    0.196    |   0.396   |   0.220    |  0.940   |  37  |   0    |    []    |
+| 2  |    0.196    |   0.488   |   0.220    |  1.000   |  41  |   0    |    []    |
 +----+-------------+-----------+------------+----------+------+--------+----------+
 ```
 
 <h4>Plot the level set tree</h4>
 ```python
-fig = tree.plot()[0]
+fig = tree.plot(form='density')[0]
 fig.show()
 ```
+![Tree figure](docs/readme_tree.png)
 
 <h4>Query the level set tree for cluster labels</h4>
 ```python
 import matplotlib.pyplot as plt
 
-clusters = tree.get_clusters(method='leaf')  # each leaf node is a cluster
+labels = tree.get_clusters(method='leaf')  # each leaf node is a cluster
+clusters = X[labels[:, 0], :]
 
 fig, ax = plt.subplots()
-ax.scatter(X[:, 0], X[:, 1], c='black', alpha=0.4)
+ax.scatter(X[:, 0], X[:, 1], c='black', s=40, alpha=0.4)
+ax.scatter(clusters[:, 0], clusters[:, 1], c=labels[:, 1], s=80, alpha=0.9,
+           cmap=plt.cm.winter)
+ax.set_xlabel('x0')
+ax.set_ylabel('x1', rotation=0)
 fig.show()
 ```
+![Clusters](docs/readme_clusters.png)
 
 Running unit tests
 ------------------
