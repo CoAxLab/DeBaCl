@@ -8,12 +8,10 @@ setup(
     packages=['debacl', 'debacl.test'],
     scripts=['bin/gauss_demo.py'],
     url='https://github.com/CoAxLab/DeBaCl',
-    license='LICENSE.txt',
-    description='Density-Based Clustering',
+    license='BSD',
+    description='DEnsity-BAsed CLustering',
     long_description=open('README.md').read(),
     install_requires=[
-        "networkx",
-        "numpy",
         "prettytable"
     ],
 )
