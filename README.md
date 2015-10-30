@@ -1,5 +1,5 @@
-DeBaCl: DEnsity-BAsed CLustering with level set trees
-=====================================================
+DeBaCl: DEnsity-BAsed CLustering
+================================
 [![Travis CI](https://travis-ci.org/CoAxLab/DeBaCl.svg?branch=dev)](https://travis-ci.org/CoAxLab/DeBaCl)
 [![Pending Pull-Requests](http://githubbadges.herokuapp.com/CoAxLab/DeBaCl/pulls)](https://github.com/CoAxLab/DeBaCl/pulls)
 [![Github Issues](http://githubbadges.herokuapp.com/CoAxLab/DeBaCl/issues)](https://github.com/CoAxLab/DeBaCl/issues)
@@ -11,11 +11,11 @@ Level set trees are a statistically-principled way to represent the topology of
 a probability density function. This representation is particularly useful for
 several core tasks in statistics:
 
-  - *clustering,* especially for data with multi-scale clustering behavior
-  - *describing data topology*
-  - *exploratory data analysis*
-  - *data visualization*
-  - *anomaly detection*
+  - clustering, especially for data with multi-scale clustering behavior
+  - describing data topology
+  - exploratory data analysis
+  - data visualization
+  - anomaly detection
 
 DeBaCl is an Python implementation of the Level Set Tree method, with an
 emphasis on computational speed, algorithmic simplicity, and extensibility.
@@ -29,19 +29,19 @@ Installation
 DeBaCl can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/0.2.0). From a terminal:
 
 ```bash
-pip install debacl
+$ pip install debacl
 ```
 
 It can also be installed by cloning this GitHub repo. This requires updating the Python path to include the cloned repo. One linux, this looks something like:
 
 ```bash
-git clone https://github.com/CoAxLab/DeBaCl/
-export PYTHONPATH='/home/brian/projects/DeBaCl'
+$ git clone https://github.com/CoAxLab/DeBaCl/
+$ export PYTHONPATH='/home/brian/projects/DeBaCl'
 ```
 
 Dependencies
 ------------
-All of the dependencies are Python packages that can be installed with either conda or pip. DeBaCl 0.3 no longer includes the dependency on igraph, which required tricky manual installation.
+All of the dependencies are Python packages that can be installed with either conda or pip. DeBaCl 0.3 no longer depends on igraph, which required tricky manual installation.
 
 **Required packages:**
   - numpy
