@@ -106,17 +106,14 @@ class LevelSetTree(object):
 
         return summary.get_string()
 
-    def prune(self, method='size_merge', **kwargs):
+    def prune(self, threshold):
         """
-        Prune the tree. A dispatch function to other methods.
+        Prune the tree by recursively merging small leaf nodes into larger
+        sibling nodes. The LevelSetTree is *immutable*, so pruning returns a
+        new LevelSetTree whose nodes all contain more points than 'threshold'.
 
         Parameters
         ----------
-        method : {'size_merge'}
-            Method for pruning the tree.
-
-        Other Parameters
-        ----------------
         threshold : int
             Nodes smaller than this will be merged for the 'size_merge' method.
 
@@ -124,28 +121,19 @@ class LevelSetTree(object):
         -------
         out : LevelSetTree
             A pruned level set tree. The original tree is unchanged.
+
+        Examples
+        --------
+        >>> X = numpy.random.rand(100, 2)
+        >>> tree = debacl.construct_tree(X, k=8, prune_threshold=2)
+        >>> tree2 = tree.prune(threshold=12)
         """
-
-        if method == 'size_merge':
-            required = set(['threshold'])
-            if not set(kwargs.keys()).issuperset(required):
-                raise ValueError("Incorrect arguments for 'size_merge' " +
-                                 "pruning.")
-            else:
-                threshold = kwargs.get('threshold')
-                return self._merge_by_size(threshold)
-
-        else:
-            raise ValueError("Pruning method not understood. 'size_merge'" +
-                             " is the only pruning method currently " +
-                             "implemented.")
+        return self._merge_by_size(threshold)
 
     def save(self, filename):
         """
-        Save a level set tree object to file.
-
-        Serialize all members of a level set tree with the cPickle module and
-        save to file.
+        Save a level set tree object to file. All members of the level set tree
+        are serialized with the cPickle module and saved to file.
 
         Parameters
         ----------
@@ -153,6 +141,16 @@ class LevelSetTree(object):
             File to save the tree to. The filename extension does not matter
             for this method (although operating system requirements still
             apply).
+
+        See Also
+        --------
+        load_tree
+
+        Examples
+        --------
+        >>> X = numpy.random.rand(100, 2)
+        >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+        >>> tree.save('my_tree')
         """
         with open(filename, 'wb') as f:
             _cPickle.dump(self, f, _cPickle.HIGHEST_PROTOCOL)
@@ -212,6 +210,14 @@ class LevelSetTree(object):
             splits in the level set tree. There is a horizontal line segment
             for *each* child in a split, and the keys in the 'split_coords'
             dictionary indicate to which *child* the line segment belongs.
+
+        Examples
+        --------
+        >>> X = numpy.random.rand(100, 2)
+        >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+        >>> plot = tree.plot(form='density')
+        >>> fig = plot[0]
+        >>> fig.show()
         """
 
         gap = 0.05
@@ -371,6 +377,16 @@ class LevelSetTree(object):
             belongs, *with respect to the clustering*. Note that the set of
             observations in this "foreground" set is typically smaller than the
             original dataset.
+
+        See Also
+        --------
+        debacl.utils.reindex_cluster_labels, get_leaf_nodes
+
+        Examples
+        --------
+        >>> X = numpy.random.rand(100, 2)
+        >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+        >>> labels = tree.get_clusters(method='leaf')
         """
 
         ## Retrive foreground labels.
@@ -425,6 +441,18 @@ class LevelSetTree(object):
         -------
         leaves : list
             List of LST leaf node indices.
+
+        See Also
+        --------
+        get_clusters
+
+        Examples
+        --------
+        >>> X = numpy.random.rand(100, 2)
+        >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+        >>> leaves = tree.get_leaf_nodes()
+        >>> print leaves
+        [1, 5, 6]
         """
         return [k for k, v in self.nodes.items() if v.children == []]
 
@@ -1139,14 +1167,24 @@ def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
     T : LevelSetTree
         A pruned level set tree.
 
-    Notes
-    -----
-
     See Also
     --------
+    construct_tree_from_graph, LevelSetTree
 
     Examples
     --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+    >>> print tree
+    +----+-------------+-----------+------------+----------+------+--------+----------+
+    | id | start_level | end_level | start_mass | end_mass | size | parent | children |
+    +----+-------------+-----------+------------+----------+------+--------+----------+
+    | 0  |    0.000    |   0.870   |   0.000    |  0.450   | 100  |  None  |  [3, 4]  |
+    | 3  |    0.870    |   3.364   |   0.450    |  0.990   |  17  |   0    |    []    |
+    | 4  |    0.870    |   1.027   |   0.450    |  0.520   |  35  |   0    |  [7, 8]  |
+    | 7  |    1.027    |   1.755   |   0.520    |  0.870   |  8   |   4    |    []    |
+    | 8  |    1.027    |   3.392   |   0.520    |  1.000   |  23  |   4    |    []    |
+    +----+-------------+-----------+------------+----------+------+--------+----------+
     """
 
     sim_graph, radii = _utl.knn_graph(X, k, method='brute_force')
@@ -1193,6 +1231,28 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
     -------
     T : levelSetTree
         See the LevelSetTree class for attributes and method definitions.
+
+    See Also
+    --------
+    construct_tree, LevelSetTree
+
+    Examples
+    --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> knn_graph, radii = debacl.utils.knn_graph(X, k=8)
+    >>> density = debacl.utils.knn_density(radii, n=100, p=2, k=8)
+    >>> tree = debacl.construct_tree_from_graph(knn_graph, density, 
+    ...                                         prune_threshold=5)
+    >>> print tree
+    +----+-------------+-----------+------------+----------+------+--------+----------+
+    | id | start_level | end_level | start_mass | end_mass | size | parent | children |
+    +----+-------------+-----------+------------+----------+------+--------+----------+
+    | 0  |    0.000    |   0.768   |   0.000    |  0.390   | 100  |  None  |  [1, 2]  |
+    | 1  |    0.768    |   1.494   |   0.390    |  0.790   |  30  |   0    |  [7, 8]  |
+    | 2  |    0.768    |   4.812   |   0.390    |  1.000   |  31  |   0    |    []    |
+    | 7  |    1.494    |   2.375   |   0.790    |  0.950   |  6   |   1    |    []    |
+    | 8  |    1.494    |   2.308   |   0.790    |  0.940   |  5   |   1    |    []    |
+    +----+-------------+-----------+------------+----------+------+--------+----------+
     """
 
     ## Initialize the graph and cluster tree
@@ -1294,6 +1354,17 @@ def load_tree(filename):
     -------
     T : LevelSetTree
         The loaded and reconstituted level set tree object.
+
+    See Also
+    --------
+    LevelSetTree.save
+
+    Examples
+    --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+    >>> tree.save('my_tree')
+    >>> tree2 = debacl.load_tree('my_tree')
     """
     with open(filename, 'rb') as f:
         T = _cPickle.load(f)

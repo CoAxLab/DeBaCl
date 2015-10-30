@@ -75,6 +75,15 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
     radii : list[float]
         For each row of 'X' the distance to its k'th nearest neighbor
         (including itself).
+
+    See Also
+    --------
+    epsilon_graph
+
+    Examples
+    --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> knn, radii = debacl.utils.knn_graph(X, k=8, method='kd-tree')
     """
 
     n, p = X.shape
@@ -141,6 +150,15 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     neighbors : numpy array
         Each row contains the nearest neighbors of the corresponding row in
         'X', indicated by row indices.
+
+    See Also
+    --------
+    knn_graph
+
+    Examples
+    --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> neighbors = debacl.utils.epsilon_graph(X, epsilon=0.2)
     """
 
     if not _HAS_SCIPY:
@@ -188,6 +206,16 @@ def knn_density(k_radius, n, p, k):
     fhat : 1D numpy array of floats
         Estimated density for the points corresponding to the entries of
         'k_radius'.
+
+    See Also
+    --------
+    knn_graph
+
+    Examples
+    --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> knn, radii = debacl.utils.knn_graph(X, k=8, method='kd-tree')
+    >>> density = debacl.utils.knn_density(radii, n=100, p=2, k=8)
     """
 
     if not _HAS_SCIPY:
@@ -347,6 +375,22 @@ def reindex_cluster_labels(labels):
     new_labels : numpy.array
         Cluster labels in the same form of the input 'labels', but with cluster
         labels reindexed to be consecutive non-negative integers.
+
+    See Also
+    --------
+    LevelSetTree.get_clusters
+
+    Examples
+    --------
+    >>> X = numpy.random.rand(100, 2)
+    >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+    >>> labels = tree.get_clusters(method='leaf')
+    >>> numpy.unique(labels[:, 1])
+    array([1, 5, 6])
+    ...
+    >>> new_labels = debacl.utils.reindex_cluster_labels(labels)
+    >>> numpy.unique(new_labels[:, 1])
+    array([0, 1, 2])
     """
 
     if not isinstance(labels, _np.ndarray):
