@@ -6,7 +6,7 @@ General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 try:
     import numpy as _np
 except:
-    raise ImportError("DeBaCl requires the numpy, networkx, and " +  
+    raise ImportError("DeBaCl requires the numpy, networkx, and " +
                       "prettytable packages.")
 
 ## Soft dependencies
@@ -24,11 +24,9 @@ except:
     _HAS_SKLEARN = False
 
 
-
 #####################################
 ### SIMILARITY GRAPH CONSTRUCTION ###
 #####################################
-
 def knn_graph(X, k, method='brute_force', leaf_size=30):
     """
     Compute the symmetric k-nearest neighbor graph for a set of points. Assume
@@ -91,22 +89,22 @@ def knn_graph(X, k, method='brute_force', leaf_size=30):
     if method == 'kd_tree':
         if _HAS_SKLEARN:
             kdtree = _sknbr.KDTree(X, leaf_size=leaf_size, metric='euclidean')
-            distances, neighbors = kdtree.query(X, k=k,
-                return_distance=True, sort_results=True)
+            distances, neighbors = kdtree.query(X, k=k, return_distance=True,
+                                                sort_results=True)
             radii = distances[:, -1]
         else:
             raise ImportError("The scikit-learn library could not be loaded." +
-                " It is required for the 'kd-tree' method.")
+                              " It is required for the 'kd-tree' method.")
 
     if method == 'ball_tree':
         if _HAS_SKLEARN:
             btree = _sknbr.BallTree(X, leaf_size=leaf_size, metric='euclidean')
-            distances, neighbors = btree.query(X, k=k,
-                return_distance=True, sort_results=True)
+            distances, neighbors = btree.query(X, k=k, return_distance=True,
+                                               sort_results=True)
             radii = distances[:, -1]
         else:
             raise ImportError("The scikit-learn library could not be loaded." +
-                " It is required for the 'ball-tree' method.")
+                              " It is required for the 'ball-tree' method.")
 
     else:  # assume brute-force
         if not _HAS_SCIPY:
@@ -169,8 +167,8 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     d = _spd.pdist(X, metric='euclidean')
     D = _spd.squareform(d)
 
-    if epsilon == None:
-        epsilon = _np.percentile(d, round(percentile*100))
+    if epsilon is None:
+        epsilon = _np.percentile(d, round(percentile * 100))
 
     adjacency_matrix = D <= epsilon
     neighbors = [_np.where(row)[0] for row in adjacency_matrix]
@@ -178,11 +176,9 @@ def epsilon_graph(X, epsilon=None, percentile=0.05):
     return neighbors
 
 
-
 ##########################
 ### DENSITY ESTIMATION ###
 ##########################
-
 def knn_density(k_radius, n, p, k):
     """
     Compute the kNN density estimate for a set of points.
@@ -222,18 +218,16 @@ def knn_density(k_radius, n, p, k):
         raise ImportError("The 'scipy' module could not be loaded." +
                           "It is required for computing knn density.")
 
-    unit_vol = _np.pi**(p/2.0) / _spspec.gamma(1 + p/2.0)
+    unit_vol = _np.pi**(p / 2.0) / _spspec.gamma(1 + p / 2.0)
     const = (1.0 * k) / (n * unit_vol)
     fhat = const / k_radius**p
 
     return fhat
 
 
-
 ##########################################
 ### LEVEL SET TREE CLUSTERING PIPELINE ###
 ##########################################
-
 def define_density_mass_grid(density, num_levels=None):
     """
     Create a grid of density levels, such that a uniform number of points have
@@ -288,7 +282,7 @@ def define_density_mass_grid(density, num_levels=None):
     if num_levels is None or num_levels > n:
         num_levels = n
 
-    idx = _np.linspace(0, n-1, num_levels)
+    idx = _np.linspace(0, n - 1, num_levels)
     idx = idx.astype(int)
     levels = _np.sort(density)[idx]
     levels = _np.unique(levels)
