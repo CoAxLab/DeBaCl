@@ -3,7 +3,7 @@ import unittest
 import tempfile
 import numpy as np
 import debacl as dcl
-import matplotlib as mpl
+# import matplotlib as mpl
 from numpy.testing import assert_array_equal
 
 
@@ -40,7 +40,7 @@ class TestLSTConstructors(unittest.TestCase):
         self.dataset = np.sort(self.dataset).reshape((self.n, 1))
 
         ## Compute a similarity graph and density estimate
-        self.knn_graph, radius = dcl.utils.knn_graph(self.dataset, self.k, 
+        self.knn_graph, radius = dcl.utils.knn_graph(self.dataset, self.k,
                                                      'kd-tree')
         self.density = dcl.utils.knn_density(radius, self.n, p=1, k=self.k)
 
@@ -69,12 +69,13 @@ class TestLSTConstructors(unittest.TestCase):
         self.assertAlmostEqual(max(end_masses), 1.)
 
         ## Sum of root sizes should be the size of the input dataset.
-        root_sizes = [len(node.members) for node in tree.nodes.values() if node.parent is None]
+        root_sizes = [len(node.members) for node in tree.nodes.values()
+                      if node.parent is None]
         self.assertEqual(sum(root_sizes), self.n)
 
         ## Check per-node plausibility
         for idx, node in tree.nodes.items():
-            
+
             if idx == 0:
                 self.assertTrue(node.parent is None)
 
@@ -107,10 +108,10 @@ class TestLSTConstructors(unittest.TestCase):
                     self.assertGreater(child, idx)
 
                     ## child nodes start where parent nodes end
-                    self.assertEqual(node.end_level, 
+                    self.assertEqual(node.end_level,
                                      tree.nodes[child].start_level)
 
-                    self.assertEqual(node.end_mass, 
+                    self.assertEqual(node.end_mass,
                                      tree.nodes[child].start_mass)
 
     def _check_tree_correctness(self, tree):
@@ -120,24 +121,32 @@ class TestLSTConstructors(unittest.TestCase):
         """
 
         ## Density levels
-        start_levels = [round(node.start_level, 3) for node in tree.nodes.values()]
-        end_levels = [round(node.end_level, 3) for node in tree.nodes.values()]
-        
-        ans_start_levels = [0.0, 0.104, 0.104, 0.189, 0.189, 0.345, 0.345, 0.741, 0.741, 0.862, 0.862]
-        ans_end_levels = [0.104, 0.189, 1.001, 0.345, 0.741, 0.508, 0.381, 0.862, 0.804, 1.349, 1.004]
-        
+        start_levels = [round(node.start_level, 3)
+                        for node in tree.nodes.values()]
+        end_levels = [round(node.end_level, 3)
+                      for node in tree.nodes.values()]
+
+        ans_start_levels = [0.0, 0.104, 0.104, 0.189, 0.189, 0.345, 0.345,
+                            0.741, 0.741, 0.862, 0.862]
+        ans_end_levels = [0.104, 0.189, 1.001, 0.345, 0.741, 0.508, 0.381,
+                          0.862, 0.804, 1.349, 1.004]
+
         self.assertItemsEqual(start_levels, ans_start_levels)
-        self.assertItemsEqual(start_levels, ans_start_levels)
-        
+        self.assertItemsEqual(end_levels, ans_end_levels)
+
         ## Masses
-        start_masses = [round(node.start_mass, 3) for node in tree.nodes.values()]
-        end_masses = [round(node.end_mass, 3) for node in tree.nodes.values()]
+        start_masses = [round(node.start_mass, 3)
+                        for node in tree.nodes.values()]
+        end_masses = [round(node.end_mass, 3)
+                      for node in tree.nodes.values()]
 
-        ans_start_masses = [0.0, 0.018, 0.018, 0.079, 0.079, 0.293, 0.293, 0.667, 0.667, 0.816, 0.816]
-        ans_end_masses = [0.018, 0.079, 0.947, 0.293, 0.667, 0.473, 0.359, 0.816, 0.734, 1.0, 0.949]
+        ans_start_masses = [0.0, 0.018, 0.018, 0.079, 0.079, 0.293, 0.293,
+                            0.667, 0.667, 0.816, 0.816]
+        ans_end_masses = [0.018, 0.079, 0.947, 0.293, 0.667, 0.473, 0.359,
+                          0.816, 0.734, 1.0, 0.949]
 
         self.assertItemsEqual(start_masses, ans_start_masses)
-        self.assertItemsEqual(start_masses, ans_start_masses)
+        self.assertItemsEqual(end_masses, ans_end_masses)
 
         ## Sizes and parents
         sizes = [len(node.members) for node in tree.nodes.values()]
@@ -239,13 +248,13 @@ class TestLevelSetTree(unittest.TestCase):
         self.assertAlmostEqual(max(end_masses), 1.)
 
         ## Sum of root sizes should be the size of the input dataset.
-        root_sizes = [len(node.members) for node in tree.nodes.values() 
+        root_sizes = [len(node.members) for node in tree.nodes.values()
                       if node.parent is None]
         self.assertEqual(sum(root_sizes), self.n)
 
         ## Check per-node plausibility
         for idx, node in tree.nodes.items():
-            
+
             if idx == 0:
                 self.assertTrue(node.parent is None)
 
@@ -278,10 +287,10 @@ class TestLevelSetTree(unittest.TestCase):
                     self.assertGreater(child, idx)
 
                     ## child nodes start where parent nodes end
-                    self.assertEqual(node.end_level, 
+                    self.assertEqual(node.end_level,
                                      tree.nodes[child].start_level)
 
-                    self.assertEqual(node.end_mass, 
+                    self.assertEqual(node.end_mass,
                                      tree.nodes[child].start_mass)
 
     def test_summaries(self):
@@ -298,7 +307,7 @@ class TestLevelSetTree(unittest.TestCase):
 
         self.assertFalse('fossa' in print_string)
 
-        column_names = ['start_level', 'end_level', 'start_mass', 'end_mass', 
+        column_names = ['start_level', 'end_level', 'start_mass', 'end_mass',
                         'size', 'parent', 'children']
         for col_name in column_names:
             self.assertTrue(col_name in print_string)
@@ -337,7 +346,6 @@ class TestLevelSetTree(unittest.TestCase):
     #         self.assertEqual(len(plot), 4)
     #         self.assertTrue(isinstance(fig, mpl.figure.Figure))
 
-
     #     ## Test horizontal scale (aka 'horizontal_spacing')
     #     for hscale in ['uniform', 'proportional']:
     #         try:
@@ -357,8 +365,8 @@ class TestLevelSetTree(unittest.TestCase):
     #     for c in node_colors.values():
     #         self.assertEqual(c, [0., 0., 0., 1.])
 
-    #     ## Test that passing in some color nodes makes those nodes have colors
-    #     #  that aren't black.
+    #     ## Test that passing in some color nodes makes those nodes have
+    #     # colors that aren't black.
     #     fig, _, _, node_colors = self.tree.plot(color_nodes=[4, 8])
 
     #     for i in [4, 8]:
@@ -410,23 +418,23 @@ class TestLevelSetTree(unittest.TestCase):
         labels = self.tree.get_clusters(method='k-level', k=k)
         self._check_cluster_label_plausibility(labels)
         self.assertTrue(len(np.unique(labels[:, 1])), k)
-        
+
         ## Upper set clustering
-        labels = self.tree.get_clusters(method='upper-level-set', 
-                                        threshold=0.4, 
+        labels = self.tree.get_clusters(method='upper-level-set',
+                                        threshold=0.4,
                                         form='density')
         self._check_cluster_label_plausibility(labels)
 
         labels = self.tree.get_clusters(method='upper-level-set',
-                                        threshold=0.6, 
+                                        threshold=0.6,
                                         form='mass')
         self._check_cluster_label_plausibility(labels)
 
         ## Leaf clustering
         leaf_labels = self.tree.get_clusters(method='leaf')
         self._check_cluster_label_plausibility(leaf_labels)
-        
-        leaves = [idx for idx, node in self.tree.nodes.items() 
+
+        leaves = [idx for idx, node in self.tree.nodes.items()
                   if len(node.children) == 0]
 
         self.assertItemsEqual(np.unique(leaf_labels[:, 1]), leaves)
@@ -435,7 +443,8 @@ class TestLevelSetTree(unittest.TestCase):
         full_labels = self.tree.get_clusters(method='leaf',
                                              fill_background=True)
         self._check_cluster_label_plausibility(full_labels, background=True)
-        assert_array_equal(leaf_labels[:, 1], full_labels[leaf_labels[:, 0], 1])
+        assert_array_equal(leaf_labels[:, 1],
+                           full_labels[leaf_labels[:, 0], 1])
 
     def test_leaf_node_getter(self):
         """

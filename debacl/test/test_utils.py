@@ -4,7 +4,6 @@ import scipy.special as spspec
 import numpy as np
 from numpy.testing import assert_array_equal
 
-import debacl as dcl
 from debacl import utils as utl
 
 
@@ -26,10 +25,10 @@ class TestDensityEstimates(unittest.TestCase):
         k = 5.
 
         # Correct density estimate
-        unit_ball_volume = np.pi**(p/2.) / spspec.gamma(1 + p/2.0)
+        unit_ball_volume = np.pi**(p / 2.) / spspec.gamma(1 + p / 2.0)
         normalizer = k / (n * unit_ball_volume)
         answer = normalizer / (r_k**p)
-        
+
         # DeBaCl knn density utility
         fhat = utl.knn_density(r_k, n, p, k)
 
@@ -56,15 +55,15 @@ class TestSimilarityGraphs(unittest.TestCase):
 
         ## Correct knn similarity graph
         ans_radii = np.array([2., 1., 1., 1., 2.])
-        ans_graph = np.array([[0, 1, 2], 
-                              [1, 0, 2], 
-                              [2, 1, 3], 
-                              [3, 2, 4], 
+        ans_graph = np.array([[0, 1, 2],
+                              [1, 0, 2],
+                              [2, 1, 3],
+                              [3, 2, 4],
                               [4, 3, 2]])
 
         ## DeBaCl knn similarity graph
         for method in ['brute_force', 'kd_tree', 'ball_tree']:
-    
+
             knn, radii = utl.knn_graph(self.X, k=k, method=method)
 
             ## Test
@@ -100,7 +99,7 @@ class TestDensityGrids(unittest.TestCase):
 
     def setUp(self):
         self.n = 10
-        
+
         self.unique_density = np.arange(self.n) + 1
         np.random.shuffle(self.unique_density)
 
@@ -120,23 +119,23 @@ class TestDensityGrids(unittest.TestCase):
 
         ## Check form of the density input.
         with self.assertRaises(ValueError):
-            levels = grid_func([])            
+            grid_func([])
 
         with self.assertRaises(TypeError):
-            levels = grid_func(density='fossa')
+            grid_func(density='fossa')
 
         ## Check the 'num_levels' parameter.
         with self.assertRaises(ValueError):
-            levels = grid_func(self.unique_density, num_levels=-1)
+            grid_func(self.unique_density, num_levels=-1)
 
         with self.assertRaises(ValueError):
-            levels = grid_func(self.unique_density, num_levels=1)
+            grid_func(self.unique_density, num_levels=1)
 
         with self.assertRaises(TypeError):
-            levels = grid_func(self.unique_density, num_levels=2.17)
+            grid_func(self.unique_density, num_levels=2.17)
 
         with self.assertRaises(TypeError):
-            levels = grid_func(self.unique_density, num_levels='fossa')
+            grid_func(self.unique_density, num_levels='fossa')
 
     def test_bogus_input(self):
         """
@@ -156,12 +155,12 @@ class TestDensityGrids(unittest.TestCase):
 
         ## Test more levels than density values (answer is the same as typical
         #  input).
-        levels = utl.define_density_mass_grid(self.unique_density, 
+        levels = utl.define_density_mass_grid(self.unique_density,
                                               num_levels=self.n * 2)
         assert_array_equal(answer, levels)
 
         ## Test fewer levels than density values.
-        levels = utl.define_density_mass_grid(self.unique_density, 
+        levels = utl.define_density_mass_grid(self.unique_density,
                                               num_levels=2)
         answer = np.array([1, 10])
         assert_array_equal(answer, levels)
@@ -203,24 +202,24 @@ class TestDensityGrids(unittest.TestCase):
 
         ## More levels than density values should yield the same answer.
         levels = utl.define_density_level_grid(self.unique_density,
-                                               num_levels = self.n * 2)
+                                               num_levels=self.n * 2)
         self._check_level_grid_answer(self.unique_density, levels)
 
         ## 2 density levels should just be min and max
-        levels = utl.define_density_level_grid(self.unique_density, 
-                                              num_levels=2)
+        levels = utl.define_density_level_grid(self.unique_density,
+                                               num_levels=2)
         answer = np.array([1, 10])
         assert_array_equal(answer, levels)
 
         ## Negative values should still range from min and max, sorted, with
         #  the right number of values.
         levels = utl.define_density_level_grid(self.generic_array,
-                                               num_levels = self.n * 2)
+                                               num_levels=self.n * 2)
         self._check_level_grid_answer(self.generic_array, levels)
 
         ## Uniform input should have a single value.
         levels = utl.define_density_level_grid(self.uniform_density)
-        self.assertItemsEqual(levels, [1.])    
+        self.assertItemsEqual(levels, [1.])
 
 
 class TestClusterReindexing(unittest.TestCase):
@@ -230,7 +229,7 @@ class TestClusterReindexing(unittest.TestCase):
 
     def setUp(self):
         self.cluster_labels = np.array([[7, 6, 8, 11, 62],
-                                               [3, 3, 7, 7, 4]]).T
+                                       [3, 3, 7, 7, 4]]).T
 
     def test_label_reindexing(self):
         """
