@@ -115,7 +115,7 @@ class LevelSetTree(object):
         Parameters
         ----------
         threshold : int
-            Nodes smaller than this will be merged for the 'size_merge' method.
+            Nodes smaller than this will be merged.
 
         Returns
         -------
@@ -158,7 +158,8 @@ class LevelSetTree(object):
     def plot(self, form='mass', horizontal_spacing='uniform',
              color_nodes=[], colormap='Dark2'):
         """
-        Plot the level set tree, or return plot objects that can be modified.
+        Plot the level set tree as a dendrogram and return coordinates and
+        colors of the branches.
 
         Parameters
         ----------
@@ -331,7 +332,7 @@ class LevelSetTree(object):
 
     def get_clusters(self, method='leaf', fill_background=False, **kwargs):
         """
-        Generic function for retrieving custer labels from the level set tree.
+        Generic function for retrieving cluster labels from the level set tree.
         Dispatches a specific cluster labeling function.
 
         Parameters
@@ -344,7 +345,7 @@ class LevelSetTree(object):
             - 'first-k': find the first K non-overlapping clusters from the
               roots of the tree.
 
-            - 'upper-level-set': cluster by cutt the tree at a specified
+            - 'upper-level-set': cluster by cutting the tree at a specified
               density or mass level. 
 
             - 'k-level': returns clusters at the lowest density level that has
@@ -389,7 +390,7 @@ class LevelSetTree(object):
         >>> labels = tree.get_clusters(method='leaf')
         """
 
-        ## Retrive foreground labels.
+        ## Retrieve foreground labels.
         if method == 'leaf':
             labels = self._leaf_cluster()
 
@@ -469,7 +470,8 @@ class LevelSetTree(object):
         Returns
         -------
         T : LevelSetTree
-            A completely indpendent level set tree, with 'ix' as the root node.
+            A completely independent level set tree, with 'ix' as the root
+            node.
         """
 
         T = LevelSetTree()
@@ -562,7 +564,7 @@ class LevelSetTree(object):
                 # set k's children to grandkids
                 parent.children = bigkid.children
 
-                # delete the single bigkid
+                # delete the single big kid
                 del tree.nodes[ix_bigkid]
 
             else:
@@ -753,7 +755,7 @@ class LevelSetTree(object):
 
     def _collapse_leaves(self, active_nodes):
         """
-        Removes descendent nodes for the branches in 'active_nodes'.
+        Removes descendant nodes for the branches in 'active_nodes'.
 
         Parameters
         ----------
@@ -842,7 +844,7 @@ class LevelSetTree(object):
         form : {'density', 'mass'}, optional
 
         horizontal_spacing : {'uniform', 'proportional'}, optional
-            Determines how much horzontal space each level set tree node is
+            Determines how much horizontal space each level set tree node is
             given. See LevelSetTree.plot() for more information.
 
         sort : bool
@@ -999,7 +1001,7 @@ class LevelSetTree(object):
             Horizontal space allocated to node 'ix'.
 
         horizontal_spacing : {'uniform', 'proportional'}, optional
-            Determines how much horzontal space each level set tree node is
+            Determines how much horizontal space each level set tree node is
             given. See LevelSetTree.plot() for more information.
 
         Returns
