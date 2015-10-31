@@ -2,4 +2,5 @@ docs/_build/*
 docs/generated/*
 MANIFEST
 *.pyc
+*.lst
 

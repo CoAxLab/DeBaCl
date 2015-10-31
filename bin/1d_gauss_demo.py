@@ -11,17 +11,17 @@ import debacl as dcl
 
 ## Generate data.
 n = 1500
-ctr = ((1,), (6,), (11,))
+centers = ((1,), (6,), (11,))
 sdev = (np.eye(1),) * 3
 mix = (0.5, 0.3, 0.2)
 
 membership = np.random.multinomial(n, pvals=mix)
-p = len(ctr[0])
+p = len(centers[0])
 X = np.zeros((n, p), dtype=np.float)
 g = np.zeros((n, ), dtype=np.int)
 b = np.cumsum((0,) + tuple(membership))
 
-for i, (size, mu, sigma) in enumerate(zip(membership, ctr, sdev)):
+for i, (size, mu, sigma) in enumerate(zip(membership, centers, sdev)):
   ix = range(b[i], b[i+1])
   X[ix, :] = np.random.multivariate_normal(mu, sigma, size)
   g[ix] = i
