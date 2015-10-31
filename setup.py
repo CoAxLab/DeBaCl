@@ -6,14 +6,12 @@ setup(
     author='Brian P. Kent',
     author_email='bpkent@gmail.com',
     packages=['debacl', 'debacl.test'],
-    scripts=['bin/gauss_demo.py'],
+    scripts=['bin/1d_gauss_demo.py', 'bin/crater_demo.py'],
     url='https://github.com/CoAxLab/DeBaCl',
-    license='LICENSE.txt',
-    description='Density-Based Clustering',
+    license='BSD',
+    description='DEnsity-BAsed CLustering',
     long_description=open('README.md').read(),
     install_requires=[
-        "networkx",
-        "numpy",
         "prettytable"
     ],
 )
