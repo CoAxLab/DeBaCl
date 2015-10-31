@@ -4,6 +4,8 @@ clustering points from a "crater" distribution with a high density core and a
 low density ring.
 
 This demo also illustrates several more advanced features of DeBaCl:
+  - How to build a level set tree from a similarity graph and density estimate,
+    instead of tabular data.
   - How to save and load a level set tree.
   - Coloring dendrogram nodes to match feature space cluster colors.
   - Assigning "background" points to clusters with a scikit-learn classifier.
@@ -44,11 +46,22 @@ ax.scatter(X[:,0], X[:,1], color='black', s=50, alpha=0.4)
 fig.show()
 
 
-## Estimate the level set tree.
+## Construct a similarity graph and density estimate by hand. For this demo we
+#  use the k-nearest neighbors similarity graph and density estimator that
+#  DeBaCl uses by default, but this is the place to plug in custom similarity
+#  graphs and density estimators. In particular, this functionality means the
+#  user is not limited to tabular data or pre-set distance functions. If the
+#  user can make a similarity graph and estimate a density (or pseudo-density),
+#  then a level set tree can be estimated with DeBaCl.
 k = int(0.05 * n)
-gamma = int(0.1 * n)
+knn_graph, radii = dcl.utils.knn_graph(X, k, method='kd-tree')
+density = dcl.utils.knn_density(radii, n, p, k)
 
-tree = dcl.construct_tree(X, k, prune_threshold=gamma, verbose=True)
+
+## Build the level set tree.
+gamma = int(0.1 * n)
+tree = dcl.construct_tree_from_graph(knn_graph, density, prune_threshold=gamma,
+                                     verbose=True)
 print tree
 
 
