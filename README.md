@@ -82,7 +82,8 @@ print tree
 fig = tree.plot(form='density')[0]
 fig.show()
 ```
-![Tree figure](docs/readme_tree.png)
+<!--![Tree figure](docs/readme_tree.png)-->
+<img src="docs/readme_tree.png" height="480px" />
 
 <h4>Query the level set tree for cluster labels</h4>
 ```python
@@ -99,7 +100,8 @@ ax.set_xlabel('x0')
 ax.set_ylabel('x1', rotation=0)
 fig.show()
 ```
-![Clusters](docs/readme_clusters.png)
+<!--![Clusters](docs/readme_clusters.png)-->
+<img src="docs/readme_clusters.png" height="480px" />
 
 Running unit tests
 ------------------
