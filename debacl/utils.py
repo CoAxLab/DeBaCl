@@ -358,7 +358,7 @@ def define_density_level_grid(density, num_levels=None):
 
 def reindex_cluster_labels(labels):
     """
-    Reindex integer cluster labels to be consecutive non-negative integers.
+    Re-index integer cluster labels to be consecutive non-negative integers.
     This is useful because the `LevelSetTree.get_clusters` method returns
     cluster labels that match level set tree node indices. These are generally
     not consecutive whole numbers.
@@ -374,7 +374,7 @@ def reindex_cluster_labels(labels):
     -------
     new_labels : numpy.array
         Cluster labels in the same form of the input 'labels', but with cluster
-        labels reindexed to be consecutive non-negative integers.
+        labels re-indexed to be consecutive non-negative integers.
 
     See Also
     --------

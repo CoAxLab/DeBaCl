@@ -6,7 +6,7 @@ setup(
     author='Brian P. Kent',
     author_email='bpkent@gmail.com',
     packages=['debacl', 'debacl.test'],
-    scripts=['bin/1d_gauss_demo.py', 'bin/crater_demo.py'],
+    scripts=['examples/1d_gauss_demo.py', 'examples/crater_demo.py'],
     url='https://github.com/CoAxLab/DeBaCl',
     license='BSD',
     description='DEnsity-BAsed CLustering',
