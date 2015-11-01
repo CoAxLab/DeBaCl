@@ -1,4 +1,4 @@
-v0.3, November 2015
+v1.0, November 2015
 -------------------
 This release is a major overhaul of DeBaCl. The primary goal is to make the
 level set trees (LSTs) easier to use, by removing much of the experimental and
