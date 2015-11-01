@@ -41,7 +41,7 @@ $ export PYTHONPATH='/home/brian/projects/DeBaCl'
 
 Dependencies
 ------------
-All of the dependencies are Python packages that can be installed with either conda or pip. DeBaCl 0.3 no longer depends on igraph, which required tricky manual installation.
+All of the dependencies are Python packages that can be installed with either conda or pip. DeBaCl 1.0 no longer depends on igraph, which required tricky manual installation.
 
 **Required packages:**
   - numpy

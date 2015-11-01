@@ -1,17 +1,20 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name='debacl',
-    version='0.3.0',
-    author='Brian P. Kent',
-    author_email='bpkent@gmail.com',
-    packages=['debacl', 'debacl.test'],
-    scripts=['examples/1d_gauss_demo.py', 'examples/crater_demo.py'],
-    url='https://github.com/CoAxLab/DeBaCl',
-    license='BSD',
+    version='1.0',
     description='DEnsity-BAsed CLustering',
-    long_description=open('README.md').read(),
-    install_requires=[
-        "prettytable"
-    ],
+    url='https://github.com/CoAxLab/DeBaCl',
+    author='Brian Kent',
+    author_email='bpkent@gmail.com',
+    license='BSD',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Scientific/Engineering'
+        ],
+    packages=find_packages(),
+    install_requires=["prettytable"]
 )
