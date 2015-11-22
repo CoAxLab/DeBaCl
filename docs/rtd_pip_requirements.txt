@@ -1,0 +1,4 @@
+prettytable
+numpy
+networkx
+numpydoc
