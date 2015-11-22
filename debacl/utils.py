@@ -230,8 +230,8 @@ def knn_density(k_radius, n, p, k):
 ##########################################
 def define_density_mass_grid(density, num_levels=None):
     """
-    Create a grid of density levels, such that a uniform number of points have
-    density values between each level in the grid.
+    Create a grid of density levels with a uniform number of points between
+    each level.
 
     Parameters
     ----------
@@ -291,8 +291,8 @@ def define_density_mass_grid(density, num_levels=None):
 
 def define_density_level_grid(density, num_levels=None):
     """
-    Create a grid of density levels, evenly spaced between 0 and the maximum
-    value of the input 'density'.
+    Create an evenly spaced grid of density levels. The levels are uniformly
+    spaced between 0 and the maximum value of the input 'density'.
 
     Parameters
     ----------

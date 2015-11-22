@@ -55,9 +55,9 @@ class ConnectedComponent(object):
 
 class LevelSetTree(object):
     """
-    The level set tree. The level set tree is a collection of connected
-    components organized hierarchically, based on a k-nearest neighbors density
-    estimate and connectivity graph.
+    Level Set Tree attributes and methods. The level set tree is a collection
+    of connected components organized hierarchically, based on a k-nearest
+    neighbors density estimate and connectivity graph.
 
     .. warning::
 

@@ -23,6 +23,11 @@ Level Set Tree model
   :nosignatures:
 
   LevelSetTree
+  LevelSetTree.prune
+  LevelSetTree.save
+  LevelSetTree.plot
+  LevelSetTree.get_clusters
+  LevelSetTree.get_leaf_nodes
 
 Utilities
 ---------
@@ -35,6 +40,7 @@ Utilities
   knn_graph
   epsilon_graph
   knn_density
-  define_density_grid
-  assign_background_points
+  define_density_mass_grid
+  define_density_level_grid
+  reindex_cluster_labels
 
