@@ -2,6 +2,7 @@ build/*
 dist/*
 debacl.egg-info/*
 docs/_build/*
+docs/_build_html/*
 docs/generated/*
 MANIFEST
 *.pyc
