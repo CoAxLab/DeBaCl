@@ -27,7 +27,7 @@ DeBaCl is available under the 3-clause BSD license.
 
 Installation
 ------------
-DeBaCl can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/0.2.0). From a terminal:
+DeBaCl can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/). From a terminal:
 
 ```bash
 $ pip install debacl
