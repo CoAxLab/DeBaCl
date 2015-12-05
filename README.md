@@ -33,9 +33,10 @@ DeBaCl can be downloaded and installed from the [Python package installer](https
 $ pip install debacl
 ```
 
-It can also be installed by cloning this GitHub repo. This requires updating the Python path to include the cloned repo. One linux, this looks something like:
+It can also be installed by cloning this GitHub repo. This requires updating the Python path to include the cloned repo. On linux, this looks something like:
 
 ```bash
+$ cd /home/brian/projects
 $ git clone https://github.com/CoAxLab/DeBaCl/
 $ export PYTHONPATH='/home/brian/projects/DeBaCl'
 ```
