@@ -3,7 +3,6 @@ import unittest
 import tempfile
 import numpy as np
 import debacl as dcl
-# import matplotlib as mpl
 from numpy.testing import assert_array_equal
 
 
