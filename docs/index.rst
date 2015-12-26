@@ -23,11 +23,12 @@ Level Set Tree model
   :nosignatures:
 
   LevelSetTree
-  LevelSetTree.prune
-  LevelSetTree.save
-  LevelSetTree.plot
+  LevelSetTree.branch_partition
   LevelSetTree.get_clusters
   LevelSetTree.get_leaf_nodes
+  LevelSetTree.plot
+  LevelSetTree.prune
+  LevelSetTree.save
 
 Utilities
 ---------
@@ -37,10 +38,10 @@ Utilities
   :toctree: generated/
   :nosignatures:
 
-  knn_graph
+  define_density_level_grid
+  define_density_mass_grid
   epsilon_graph
   knn_density
-  define_density_mass_grid
-  define_density_level_grid
+  knn_graph
   reindex_cluster_labels
 
