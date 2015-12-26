@@ -155,8 +155,8 @@ class LevelSetTree(object):
         with open(filename, 'wb') as f:
             _cPickle.dump(self, f, _cPickle.HIGHEST_PROTOCOL)
 
-    def plot(self, form='mass', horizontal_spacing='uniform',
-             color_nodes=[], colormap='Dark2'):
+    def plot(self, form='mass', horizontal_spacing='uniform', color_nodes=[],
+             colormap='Dark2'):
         """
         Plot the level set tree as a dendrogram and return coordinates and
         colors of the branches.
@@ -454,6 +454,49 @@ class LevelSetTree(object):
         [1, 5, 6]
         """
         return [k for k, v in self.nodes.items() if v.children == []]
+
+    def branch_partition(self):
+        """
+        Partition the input data. Each instance's assigned label is the index
+        of the *highest density* node to which the point belongs. This is
+        similar to retrieving high-density clusters with background points
+        labeled, except here the background points are labeled according to
+        their internal node membership as well (not just that they're
+        background points).
+
+        Returns
+        -------
+        labels : 2-dimensional numpy array
+            Each row corresponds to an observation. The first column indicates
+            the index of the observation in the original data matrix, and the
+            second column is the index of the LST node to which the observation
+            belongs.
+
+        See Also
+        --------
+        get_clusters
+
+        Examples
+        --------
+        >>> X = numpy.random.rand(100, 2)
+        >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
+        >>> labels = tree.branch_partition(method='leaf')
+        """
+        points = []
+        labels = []
+
+        for ix, node in self.nodes.items():
+            branch_members = node.members.copy()
+
+            for ix_child in node.children:
+                child_node = self.nodes[ix_child]
+                branch_members.difference_update(child_node.members)
+
+            points.extend(branch_members)
+            labels += ([ix] * len(branch_members))
+
+        partition = _np.array([points, labels], dtype=_np.int).T
+        return partition
 
     def _make_subtree(self, ix):
         """

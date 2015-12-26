@@ -329,48 +329,6 @@ class TestLevelSetTree(unittest.TestCase):
         self._check_tree_viability(self.tree)
         self._check_tree_viability(pruned_tree)
 
-    # def test_plot(self):
-    #     """
-    #     Test LevelSetTree plotting.
-    #     """
-    #     ## Test vertical scales (aka 'form')
-    #     for vscale in ['mass', 'density', 'branch-mass']:
-    #         try:
-    #             plot = self.tree.plot(form=vscale)
-    #             fig = plot[0]
-    #         except:
-    #             assert False, \
-    #                 "Plot function failed for the '{}' form.".format(vscale)
-
-    #         self.assertEqual(len(plot), 4)
-    #         self.assertTrue(isinstance(fig, mpl.figure.Figure))
-
-    #     ## Test horizontal scale (aka 'horizontal_spacing')
-    #     for hscale in ['uniform', 'proportional']:
-    #         try:
-    #             plot = self.tree.plot(horizontal_spacing=hscale)
-    #             fig = plot[0]
-    #         except:
-    #             assert False, \
-    #                 "Plot function failed for the '{}' form.".format(hscale)
-
-    #         self.assertEqual(len(plot), 4)
-    #         self.assertTrue(isinstance(fig, mpl.figure.Figure))
-
-    #     ## Test that no color nodes yields all black node line segments.
-    #     fig, _, _, node_colors = self.tree.plot()
-    #     self.assertItemsEqual(node_colors.keys(), self.tree.nodes.keys())
-
-    #     for c in node_colors.values():
-    #         self.assertEqual(c, [0., 0., 0., 1.])
-
-    #     ## Test that passing in some color nodes makes those nodes have
-    #     # colors that aren't black.
-    #     fig, _, _, node_colors = self.tree.plot(color_nodes=[4, 8])
-
-    #     for i in [4, 8]:
-    #         self.assertNotEqual(node_colors[i], [0., 0., 0., 1.])
-
     def _check_cluster_label_plausibility(self, labels, background=False):
         """
         Utility for checking whether cluster labels conform to minimal
@@ -453,3 +411,26 @@ class TestLevelSetTree(unittest.TestCase):
         leaves = self.tree.get_leaf_nodes()
         answer = [2, 5, 6, 8, 9, 10]
         self.assertEqual(leaves, answer)
+
+    def test_branch_partition(self):
+        """
+        Test that the full data partition based on branch membership works
+        correctly.
+        """
+        partition = self.tree.branch_partition()
+
+        # all values should be integers
+        self.assertTrue(partition.dtype is np.dtype('int64'))
+
+        # a label for each data instance
+        self.assertEqual(len(partition), self.n)
+
+        # no duplicate row indices
+        self.assertEqual(len(partition[:, 0]), len(np.unique(partition[:, 0])))
+
+        # row indices should start at 0
+        self.assertEqual(np.min(partition[:, 0]), 0)
+
+        # Labels should match tree nodes exactly.
+        self.assertItemsEqual(np.unique(partition[:, 1]),
+                              self.tree.nodes.keys())
