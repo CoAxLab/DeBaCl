@@ -1,3 +1,9 @@
+Master (not yet on PyPI)
+------------------------
+- The method `branch_partition` has been added to the `LevelSetTree`. This
+  method assigns each point a label corresponding to the *highest density* node
+  to which the point belongs in the level set tree.
+
 v1.0, November 2015
 -------------------
 This release is a major overhaul of DeBaCl. The primary goal is to make the
