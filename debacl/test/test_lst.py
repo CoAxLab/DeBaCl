@@ -1,4 +1,6 @@
 
+from __future__ import print_function, absolute_import
+
 import unittest
 import tempfile
 import numpy as np
@@ -298,7 +300,7 @@ class TestLevelSetTree(unittest.TestCase):
         """
 
         try:
-            print self.tree
+            print(self.tree)
         except:
             assert False, "LevelSetTree failed to print."
 

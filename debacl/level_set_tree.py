@@ -6,10 +6,12 @@ analysis and clustering with level set trees.
 """
 
 ## Built-in packages
+from __future__ import print_function, absolute_import
+
 import logging as _logging
 import copy as _copy
-import cPickle as _cPickle
-import utils as _utl
+import pickle as _pickle
+import debacl.utils as _utl
 
 _logging.basicConfig(level=_logging.INFO, datefmt='%Y-%m-%d %I:%M:%S',
                      format='%(levelname)s (%(asctime)s): %(message)s')
@@ -133,7 +135,7 @@ class LevelSetTree(object):
     def save(self, filename):
         """
         Save a level set tree object to file. All members of the level set tree
-        are serialized with the cPickle module and saved to file.
+        are serialized with the `pickle` module and saved to file.
 
         Parameters
         ----------
@@ -153,7 +155,7 @@ class LevelSetTree(object):
         >>> tree.save('my_tree')
         """
         with open(filename, 'wb') as f:
-            _cPickle.dump(self, f, _cPickle.HIGHEST_PROTOCOL)
+            _pickle.dump(self, f, _pickle.HIGHEST_PROTOCOL)
 
     def plot(self, form='mass', horizontal_spacing='uniform', color_nodes=[],
              colormap='Dark2'):
@@ -450,7 +452,7 @@ class LevelSetTree(object):
         >>> X = numpy.random.rand(100, 2)
         >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
         >>> leaves = tree.get_leaf_nodes()
-        >>> print leaves
+        >>> print(leaves)
         [1, 5, 6]
         """
         return [k for k, v in self.nodes.items() if v.children == []]
@@ -480,7 +482,7 @@ class LevelSetTree(object):
         --------
         >>> X = numpy.random.rand(100, 2)
         >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
-        >>> labels = tree.branch_partition(method='leaf')
+        >>> labels = tree.branch_partition()
         """
         points = []
         labels = []
@@ -1212,7 +1214,7 @@ def construct_tree(X, k, prune_threshold=None, num_levels=None, verbose=False):
     --------
     >>> X = numpy.random.rand(100, 2)
     >>> tree = debacl.construct_tree(X, k=8, prune_threshold=5)
-    >>> print tree
+    >>> print(tree)
     +----+-------------+-----------+------------+----------+------+--------+----------+
     | id | start_level | end_level | start_mass | end_mass | size | parent | children |
     +----+-------------+-----------+------------+----------+------+--------+----------+
@@ -1281,7 +1283,7 @@ def construct_tree_from_graph(adjacency_list, density, prune_threshold=None,
     >>> density = debacl.utils.knn_density(radii, n=100, p=2, k=8)
     >>> tree = debacl.construct_tree_from_graph(knn_graph, density,
     ...                                         prune_threshold=5)
-    >>> print tree
+    >>> print(tree)
     +----+-------------+-----------+------------+----------+------+--------+----------+
     | id | start_level | end_level | start_mass | end_mass | size | parent | children |
     +----+-------------+-----------+------------+----------+------+--------+----------+
@@ -1405,6 +1407,6 @@ def load_tree(filename):
     >>> tree2 = debacl.load_tree('my_tree')
     """
     with open(filename, 'rb') as f:
-        T = _cPickle.load(f)
+        T = _pickle.load(f)
 
     return T

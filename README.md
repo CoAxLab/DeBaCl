@@ -27,7 +27,7 @@ DeBaCl is available under the 3-clause BSD license.
 
 Installation
 ------------
-DeBaCl can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/). From a terminal:
+DeBaCl is currently compatible with Python 2.7 only. Other versions may work, but `caveat emptor`; at this time DeBaCl is only officially tested on Python 2.7. The package can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/). From a terminal:
 
 ```bash
 $ pip install debacl
@@ -44,6 +44,10 @@ $ export PYTHONPATH='/home/brian/projects/DeBaCl'
 Dependencies
 ------------
 All of the dependencies are Python packages that can be installed with either conda or pip. DeBaCl 1.0 no longer depends on igraph, which required tricky manual installation.
+
+**Langauges:**
+  - Python 2.7
+  - (coming soon: Python 3.4)
 
 **Required packages:**
   - numpy

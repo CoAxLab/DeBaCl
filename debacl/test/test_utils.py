@@ -1,10 +1,12 @@
 
+from __future__ import print_function, absolute_import
+
 import unittest
 import scipy.special as spspec
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from debacl import utils as utl
+import debacl.utils as utl
 
 
 class TestDensityEstimates(unittest.TestCase):
