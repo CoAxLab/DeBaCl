@@ -27,7 +27,7 @@ DeBaCl is available under the 3-clause BSD license.
 
 Installation
 ------------
-DeBaCl is currently compatible with Python 2.7 only. Other versions may work, but `caveat emptor`; at this time DeBaCl is only officially tested on Python 2.7. The package can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/). From a terminal:
+DeBaCl is currently compatible with Python 2.7 only. Other versions may work, but *caveat emptor*; at this time DeBaCl is only officially tested on Python 2.7. The package can be downloaded and installed from the [Python package installer](https://pypi.python.org/pypi/debacl/). From a terminal:
 
 ```bash
 $ pip install debacl
