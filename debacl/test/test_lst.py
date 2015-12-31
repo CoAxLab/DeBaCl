@@ -1,6 +1,7 @@
 
 from __future__ import print_function, absolute_import
 
+import os
 import unittest
 import tempfile
 import numpy as np
@@ -194,6 +195,78 @@ class TestLSTConstructors(unittest.TestCase):
 
         self._check_tree_viability(tree2)
         self._check_tree_correctness(tree)
+
+
+class TestBackwardCompatibility(unittest.TestCase):
+    """
+    Make sure models from previous versions of DeBaCl still load in the
+    current version.
+    """
+
+    def test_old_trees(self):
+        """
+        Make sure models from previous versions of DeBaCl still load in the
+        current version.
+        """
+        for f in os.listdir('saved_trees'):
+
+           ## Load the tree.
+            tree = dcl.load_tree(os.path.join('saved_trees', f))
+
+            ## Is it a level set tree?
+            self.assertIsInstance(tree, dcl.LevelSetTree)
+
+            ## Make sure all methods run ok.
+            # printing
+            print(tree)
+            for c in ('start_level', 'end_level', 'start_mass', 'end_mass',
+                      'size', 'parent', 'children'):
+                self.assertTrue(c in tree.__str__())
+
+            # pruning
+            old_gamma = tree.prune_threshold
+            new_gamma = 2 * tree.prune_threshold
+            pruned_tree = tree.prune(new_gamma)
+            self.assertEqual(tree.prune_threshold, old_gamma)
+            self.assertEqual(pruned_tree.prune_threshold, new_gamma)
+
+            # plotting
+            plot = tree.plot()
+
+            # retrieve clusters.
+            labels = tree.get_clusters()
+            n = len(tree.density)
+
+            self.assertTrue(labels.dtype is np.dtype('int64'))
+            self.assertLessEqual(len(labels), n)
+            self.assertEqual(len(labels[:, 0]), len(np.unique(labels[:, 0])))
+            self.assertGreaterEqual(np.min(labels), 0)
+
+            max_row_index = np.max(labels[:, 0])
+            self.assertLessEqual(max_row_index, n)
+
+            # retrieve leaf indices
+            leaves = tree.get_leaf_nodes()
+            self.assertIsInstance(leaves, list)
+            self.assertGreater(len(leaves), 0)
+
+            # full partition
+            partition = tree.branch_partition()
+
+            self.assertTrue(partition.dtype is np.dtype('int64'))
+            self.assertEqual(len(partition), n)
+            self.assertEqual(len(partition[:, 0]), len(np.unique(partition[:, 0])))
+            self.assertEqual(np.min(partition[:, 0]), 0)
+            self.assertItemsEqual(np.unique(partition[:, 1]),
+                                  tree.nodes.keys())
+
+            # save and load
+            with tempfile.NamedTemporaryFile() as t:
+                tree.save(t.name)
+                tree2 = dcl.load_tree(t.name)
+
+                self.assertItemsEqual([x.start_level for x in tree.nodes.values()],
+                                      [y.start_level for y in tree2.nodes.values()])
 
 
 class TestLevelSetTree(unittest.TestCase):
