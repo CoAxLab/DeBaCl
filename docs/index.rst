@@ -30,7 +30,7 @@ neighbors). These packages can all be installed with either "conda" or "pip"::
 
 Quickstart
 ----------
-DeBaCl runs in any standard Python 2.7 interpreter, such as IPython:
+DeBaCl runs in any standard Python 2.7 interpreter, such as IPython::
 
   $ pip install ipython
   $ ipython
