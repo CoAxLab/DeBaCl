@@ -9,8 +9,10 @@ in computational efficiency, flexible algorithms, and an emphasis on
 modularity and user customizability.
 """
 
-from level_set_tree import construct_tree
-from level_set_tree import construct_tree_from_graph
-from level_set_tree import load_tree
+__version__ = '1.1.dev0'
 
-from level_set_tree import LevelSetTree
+from debacl.level_set_tree import construct_tree
+from debacl.level_set_tree import construct_tree_from_graph
+from debacl.level_set_tree import load_tree
+
+from debacl.level_set_tree import LevelSetTree
