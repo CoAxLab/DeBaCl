@@ -7,6 +7,12 @@ complex datasets that exhibit multi-scale clustering behavior. DeBaCl is
 intended to promote the practical use of level set trees through improvements
 in computational efficiency, flexible algorithms, and an emphasis on
 modularity and user customizability.
+
+DeBaCl is available under the 3-clause BSD license. Some useful links:
+
+- `Source code <https://github.com/CoAxLab/DeBaCl>`_
+- `API documentation <http://debacl.readthedocs.org/en/master/>`_
+- `PyPI page <https://pypi.python.org/pypi/debacl>`_
 """
 
 __version__ = '1.1.dev0'
