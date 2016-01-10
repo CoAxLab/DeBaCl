@@ -7,4 +7,4 @@ docs/generated/*
 MANIFEST
 *.pyc
 *.lst
-
+examples/.ipynb_checkpoints
