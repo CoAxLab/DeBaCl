@@ -3,7 +3,8 @@ General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 """
 
 ## Required packages
-from __future__ import print_function, absolute_import
+from __future__ import print_function as _print_function
+from __future__ import absolute_import as _absolute_import
 
 try:
     import numpy as _np
