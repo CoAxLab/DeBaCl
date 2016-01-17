@@ -6,7 +6,8 @@ analysis and clustering with level set trees.
 """
 
 ## Built-in packages
-from __future__ import print_function, absolute_import
+from __future__ import print_function as _print_function
+from __future__ import absolute_import as _absolute_import
 
 import logging as _logging
 import copy as _copy
