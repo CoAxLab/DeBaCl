@@ -87,6 +87,12 @@ class LevelSetTree(object):
         self.nodes = {}
         self._subgraphs = {}
 
+    def __repr__(self):
+        """
+        Print the tree summary table.
+        """
+        return self.__str__()
+
     def __str__(self):
         """
         Print the tree summary table.

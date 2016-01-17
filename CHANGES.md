@@ -4,6 +4,9 @@ Master (not yet on PyPI)
   method assigns each point a label corresponding to the *highest density* node
   to which the point belongs in the level set tree.
 
+- The tree table now prints when the tree is called by itself. Now both
+  `print(tree)` and `tree` print the tree's summary table to the console.
+
 v1.0, November 2015
 -------------------
 This release is a major overhaul of DeBaCl. The primary goal is to make the

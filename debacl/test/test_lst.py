@@ -374,11 +374,17 @@ class TestLevelSetTree(unittest.TestCase):
         """
         Check that tree printing in table form is working properly.
         """
+        print
+
+        try:
+            self.tree
+        except:
+            self.assertTrue(False, "LevelSetTree __repr__ failed.")
 
         try:
             print(self.tree)
         except:
-            assert False, "LevelSetTree failed to print."
+            self.assertTrue(False, "LevelSetTree failed to print.")
 
         print_string = self.tree.__str__()
 
