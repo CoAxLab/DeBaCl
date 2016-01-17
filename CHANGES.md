@@ -1,11 +1,16 @@
 Master (not yet on PyPI)
 ------------------------
+**Features**
 - The method `branch_partition` has been added to the `LevelSetTree`. This
   method assigns each point a label corresponding to the *highest density* node
   to which the point belongs in the level set tree.
 
 - The tree table now prints when the tree is called by itself. Now both
   `print(tree)` and `tree` print the tree's summary table to the console.
+
+**Bugfixes**
+- Tree node colors should now match between the figure and the `color_nodes`
+  output of the `LevelSetTree` plot method.
 
 v1.0, November 2015
 -------------------
