@@ -324,14 +324,18 @@ class LevelSetTree(object):
                 node_colors[ix_sub] = list(colorset[i])
 
         ## Add the line segments to the figure.
-        node_lines = _LineCollection(node_coords.values(),
-                                     linewidths=node_widths.values(),
-                                     colors=node_colors.values())
+        line_coords = [node_coords[c] for c in node_coords.keys()]
+        line_widths = [node_widths[c] for c in node_coords.keys()]
+        line_colors = [node_colors[c] for c in node_coords.keys()]
+
+        node_lines = _LineCollection(line_coords, linewidths=line_widths,
+                                     colors=line_colors)
         ax.add_collection(node_lines)
 
-        split_colors = {k: node_colors[k] for k in split_coords.keys()}
-        split_lines = _LineCollection(split_coords.values(),
-                                      colors=split_colors.values())
+        line_coords = [split_coords[c] for c in split_coords.keys()]
+        line_colors = [node_colors[c] for c in split_coords.keys()]
+
+        split_lines = _LineCollection(line_coords, colors=line_colors)
         ax.add_collection(split_lines)
 
         return fig, node_coords, split_coords, node_colors
