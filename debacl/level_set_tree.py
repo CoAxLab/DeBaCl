@@ -230,6 +230,17 @@ class LevelSetTree(object):
         >>> fig.show()
         """
 
+        ## Validate inputs
+        if not isinstance(color_nodes, list):
+            raise TypeError("The 'color_nodes' parameter must be a list.")
+
+        if not set(color_nodes).issubset(self.nodes.keys()):
+            raise ValueError("The 'color_nodes' parameter contains values " +
+                             "that do not correspond to tree nodes. This " +
+                             "tree's node indices are found in the first " +
+                             "column of the printed tree.")
+
+        ## Constants
         gap = 0.05
         min_node_width = 1.2
 
