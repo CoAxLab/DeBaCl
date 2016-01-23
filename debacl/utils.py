@@ -6,6 +6,11 @@ General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 from __future__ import print_function as _print_function
 from __future__ import absolute_import as _absolute_import
 
+import logging as _logging
+
+_logging.basicConfig(level=_logging.INFO, datefmt='%Y-%m-%d %I:%M:%S',
+                     format='%(levelname)s (%(asctime)s): %(message)s')
+
 try:
     import numpy as _np
 except:
@@ -186,6 +191,15 @@ def knn_density(k_radius, n, p, k):
     """
     Compute the kNN density estimate for a set of points.
 
+    Note that this density estimator is highly susceptible to the "curse of
+    dimensionality". If the dimension `p` of the data is larger than about 340,
+    the density estimates will all be infinite or undefined. If your ultimate
+    goal is to estimate the level set tree, consider setting the dimension here
+    to `p = 1`. DeBaCl requires only the *relative order* of the data points
+    for accurate estimation of the *shape* of the LST, not the density values
+    themselves. Please see the notes for more details on the numerical problems
+    that occur with high-dimensional data.
+
     Parameters
     ----------
     k_radius : 1-dimensional numpy array of floats
@@ -210,6 +224,39 @@ def knn_density(k_radius, n, p, k):
     --------
     knn_graph
 
+    Notes
+    -----
+    The k-nearest neighbor density estimate is
+
+    .. math::
+
+        \hat{f}(x) = \\frac{k}{n \cdot v_p \cdot r_k^p(x)}
+
+    Where:
+      - :math:`x` is any point in the feature space,
+      - :math:`n` is the total number of observations,
+      - :math:`p` is the dimension of the feature space,
+      - :math:`k` is the number of neighbors to consider for :math:`x`,
+      - :math:`v_p` is the volume of a :math:`p`-dimensional unit sphere, and
+      - :math:`r_k(x)` is the distance from :math:`x` to its :math:`k`'th
+        nearest neighbor.
+
+    As the dimension :math:`p` grows past about 340 (on most systems), the
+    volume of the unit ball :math:`v_p` underflows to 0.0. At the same time, if
+    the radius :math:`r_k(x)` is large enough, `r_k^p(x)` overflows to
+    infinity. The result is either an infinite or undefined density estimate.
+
+    For the purpose of level set tree estimation, a simple workaround is to set
+    `p` to 1. Clearly this results in incorrect values of the density estimate,
+    but this does not matter for estimating the *shape* of a level set tree; on
+    the relative order of the density estimates matters.
+
+    References
+    ----------
+    - Kpotufe, S. and Luxburg, U. Von (2011) *Pruning Nearest Neighbor Cluster
+      Trees*. Proceedings of the 28th International Conference on Machine
+      Learning, 105, pp. 225-232.
+
     Examples
     --------
     >>> X = numpy.random.rand(100, 2)
@@ -221,9 +268,42 @@ def knn_density(k_radius, n, p, k):
         raise ImportError("The 'scipy' module could not be loaded." +
                           "It is required for computing knn density.")
 
+    if not isinstance(k_radius, _np.ndarray):
+        raise TypeError("The 'k_radius' values must be in a 1-dimensional " +
+                        "numpy array.")
+
+    ## Compute the numerically problematic stuff.
     unit_vol = _np.pi**(p / 2.0) / _spspec.gamma(1 + p / 2.0)
-    const = (1.0 * k) / (n * unit_vol)
-    fhat = const / k_radius**p
+    volume_mult = k_radius**p
+
+    ## Check for numerical problems.
+    max_multiplier = max(volume_mult)
+
+    dimension_msg = ("For level set tree estimation, try setting 'p' in " +
+                     "this function to 1, because only the *relative order* " + 
+                     "of density values matters, not the values themselves.")
+
+    if unit_vol == 0.0:
+        if max_multiplier == _np.inf:
+            raise ArithmeticError("The dimension 'p' is too large; at least " +
+                                  "one density estimate is undefined. " + 
+                                  dimension_msg)
+
+        else:
+            _logging.warning("The dimension 'p' is too large; all density " +
+                             "estimates are infinite. " + dimension_msg)
+
+    else:
+        if max_multiplier == _np.inf:
+            _logging.warning("The dimension 'p' to too large for some " +
+                              "values of the k'th neighbor radius " +
+                              "'k_radius'; for these values, the density " +
+                              "estimate is 0.0. " + dimension_msg)
+
+    ## Finish the easy computation.
+    with _np.errstate(all='ignore'):
+        denom = n * unit_vol * volume_mult
+        fhat = float(k) / denom
 
     return fhat
 

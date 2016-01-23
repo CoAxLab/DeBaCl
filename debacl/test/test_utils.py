@@ -22,7 +22,7 @@ class TestDensityEstimates(unittest.TestCase):
         """
 
         # Input parameters
-        r_k = 1.
+        r_k = np.array([1.])
         n = 100
         p = 2
         k = 5.
@@ -34,8 +34,12 @@ class TestDensityEstimates(unittest.TestCase):
 
         # DeBaCl knn density utility
         fhat = utl.knn_density(r_k, n, p, k)
-
         self.assertEqual(fhat, answer)
+
+        ## Check that undefined density estimates raise an error.
+        with self.assertRaises(ArithmeticError):
+            r_k = np.array([10., 10.])
+            fhat = utl.knn_density(r_k, n=1000, p=350, k=10)
 
 
 class TestSimilarityGraphs(unittest.TestCase):
