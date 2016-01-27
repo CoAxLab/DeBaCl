@@ -6,13 +6,13 @@ Welcome to DeBaCl
 
 Installation
 ------------
-The most straightforward way to install DeBaCl is to download it from thttps://github.com/CoAxLab/DeBaCl.githe PyPI
+The most straightforward way to install DeBaCl is to download it from the PyPI
 server. In a bash terminal (linux and Mac)::
 
   $ pip install debacl
 
 The current plan is to post a new version of DeBaCl on the PyPI server roughly
-every 2-3 months. In between "official" updates, the latest code can be
+every two months. In between "official" updates, the latest code can be
 installed by downloading the DeBaCl repo directly from GitHub. In a bash
 terminal, the following commands download DeBaCl to a newly created "DeBaCl"
 folder in your working directory, then add the new folder to the python path::

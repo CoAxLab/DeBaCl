@@ -1,5 +1,5 @@
 """
-General utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
+Utility functions for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
 """
 
 ## Required packages
@@ -38,7 +38,7 @@ except:
 def knn_graph(X, k, method='brute_force', leaf_size=30):
     """
     Compute the symmetric k-nearest neighbor graph for a set of points. Assume
-    Euclidean distance metric.
+    a Euclidean distance metric.
 
     Parameters
     ----------
@@ -280,13 +280,13 @@ def knn_density(k_radius, n, p, k):
     max_multiplier = max(volume_mult)
 
     dimension_msg = ("For level set tree estimation, try setting 'p' in " +
-                     "this function to 1, because only the *relative order* " + 
+                     "this function to 1, because only the *relative order* " +
                      "of density values matters, not the values themselves.")
 
     if unit_vol == 0.0:
         if max_multiplier == _np.inf:
             raise ArithmeticError("The dimension 'p' is too large; at least " +
-                                  "one density estimate is undefined. " + 
+                                  "one density estimate is undefined. " +
                                   dimension_msg)
 
         else:
@@ -296,9 +296,9 @@ def knn_density(k_radius, n, p, k):
     else:
         if max_multiplier == _np.inf:
             _logging.warning("The dimension 'p' to too large for some " +
-                              "values of the k'th neighbor radius " +
-                              "'k_radius'; for these values, the density " +
-                              "estimate is 0.0. " + dimension_msg)
+                             "values of the k'th neighbor radius " +
+                             "'k_radius'; for these values, the density " +
+                             "estimate is 0.0. " + dimension_msg)
 
     ## Finish the easy computation.
     with _np.errstate(all='ignore'):

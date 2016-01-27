@@ -1,5 +1,5 @@
-Master (not yet on PyPI)
-------------------------
+v1.1, January 2016
+------------------
 **Features**
 - The method `branch_partition` has been added to the `LevelSetTree`. This
   method assigns each point a label corresponding to the *highest density* node
@@ -11,6 +11,10 @@ Master (not yet on PyPI)
 **Bugfixes**
 - Tree node colors should now match between the figure and the `color_nodes`
   output of the `LevelSetTree` plot method.
+
+- The `knn_density` function in the `utils` module has more informative error
+  messages and warnings for numerical issues, typically resulting from
+  high-dimensional data.
 
 v1.0, November 2015
 -------------------

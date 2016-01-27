@@ -259,7 +259,8 @@ class TestBackwardCompatibility(unittest.TestCase):
 
             self.assertTrue(partition.dtype is np.dtype('int64'))
             self.assertEqual(len(partition), n)
-            self.assertEqual(len(partition[:, 0]), len(np.unique(partition[:, 0])))
+            self.assertEqual(len(partition[:, 0]),
+                             len(np.unique(partition[:, 0])))
             self.assertEqual(np.min(partition[:, 0]), 0)
             self.assertItemsEqual(np.unique(partition[:, 1]),
                                   tree.nodes.keys())
@@ -269,8 +270,9 @@ class TestBackwardCompatibility(unittest.TestCase):
                 tree.save(t.name)
                 tree2 = dcl.load_tree(t.name)
 
-                self.assertItemsEqual([x.start_level for x in tree.nodes.values()],
-                                      [y.start_level for y in tree2.nodes.values()])
+                self.assertItemsEqual(
+                    [x.start_level for x in tree.nodes.values()],
+                    [y.start_level for y in tree2.nodes.values()])
 
 
 class TestLevelSetTree(unittest.TestCase):
