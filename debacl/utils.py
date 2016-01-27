@@ -296,9 +296,9 @@ def knn_density(k_radius, n, p, k):
     else:
         if max_multiplier == _np.inf:
             _logging.warning("The dimension 'p' to too large for some " +
-                              "values of the k'th neighbor radius " +
-                              "'k_radius'; for these values, the density " +
-                              "estimate is 0.0. " + dimension_msg)
+                             "values of the k'th neighbor radius " +
+                             "'k_radius'; for these values, the density " +
+                             "estimate is 0.0. " + dimension_msg)
 
     ## Finish the easy computation.
     with _np.errstate(all='ignore'):
