@@ -1,6 +1,6 @@
 """
 DeBaCl is a Python library for estimation of density level set trees and
-nonparametric density-based clustering. Level set trees are based on the
+nonparametric DEnsity-BAsed CLustering. Level set trees are based on the
 statistically-principled definition of clusters as modes of a probability
 density function. They are particularly useful for analyzing structure in
 complex datasets that exhibit multi-scale clustering behavior. DeBaCl is
@@ -15,7 +15,7 @@ DeBaCl is available under the 3-clause BSD license. Some useful links:
 - `PyPI page <https://pypi.python.org/pypi/debacl>`_
 """
 
-__version__ = '1.1.dev0'
+__version__ = '1.1'
 
 from debacl.level_set_tree import construct_tree
 from debacl.level_set_tree import construct_tree_from_graph
