@@ -1,8 +1,7 @@
 """
 Main functions and classes for the DEnsity-BAsed CLustering (DeBaCl) toolbox.
-Includes functions to construct and modify level set trees produced by standard
-geometric clustering on each level. Also defines tools for interactive data
-analysis and clustering with level set trees.
+Includes functions to construct and modify level set trees, and level set tree
+methods for retrieving clusters and plotting.
 """
 
 ## Built-in packages
@@ -39,8 +38,8 @@ except:
 
 class ConnectedComponent(object):
     """
-    Defines a connected component for level set tree construction. A level set
-    tree is really just a set of ConnectedComponents.
+    Define a connected component for level set tree construction. A level set
+    tree is really just a set of ConnectedComponent objects.
     """
 
     def __init__(self, idnum, parent, children, start_level, end_level,
@@ -59,21 +58,22 @@ class ConnectedComponent(object):
 class LevelSetTree(object):
     """
     Level Set Tree attributes and methods. The level set tree is a collection
-    of connected components organized hierarchically, based on a k-nearest
-    neighbors density estimate and connectivity graph.
+    of connected components organized hierarchically, based on a density
+    estimate and connectivity graph.
 
     .. warning::
 
         LevelSetTree objects should not generally be instantiated directly,
-        because they will contain empty node hierarchies. Use the tree
-        constructors :func:`construct_tree` or
-        :func:`construct_tree_from_graph` to instantiate a LevelSetTree model.
+        because they will contain empty node hierarchies. Use the constructors
+        :func:`construct_tree` or :func:`construct_tree_from_graph` to
+        instantiate a LevelSetTree model.
 
     Parameters
     ----------
     density : list[float] or numpy array
-        The observations removed as background points at each successively
-        higher density level.
+        Estimated probability density for each point. This defines the order in
+        which the points are removed from the similarity graph as the Level Set
+        Tree is grown upward from the root.
 
     levels : array_like
         Probability density levels at which to find clusters. Defines the
@@ -142,14 +142,13 @@ class LevelSetTree(object):
     def save(self, filename):
         """
         Save a level set tree object to file. All members of the level set tree
-        are serialized with the `pickle` module and saved to file.
+        are serialized with the `pickle` module.
 
         Parameters
         ----------
         filename : str
-            File to save the tree to. The filename extension does not matter
-            for this method (although operating system requirements still
-            apply).
+            File name for the saved tree. Any filename extension should work
+            (although operating system requirements still apply).
 
         See Also
         --------
@@ -354,8 +353,9 @@ class LevelSetTree(object):
 
     def get_clusters(self, method='leaf', fill_background=False, **kwargs):
         """
-        Generic function for retrieving cluster labels from the level set tree.
-        Dispatches a specific cluster labeling function.
+        Retrieve cluster labels from the level set tree. There are several ways
+        to do this with a level set tree, and a particular strategy can be
+        specified with the `method` parameter.
 
         Parameters
         ----------
@@ -375,20 +375,21 @@ class LevelSetTree(object):
 
         fill_background : bool, optional
             If True, a label of -1 is assigned to background points, i.e. those
-            instances not otherwise assigned to a high-density cluster.
+            instances not otherwise assigned to a high-density cluster. If
+            False, the background points are omitted from the output.
 
         Other Parameters
         ----------------
         k : int
-            If method is 'first-k' or 'k-level', this is the desired number of
-            clusters.
+            If `method` is 'first-k' or 'k-level', this is the desired number
+            of clusters.
 
         threshold : float
-            If method is 'upper-level-set', this is the threshold at which to
+            If `method` is 'upper-level-set', this is the threshold at which to
             cut the tree.
 
         form : {'density', 'mass'}
-            If method is 'upper-level-set', this is vertical scale which
+            If `method` is 'upper-level-set', this is vertical scale which
             'threshold' refers to.
 
         Returns
