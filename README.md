@@ -83,6 +83,7 @@ print tree
 ```
 
 <h4>Plot the level set tree</h4>
+Clusters are represented by the vertical line segments in the dendrogram. In this example the vertical axis is plotted on the _density_ scale, so that the lower endpoint of a cluster's branch is at its _start_level_ and the upper endpoint is at its _end_level_ (see the table above), and the length of the branch is the _persistence_ of the cluster.
 ```python
 fig = tree.plot(form='density')[0]
 fig.show()
