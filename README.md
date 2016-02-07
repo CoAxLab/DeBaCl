@@ -112,7 +112,7 @@ fig.show()
 
 Documentation
 -------------
-- [API documenation](http://debacl.readthedocs.org/en/master/)
+- [API documentation](http://debacl.readthedocs.org/en/master/)
 - [Example jupyter notebooks](examples) (in progress)
 
 Running unit tests
