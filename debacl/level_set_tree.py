@@ -164,7 +164,7 @@ class LevelSetTree(object):
             _pickle.dump(self, f, _pickle.HIGHEST_PROTOCOL)
 
     def plot(self, form='mass', horizontal_spacing='uniform', color_nodes=[],
-             colormap='Dark2'):
+             colormap='Dark2', annotate_nodes=[], annotate_kwargs={}):
         """
         Plot the level set tree as a dendrogram and return coordinates and
         colors of the branches.
@@ -202,6 +202,18 @@ class LevelSetTree(object):
             one node index. Default is the 'Dark2' colormap. "Qualitative"
             colormaps are highly recommended.
 
+        annotate_nodes : list, optional
+            Nodes to annotate on the output figure. Nodes are annotated by
+            writing their index numbers just above the corresponding branch on
+            the dendrograms. By default, none of the nodes are annotated.
+
+        annotate_kwargs : dict, optional
+            Keyword arguments to format the node annotations specified in
+            `annotate_nodes`. Valid parameters and arguments can be found in
+            the documentation for `matplotlib.text.Text`. For example, setting
+            `alpha` to a value less than 1 can make the node annotations less
+            distracting.
+
         Returns
         -------
         fig : matplotlib figure
@@ -230,14 +242,25 @@ class LevelSetTree(object):
         """
 
         ## Validate inputs
+        if not isinstance(annotate_nodes, list):
+            raise TypeError("The 'annotate_nodes' parameter must be a list.")
+
+        if not set(annotate_nodes).issubset(self.nodes.keys()):
+            raise ValueError("The 'annotate_nodes' parameter contains values " +
+                             "that do not correspond to tree nodes. Valid " +
+                             "node indices are found in the first column " +
+                             "of the printed tree, or by printing the " +
+                             "tree's `nodes.keys()` attribute.")
+
         if not isinstance(color_nodes, list):
             raise TypeError("The 'color_nodes' parameter must be a list.")
 
         if not set(color_nodes).issubset(self.nodes.keys()):
             raise ValueError("The 'color_nodes' parameter contains values " +
-                             "that do not correspond to tree nodes. This " +
-                             "tree's node indices are found in the first " +
-                             "column of the printed tree.")
+                             "that do not correspond to tree nodes. Valid " +
+                             "node indices are found in the first column " +
+                             "of the printed tree, or by printing the " +
+                             "tree's `nodes.keys()` attribute.")
 
         ## Constants
         gap = 0.05
@@ -302,23 +325,23 @@ class LevelSetTree(object):
 
         ## Form-specific details
         if form == 'branch-mass':
-            kappa_max = max(primary_ticks)
-            ax.set_ylim((-1.0 * gap * kappa_max, 1.04 * kappa_max))
+            yrange = max(primary_ticks)
+            ax.set_ylim((-1.0 * gap * yrange, 1.04 * yrange))
             ax.set_ylabel("branch mass")
 
         elif form == 'density':
             ax.set_ylabel("density level")
             ymin = min([v.start_level for v in self.nodes.itervalues()])
             ymax = max([v.end_level for v in self.nodes.itervalues()])
-            rng = ymax - ymin
-            ax.set_ylim(ymin - gap * rng, ymax + 0.05 * rng)
+            yrange = ymax - ymin
+            ax.set_ylim(ymin - gap * yrange, ymax + 0.05 * yrange)
 
         elif form == 'mass':
             ax.set_ylabel("mass level")
             ymin = min([v.start_mass for v in self.nodes.itervalues()])
             ymax = max([v.end_mass for v in self.nodes.itervalues()])
-            rng = ymax - ymin
-            ax.set_ylim(ymin - gap * rng, ymax + 0.05 * ymax)
+            yrange = ymax - ymin
+            ax.set_ylim(ymin - gap * yrange, ymax + 0.05 * yrange)
 
         else:
             raise ValueError('Plot form not understood')
@@ -348,6 +371,14 @@ class LevelSetTree(object):
 
         split_lines = _LineCollection(line_coords, colors=line_colors)
         ax.add_collection(split_lines)
+
+        ## Add node IDs above specified dendrogram branches.
+        for idx in set(annotate_nodes):
+            horizontal_coord = node_coords[idx][1][0]
+            vertical_coord = node_coords[idx][1][1]
+            ax.text(horizontal_coord, vertical_coord + 0.012 * yrange,
+                    str(int(idx)), horizontalalignment='center',
+                    **annotate_kwargs)
 
         return fig, node_coords, split_coords, node_colors
 
