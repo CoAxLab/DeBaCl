@@ -4,7 +4,7 @@ DeBaCl: DEnsity-BAsed CLustering
 [![Pending Pull-Requests](http://githubbadges.herokuapp.com/CoAxLab/DeBaCl/pulls)](https://github.com/CoAxLab/DeBaCl/pulls)
 [![Github Issues](http://githubbadges.herokuapp.com/CoAxLab/DeBaCl/issues)](https://github.com/CoAxLab/DeBaCl/issues)
 [![License](http://img.shields.io/:license-bsd-blue.svg)](http://opensource.org/licenses/BSD-3-Clause)
-[![Docs](https://readthedocs.org/projects/debacl/badge/?version=master)](http://debacl.readthedocs.org/en/master/)
+[![Docs](https://readthedocs.org/projects/debacl/badge/?version=master)](http://debacl.readthedocs.io/en/master/)
 
 DeBaCl is a Python library for **density-based clustering** with **level set trees**.
 
@@ -112,7 +112,7 @@ fig.show()
 
 Documentation
 -------------
-- [API documentation](http://debacl.readthedocs.org/en/master/)
+- [API documentation](http://debacl.readthedocs.io/en/master/)
 - [Example jupyter notebooks](examples) (in progress)
 
 Running unit tests

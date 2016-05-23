@@ -11,7 +11,7 @@ modularity and user customizability.
 DeBaCl is available under the 3-clause BSD license. Some useful links:
 
 - `Source code <https://github.com/CoAxLab/DeBaCl>`_
-- `API documentation <http://debacl.readthedocs.org/en/master/>`_
+- `API documentation <http://debacl.readthedocs.io/en/master/>`_
 - `PyPI page <https://pypi.python.org/pypi/debacl>`_
 """
 
